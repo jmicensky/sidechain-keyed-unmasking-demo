@@ -5,15 +5,38 @@
 // exclusive so only one is ever audible at a time).
 
 const CLASS_NAMES = ['Dialogue', 'Music', 'Background Noise', 'Safety Alerts', 'Other'];
-const STEM_FILES = ['Dialogue.wav', 'MUSIC.wav', 'BKG.wav', 'SAFETY.wav', 'OTHER.wav'];
-const STEM_DIR = '../Construction Scene/';
-const BLEND_FILE = 'WHOLE BLEND.wav';
+
+// Each scene's stems live in their own folder with their own file-naming
+// convention (the two scenes on disk don't match each other), so every
+// scene lists its own filenames explicitly rather than assuming a pattern.
+const SCENES = {
+  construction: {
+    label: 'Construction',
+    dir: '../Construction Scene/',
+    stems: ['Dialogue.wav', 'MUSIC.wav', 'BKG.wav', 'SAFETY.wav', 'OTHER.wav'],
+    blend: 'WHOLE BLEND.wav',
+  },
+  publicTransit: {
+    label: 'Public Transit',
+    dir: '../PublicTransit Scene/',
+    stems: [
+      'Dialogue_PublicTransit_01.wav',
+      'MUSIC_publictransit_01.wav',
+      'BKG_PublicTransit_01.wav',
+      'SAFETY_publictransit_01.wav',
+      'OTHER_publictransit_01.wav',
+    ],
+    blend: 'WholeBlend_publictransit.wav',
+  },
+};
 
 let audioCtx = null;
 let engineNode = null;
+let workletReady = null; // Promise, resolves once the AudioWorklet's WASM module has loaded
 let numFrames = 0;
 let sampleRate = 48000;
 let decomposedRunning = false;
+let blendBlobUrl = null; // revoked and replaced on every scene load
 
 const $ = (id) => document.getElementById(id);
 const statusEl = $('status');
@@ -46,8 +69,8 @@ function extractStereo(audioBuffer) {
   return { left, right };
 }
 
-async function decodeStem(ctx, filename) {
-  const resp = await fetch(STEM_DIR + encodeURIComponent(filename));
+async function decodeStem(ctx, dir, filename) {
+  const resp = await fetch(dir + encodeURIComponent(filename));
   if (!resp.ok) throw new Error(`Failed to fetch ${filename}: ${resp.status}`);
   const arrayBuf = await resp.arrayBuffer();
   const audioBuf = await ctx.decodeAudioData(arrayBuf);
@@ -224,22 +247,91 @@ function drawNotchDip(ctx, freqToX, dbToY, cssWidth, y0, freqHz, gainDb, labelRo
 // ---------------------------------------------------------------------
 // Loading
 // ---------------------------------------------------------------------
-async function init() {
-  audioCtx = new AudioContext();
-  sampleRate = audioCtx.sampleRate;
-  await audioCtx.suspend(); // stay silent until the user presses Play
-  await audioCtx.audioWorklet.addModule('engine-worklet.js');
 
-  setStatus('Loading stems and reference...');
+// Creates the AudioContext + AudioWorkletNode exactly once, however many
+// times loadScene() is called afterward. Resolves once the worklet's WASM
+// module has actually finished loading (not just once the node exists), so
+// loadScene() can safely postMessage('loadStems') right after awaiting this
+// on every call, not just the first.
+function ensureAudioGraph() {
+  if (workletReady) return workletReady;
 
-  const blendResp = await fetch(STEM_DIR + encodeURIComponent(BLEND_FILE));
-  if (!blendResp.ok) throw new Error(`Failed to fetch ${BLEND_FILE}: ${blendResp.status}`);
+  workletReady = (async () => {
+    audioCtx = new AudioContext();
+    sampleRate = audioCtx.sampleRate;
+    await audioCtx.suspend(); // stay silent until the user presses Play
+    await audioCtx.audioWorklet.addModule('engine-worklet.js');
+
+    engineNode = new AudioWorkletNode(audioCtx, 'engine-processor', {
+      numberOfInputs: 0,
+      numberOfOutputs: 1,
+      outputChannelCount: [2],
+    });
+    engineNode.connect(audioCtx.destination);
+
+    const readyPromise = new Promise((resolve) => {
+      engineNode.port.onmessage = (event) => {
+        const msg = event.data;
+        if (msg.type === 'ready') {
+          resolve();
+        } else if (msg.type === 'stemsLoaded') {
+          const durSec = numFrames / sampleRate;
+          setStatus(`Ready — ${fmtTime(durSec)} loaded`);
+          timeEl.textContent = `0:00.0 / ${fmtTime(durSec)}`;
+          refTimeEl.textContent = `0:00.0 / ${fmtTime(durSec)}`;
+          setPlayheadFraction('playhead-blend', 0);
+          for (let c = 0; c < 5; c++) setPlayheadFraction(`playhead${c}`, 0);
+          $('playBtn').disabled = false;
+          $('restartBtn').disabled = false;
+          $('refPlayBtn').disabled = false;
+        } else if (msg.type === 'playhead') {
+          const sec = msg.frame / sampleRate;
+          timeEl.textContent = `${fmtTime(sec)} / ${fmtTime(numFrames / sampleRate)}`;
+          for (let c = 0; c < 5; c++) setPlayheadFraction(`playhead${c}`, msg.frame / numFrames);
+
+          currentGainDb = gainLinearToDb(msg.gainLinear);
+          currentResonance = msg.resonance || currentResonance;
+          updateGainVisualization();
+        }
+      };
+    });
+    await readyPromise;
+  })();
+
+  return workletReady;
+}
+
+// Fetches one scene's stems + reference blend, draws their waveforms, and
+// hands the stems to the (already-running) engine. Safe to call repeatedly
+// to switch scenes - pauses whatever's currently playing first.
+async function loadScene(sceneKey) {
+  const scene = SCENES[sceneKey];
+  if (!scene) throw new Error(`Unknown scene: ${sceneKey}`);
+
+  if (decomposedRunning && audioCtx) {
+    await audioCtx.suspend();
+    $('playBtn').textContent = 'Play';
+    decomposedRunning = false;
+  }
+  if (!refAudio.paused) {
+    refAudio.pause();
+    $('refPlayBtn').textContent = 'Play';
+  }
+  $('playBtn').disabled = true;
+  $('restartBtn').disabled = true;
+  $('refPlayBtn').disabled = true;
+
+  setStatus(`Loading ${scene.label} scene...`);
+  await ensureAudioGraph();
+
+  const blendResp = await fetch(scene.dir + encodeURIComponent(scene.blend));
+  if (!blendResp.ok) throw new Error(`Failed to fetch ${scene.blend}: ${blendResp.status}`);
   const blendArrayBuf = await blendResp.arrayBuffer();
-  const blendBlobUrl = URL.createObjectURL(new Blob([blendArrayBuf], { type: 'audio/wav' }));
+  const newBlendBlobUrl = URL.createObjectURL(new Blob([blendArrayBuf], { type: 'audio/wav' }));
   const blendAudioBuf = await audioCtx.decodeAudioData(blendArrayBuf.slice(0));
   const blendMono = downmixToMono(blendAudioBuf);
 
-  const stems = await Promise.all(STEM_FILES.map((f) => decodeStem(audioCtx, f)));
+  const stems = await Promise.all(scene.stems.map((f) => decodeStem(audioCtx, scene.dir, f)));
   numFrames = Math.min(...stems.map((s) => s.mono.length), blendMono.length);
   const monoForWaveform = stems.map((s) => s.mono.subarray(0, numFrames));
   const channelsL = stems.map((s) => s.left.subarray(0, numFrames));
@@ -250,47 +342,14 @@ async function init() {
     drawWaveform($(`wave${c}`), monoForWaveform[c], '#4a7fd6');
   }
 
+  if (blendBlobUrl) URL.revokeObjectURL(blendBlobUrl);
+  blendBlobUrl = newBlendBlobUrl;
   refAudio.src = blendBlobUrl;
-  refAudio.addEventListener('timeupdate', () => {
-    refTimeEl.textContent = `${fmtTime(refAudio.currentTime)} / ${fmtTime(refAudio.duration || numFrames / sampleRate)}`;
-    setPlayheadFraction('playhead-blend', refAudio.currentTime / (refAudio.duration || 1));
-  });
-  refAudio.addEventListener('ended', () => {
-    $('refPlayBtn').textContent = 'Play';
-  });
 
-  engineNode = new AudioWorkletNode(audioCtx, 'engine-processor', {
-    numberOfInputs: 0,
-    numberOfOutputs: 1,
-    outputChannelCount: [2],
-  });
-  engineNode.connect(audioCtx.destination);
-
-  engineNode.port.onmessage = (event) => {
-    const msg = event.data;
-    if (msg.type === 'ready') {
-      engineNode.port.postMessage(
-        { type: 'loadStems', channelsL, channelsR, numFrames },
-        [...channelsL.map((c) => c.buffer), ...channelsR.map((c) => c.buffer)]
-      );
-    } else if (msg.type === 'stemsLoaded') {
-      const durSec = numFrames / sampleRate;
-      setStatus(`Ready — ${fmtTime(durSec)} loaded`);
-      timeEl.textContent = `0:00.0 / ${fmtTime(durSec)}`;
-      refTimeEl.textContent = `0:00.0 / ${fmtTime(durSec)}`;
-      $('playBtn').disabled = false;
-      $('restartBtn').disabled = false;
-      $('refPlayBtn').disabled = false;
-    } else if (msg.type === 'playhead') {
-      const sec = msg.frame / sampleRate;
-      timeEl.textContent = `${fmtTime(sec)} / ${fmtTime(numFrames / sampleRate)}`;
-      for (let c = 0; c < 5; c++) setPlayheadFraction(`playhead${c}`, msg.frame / numFrames);
-
-      currentGainDb = gainLinearToDb(msg.gainLinear);
-      currentResonance = msg.resonance || currentResonance;
-      updateGainVisualization();
-    }
-  };
+  engineNode.port.postMessage(
+    { type: 'loadStems', channelsL, channelsR, numFrames },
+    [...channelsL.map((c) => c.buffer), ...channelsR.map((c) => c.buffer)]
+  );
 
   applyAllControls();
 }
@@ -422,10 +481,11 @@ function wireControls() {
   $('loadBtn').addEventListener('click', async () => {
     $('loadBtn').disabled = true;
     try {
-      await init();
+      await loadScene($('sceneSelect').value);
     } catch (err) {
       setStatus(`Error: ${err.message}`);
       console.error(err);
+    } finally {
       $('loadBtn').disabled = false;
     }
   });
@@ -470,6 +530,14 @@ function wireControls() {
     }
   });
 }
+
+refAudio.addEventListener('timeupdate', () => {
+  refTimeEl.textContent = `${fmtTime(refAudio.currentTime)} / ${fmtTime(refAudio.duration || numFrames / sampleRate)}`;
+  setPlayheadFraction('playhead-blend', refAudio.currentTime / (refAudio.duration || 1));
+});
+refAudio.addEventListener('ended', () => {
+  $('refPlayBtn').textContent = 'Play';
+});
 
 buildChannelRows();
 wireControls();
