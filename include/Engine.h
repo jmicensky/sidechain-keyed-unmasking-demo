@@ -291,7 +291,7 @@ private:
     double sampleRate_ = 48000.0;
     DuckMode mode_ = DuckMode::Advanced;
     bool unmaskEnabled_ = false;
-    int keyChannel_ = kSafetyAlerts;
+    int keyChannel_ = kDialogue;
     double safetyGainLinear_ = 1.0;
     CompressorParams params_;
 

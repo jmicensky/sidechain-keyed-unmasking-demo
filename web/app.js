@@ -356,7 +356,7 @@ function buildChannelRows() {
     const opt = document.createElement('option');
     opt.value = c;
     opt.textContent = name;
-    if (c === 3) opt.selected = true; // Safety Alerts, matches Engine's default
+    if (c === 0) opt.selected = true; // Dialogue, matches Engine's default
     keySelect.appendChild(opt);
   });
 }
