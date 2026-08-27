@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sidechain-Keyed Unmasking Demo</title>
+<style>
+  body { font-family: -apple-system, sans-serif; max-width: 900px; margin: 24px auto; padding: 0 16px; color: #1a1a1a; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  h2 { font-size: 15px; text-transform: uppercase; letter-spacing: 0.04em; color: #444; margin: 0 0 10px; }
+  .loadbar { display: flex; align-items: center; gap: 10px; margin: 14px 0 20px; }
+  .panel { border: 1px solid #d8d8d8; border-radius: 8px; padding: 14px 18px 18px; margin: 14px 0; }
+  .transport { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .transport button { min-width: 64px; }
+  .time { font-variant-numeric: tabular-nums; color: #555; font-size: 13px; }
+  .waveform-container { position: relative; width: 100%; height: 56px; background: #f6f6f6; border: 1px solid #e0e0e0; border-radius: 4px; overflow: hidden; }
+  canvas.waveform { display: block; width: 100%; height: 100%; }
+  .playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: #e03131; left: 0%; pointer-events: none; }
+  .channel-row { margin-bottom: 16px; }
+  .channel-row:last-child { margin-bottom: 0; }
+  .channel-header { display: flex; align-items: center; gap: 14px; margin-bottom: 5px; }
+  .channel-name { font-weight: 600; min-width: 130px; font-size: 14px; }
+  .channel-header label { font-size: 13px; color: #333; }
+  .controls { margin-top: 18px; padding-top: 14px; border-top: 1px solid #eee; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+  .compressor-controls { margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e5e5e5; display: flex; flex-direction: column; gap: 8px; }
+  .compressor-header { font-weight: 600; color: #444; }
+  .compressor-header .hint { font-weight: 400; color: #999; }
+  #thresholdDb { vertical-align: middle; width: 160px; }
+  #status { color: #666; font-size: 13px; }
+  .gain-viz-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; font-size: 13px; color: #444; }
+  .gain-viz-container { width: 100%; height: 150px; background: #fbfbfb; border: 1px solid #e0e0e0; border-radius: 4px; margin-bottom: 16px; }
+  canvas.gain-viz { display: block; width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+<h1>Sidechain-Keyed Unmasking Demo</h1>
+
+<div class="loadbar">
+  <button id="loadBtn">Load Construction Scene</button>
+  <span id="status">Not loaded</span>
+</div>
+
+<section class="panel">
+  <h2>Unprocessed</h2>
+  <div class="waveform-container">
+    <canvas id="wave-blend" class="waveform"></canvas>
+    <div id="playhead-blend" class="playhead"></div>
+  </div>
+  <div class="transport" style="margin-top: 10px;">
+    <button id="refPlayBtn" disabled>Play</button>
+    <span id="refTime" class="time">0:00 / 0:00</span>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Decomposed Mix</h2>
+  <div class="transport">
+    <button id="playBtn" disabled>Play</button>
+    <button id="restartBtn" disabled>Restart</button>
+    <span id="time" class="time">0:00 / 0:00</span>
+  </div>
+
+  <div class="gain-viz-header">
+    <span>Gain Reduction</span>
+    <span id="gainDbReadout" class="time">0.0 dB</span>
+  </div>
+  <div class="gain-viz-container">
+    <canvas id="gainViz" class="gain-viz"></canvas>
+  </div>
+
+  <div id="channels"></div>
+
+  <div class="controls">
+    <label><input type="checkbox" id="unmaskEnabled"> Unmask enabled</label>
+    <label>Key channel: <select id="keyChannel"></select></label>
+    <label>Mode:
+      <select id="duckMode">
+        <option value="0">Basic (full-band)</option>
+        <option value="1" selected>Advanced (band-limited 300Hz&ndash;1.8kHz)</option>
+        <option value="2">Resonance (4 dynamic notches, tracks key's spectral peaks)</option>
+      </select>
+    </label>
+
+    <div class="compressor-controls">
+      <div class="compressor-header">Sidechain Compressor <span class="hint">(applies to all modes, including Resonance)</span></div>
+      <label>Threshold:
+        <input type="range" id="thresholdDb" min="-60" max="0" step="1" value="-30">
+        <span id="thresholdReadout" class="time">-30 dB</span>
+      </label>
+      <label>Ratio:
+        <select id="ratio">
+          <option value="1.5">Low (1.5:1)</option>
+          <option value="4" selected>Default (4:1)</option>
+          <option value="8">High (8:1)</option>
+        </select>
+      </label>
+      <label>Attack:
+        <select id="attackMs">
+          <option value="1">Extremely Fast (1ms)</option>
+          <option value="5" selected>Fast (5ms)</option>
+          <option value="15">Medium (15ms)</option>
+          <option value="50">Slow (50ms)</option>
+        </select>
+      </label>
+      <label>Release:
+        <select id="releaseMs">
+          <option value="20">Extremely Fast (20ms)</option>
+          <option value="60">Fast (60ms)</option>
+          <option value="120" selected>Medium (120ms)</option>
+          <option value="400">Slow (400ms)</option>
+        </select>
+      </label>
+    </div>
+  </div>
+</section>
+
+<audio id="refAudio"></audio>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
