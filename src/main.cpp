@@ -328,6 +328,14 @@ int main(int argc, char** argv) {
             [&]{ engine.setKneeDb(0.0); }},
         {15.0, "Knee to 24 (very soft) mid-playback",
             [&]{ engine.setKneeDb(24.0); }},
+        {16.0, "Resonance: 12 peaks, very wide bandwidth (3 oct) - stresses the separation fallback",
+            [&]{ engine.setResonanceNumPeaks(12); engine.setResonanceBandwidthOctaves(3.0); }},
+        {17.0, "Resonance: down to 1 peak (single band)",
+            [&]{ engine.setResonanceNumPeaks(1); }},
+        {18.0, "Resonance: 8 peaks, narrow bandwidth (0.1 oct)",
+            [&]{ engine.setResonanceNumPeaks(8); engine.setResonanceBandwidthOctaves(0.1); }},
+        {19.0, "Resonance: max reduction clamped to 3dB",
+            [&]{ engine.setResonanceMaxReductionDb(3.0); }},
     };
 
     std::cout << "\nRunning scripted timeline (" << durationSec << "s, "

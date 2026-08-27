@@ -16,15 +16,16 @@ namespace demo {
 // continuously so filter state stays settled and mute/unmute never clicks)
 // plus a smoothed audibility gain for mute/solo. Separate L/R filterbanks
 // preserve the stereo image instead of collapsing each stem to mono. The
-// notch filters (kNumPeaks per side, cascaded in series) are Resonance
-// mode's equivalent of the crossover - every channel gets its own filter
-// *state*, but every channel's notches share the same coefficients each
-// sample (computed once from the shared SpectralAnalyzer, see
+// notch filters (up to kMaxPeaks per side, cascaded in series - only the
+// first Engine::resonanceNumPeaks() are actually used each sample) are
+// Resonance mode's equivalent of the crossover - every channel gets its own
+// filter *state*, but every channel's notches share the same coefficients
+// each sample (computed once from the shared SpectralAnalyzer, see
 // Engine::process()).
 struct ChannelStrip {
     CrossoverFilterbank crossoverL;
     CrossoverFilterbank crossoverR;
-    std::array<Biquad, SpectralAnalyzer::kNumPeaks> notchL, notchR;
+    std::array<Biquad, SpectralAnalyzer::kMaxPeaks> notchL, notchR;
     Smoother audibleGain; // 0 = silent, 1 = fully audible
     bool muted = false;
     bool soloed = false;
@@ -51,6 +52,9 @@ public:
         gainComputer_.prepare(params_);
         detector_.prepare(sampleRate, params_.attackMs, params_.releaseMs);
         resonanceAnalyzer_.prepare(sampleRate, params_.attackMs, params_.releaseMs);
+        resonanceAnalyzer_.setActivePeakCount(resonanceNumPeaks_);
+        resonanceAnalyzer_.setBandwidthOctaves(resonanceBandwidthOctaves_);
+        resonanceQ_ = bandwidthOctavesToQ(resonanceBandwidthOctaves_);
         safetyGainLinear_ = std::pow(10.0, params_.safetyGainDb / 20.0);
 
         for (int c = 0; c < kNumClasses; ++c) {
@@ -131,6 +135,28 @@ public:
         gainComputer_.setParams(params_);
     }
 
+    // Resonance-mode-only settings (not shared with Basic/Advanced).
+    void setResonanceNumPeaks(int count) {
+        resonanceNumPeaks_ = std::clamp(count, 1, SpectralAnalyzer::kMaxPeaks);
+        resonanceAnalyzer_.setActivePeakCount(resonanceNumPeaks_);
+    }
+
+    // Notch bandwidth in octaves (the -3dB width of each peaking filter).
+    // Also re-derives the minimum spacing between peaks so wider notches
+    // automatically push peaks further apart and can't overlap - see
+    // SpectralAnalyzer::setBandwidthOctaves().
+    void setResonanceBandwidthOctaves(double bandwidthOctaves) {
+        resonanceBandwidthOctaves_ = std::clamp(bandwidthOctaves, 0.05, 4.0);
+        resonanceQ_ = bandwidthOctavesToQ(resonanceBandwidthOctaves_);
+        resonanceAnalyzer_.setBandwidthOctaves(resonanceBandwidthOctaves_);
+    }
+
+    // Ceiling on how deep any single notch may cut, in dB (magnitude - pass
+    // 24 for "at most -24dB", not -24).
+    void setResonanceMaxReductionDb(double maxReductionDb) {
+        resonanceMaxReductionDb_ = std::clamp(maxReductionDb, 0.0, 60.0);
+    }
+
     void setAttackMs(double attackMs) {
         params_.attackMs = attackMs;
         detector_.setTimes(params_.attackMs, params_.releaseMs);
@@ -165,11 +191,11 @@ public:
             double detectorInput = keyMuted ? 0.0 : keyRaw;
 
             double g = 1.0;
-            std::array<BiquadCoeffs, SpectralAnalyzer::kNumPeaks> notchCoeffs;
+            std::array<BiquadCoeffs, SpectralAnalyzer::kMaxPeaks> notchCoeffs;
             if (mode_ == DuckMode::Resonance) {
                 resonanceAnalyzer_.tick(detectorInput);
                 double minGain = 1.0;
-                for (int p = 0; p < SpectralAnalyzer::kNumPeaks; ++p) {
+                for (int p = 0; p < resonanceNumPeaks_; ++p) {
                     // A single ~0.5-octave analysis band inherently captures
                     // far less energy than the full-band detector
                     // Basic/Advanced use for the same real signal (energy is
@@ -182,10 +208,12 @@ public:
                     // correction.
                     double level = resonanceAnalyzer_.levelDb(p) + kResonanceLevelCompensationDb;
                     double gp = unmaskEnabled_ ? gainComputer_.computeLinearGain(level) : 1.0;
+                    double gainDb = 20.0 * std::log10(std::max(gp, 1e-6));
+                    gainDb = std::max(gainDb, -resonanceMaxReductionDb_); // user-set ceiling on reduction depth
+                    gp = std::pow(10.0, gainDb / 20.0); // keep the linear gain consistent with the clamp
                     resonanceFreq_[p] = resonanceAnalyzer_.freq(p);
                     resonanceGainLinear_[p] = gp;
-                    double gainDb = 20.0 * std::log10(std::max(gp, 1e-6));
-                    notchCoeffs[p] = computePeakingCoeffs(sampleRate_, resonanceFreq_[p], gainDb, kResonanceQ);
+                    notchCoeffs[p] = computePeakingCoeffs(sampleRate_, resonanceFreq_[p], gainDb, resonanceQ_);
                     minGain = std::min(minGain, gp);
                 }
                 lastGainLinear_ = minGain; // deepest of the notch cuts, for the single-number readout
@@ -217,10 +245,10 @@ public:
                     strips_[c].crossoverR.tick(rawR, bandsR);
                     duckedL = bandsL[0] + bandsL[1] + g * bandsL[2] + bandsL[3];
                     duckedR = bandsR[0] + bandsR[1] + g * bandsR[2] + bandsR[3];
-                } else { // Resonance: kNumPeaks cascaded dynamic notches, same coeffs on both sides
+                } else { // Resonance: resonanceNumPeaks_ cascaded dynamic notches, same coeffs on both sides
                     duckedL = rawL;
                     duckedR = rawR;
-                    for (int p = 0; p < SpectralAnalyzer::kNumPeaks; ++p) {
+                    for (int p = 0; p < resonanceNumPeaks_; ++p) {
                         strips_[c].notchL[p].setCoeffs(notchCoeffs[p]);
                         strips_[c].notchR[p].setCoeffs(notchCoeffs[p]);
                         duckedL = strips_[c].notchL[p].tick(duckedL);
@@ -255,20 +283,18 @@ public:
     // Resonance mode's dynamic notch centers (Hz) and depths (linear gain,
     // 1.0 = no cut) from the most recently processed sample - only
     // meaningful while setMode(DuckMode::Resonance) is active. peakIndex
-    // ranges over [0, SpectralAnalyzer::kNumPeaks). Exposed primarily so the
-    // UI can draw the notches at their real, moving frequencies instead of
-    // a fixed band.
-    static constexpr int kNumResonancePeaks = SpectralAnalyzer::kNumPeaks;
+    // ranges over [0, resonanceNumPeaks()). Exposed primarily so the UI can
+    // draw the notches at their real, moving frequencies instead of a fixed
+    // band. kMaxResonancePeaks is the compile-time upper bound (array size);
+    // resonanceNumPeaks() is the live, user-set count actually in use.
+    static constexpr int kMaxResonancePeaks = SpectralAnalyzer::kMaxPeaks;
+    int resonanceNumPeaks() const { return resonanceNumPeaks_; }
     double resonanceFreq(int peakIndex) const { return resonanceFreq_[peakIndex]; }
     double resonanceGainLinear(int peakIndex) const { return resonanceGainLinear_[peakIndex]; }
 
 private:
     static constexpr double kAudibleRampMs = 8.0;
     static constexpr double kKeyRampMs = 30.0;
-    // Notch bandwidth applied in Resonance mode. RBJ peaking-filter Q, so
-    // lower = wider/gentler. 1.2 is roughly a 1.1-octave-wide cut, versus
-    // the earlier 4.0's ~0.36 octaves (a much more surgical notch).
-    static constexpr double kResonanceQ = 1.2;
     static constexpr double kResonanceLevelCompensationDb = 12.0; // see process()
 
     void recomputeAudibility() {
@@ -295,6 +321,18 @@ private:
     double safetyGainLinear_ = 1.0;
     CompressorParams params_;
 
+    // Resonance-mode-only settings. Defaults match the values this project
+    // shipped with before these became live-adjustable (4 peaks, ~1.16
+    // octaves bandwidth). Note the old fixed 3-band minimum separation was
+    // actually narrower than this bandwidth (~0.6 vs ~1.16 octaves), so
+    // notches could already overlap before setBandwidthOctaves() started
+    // deriving separation from the real bandwidth - see
+    // SpectralAnalyzer::setBandwidthOctaves().
+    int resonanceNumPeaks_ = 4;
+    double resonanceBandwidthOctaves_ = 1.16;
+    double resonanceQ_ = 1.2;
+    double resonanceMaxReductionDb_ = 24.0;
+
     EnvelopeFollower detector_;
     GainComputer gainComputer_;
     SpectralAnalyzer resonanceAnalyzer_;
@@ -307,8 +345,8 @@ private:
     size_t numFrames_ = 0;
     size_t sampleIndex_ = 0;
     double lastGainLinear_ = 1.0;
-    std::array<double, SpectralAnalyzer::kNumPeaks> resonanceFreq_{};
-    std::array<double, SpectralAnalyzer::kNumPeaks> resonanceGainLinear_{};
+    std::array<double, SpectralAnalyzer::kMaxPeaks> resonanceFreq_{};
+    std::array<double, SpectralAnalyzer::kMaxPeaks> resonanceGainLinear_{};
 };
 
 } // namespace demo

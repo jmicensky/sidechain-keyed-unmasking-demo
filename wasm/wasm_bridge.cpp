@@ -126,6 +126,23 @@ void engine_set_release_ms(Engine* e, double releaseMs) {
     e->setReleaseMs(releaseMs);
 }
 
+// Resonance-mode-only settings (see Engine::setResonance*() doc comments) -
+// not shared with Basic/Advanced.
+EMSCRIPTEN_KEEPALIVE
+void engine_set_resonance_num_peaks(Engine* e, int count) {
+    e->setResonanceNumPeaks(count);
+}
+
+EMSCRIPTEN_KEEPALIVE
+void engine_set_resonance_bandwidth_octaves(Engine* e, double bandwidthOctaves) {
+    e->setResonanceBandwidthOctaves(bandwidthOctaves);
+}
+
+EMSCRIPTEN_KEEPALIVE
+void engine_set_resonance_max_reduction_db(Engine* e, double maxReductionDb) {
+    e->setResonanceMaxReductionDb(maxReductionDb);
+}
+
 EMSCRIPTEN_KEEPALIVE
 void engine_reset_playhead(Engine* e) {
     e->resetPlayhead();
@@ -141,12 +158,12 @@ double engine_last_gain_linear(Engine* e) {
     return e->lastGainLinear();
 }
 
-// How many dynamic notches Resonance mode currently tracks (see
-// SpectralAnalyzer::kNumPeaks) - lets JS size its arrays without hardcoding
-// the count.
+// How many dynamic notches Resonance mode is currently using (live, set via
+// engine_set_resonance_num_peaks) - lets JS size its display arrays without
+// hardcoding the count.
 EMSCRIPTEN_KEEPALIVE
-int engine_resonance_num_peaks() {
-    return Engine::kNumResonancePeaks;
+int engine_resonance_num_peaks(Engine* e) {
+    return e->resonanceNumPeaks();
 }
 
 // Resonance mode's dynamic notch centers/depths, for drawing the actual

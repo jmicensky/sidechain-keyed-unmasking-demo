@@ -18,7 +18,6 @@ class EngineProcessor extends AudioWorkletProcessor {
     this._module = null;
     this._pendingStems = null;
     this._quantumCount = 0;
-    this._numResonancePeaks = 0;
 
     this.port.onmessage = (event) => this._handleMessage(event.data);
 
@@ -28,7 +27,6 @@ class EngineProcessor extends AudioWorkletProcessor {
       module._engine_prepare(this._enginePtr, sampleRate);
       this._outPtrL = module._engine_alloc(kRenderQuantum);
       this._outPtrR = module._engine_alloc(kRenderQuantum);
-      this._numResonancePeaks = module._engine_resonance_num_peaks();
       this._ready = true;
       this.port.postMessage({ type: 'ready' });
       if (this._pendingStems) {
@@ -71,6 +69,12 @@ class EngineProcessor extends AudioWorkletProcessor {
         m._engine_set_attack_ms(e, msg.attackMs); break;
       case 'setReleaseMs':
         m._engine_set_release_ms(e, msg.releaseMs); break;
+      case 'setResonanceNumPeaks':
+        m._engine_set_resonance_num_peaks(e, msg.count); break;
+      case 'setResonanceBandwidthOctaves':
+        m._engine_set_resonance_bandwidth_octaves(e, msg.bandwidthOctaves); break;
+      case 'setResonanceMaxReductionDb':
+        m._engine_set_resonance_max_reduction_db(e, msg.maxReductionDb); break;
       case 'seek':
         m._engine_reset_playhead(e); break;
       default:
@@ -131,8 +135,10 @@ class EngineProcessor extends AudioWorkletProcessor {
       const e = this._enginePtr;
       const playhead = m._engine_playhead(e);
       const gainLinear = m._engine_last_gain_linear(e);
+      // Queried live (not cached) since the peak count can change mid-playback.
+      const numPeaks = m._engine_resonance_num_peaks(e);
       const peaks = [];
-      for (let p = 0; p < this._numResonancePeaks; p++) {
+      for (let p = 0; p < numPeaks; p++) {
         peaks.push({
           freq: m._engine_resonance_freq(e, p),
           gainLinear: m._engine_resonance_gain_linear(e, p),

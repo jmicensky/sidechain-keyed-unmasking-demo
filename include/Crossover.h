@@ -12,6 +12,12 @@ struct BiquadCoeffs {
     double b0 = 1.0, b1 = 0.0, b2 = 0.0, a1 = 0.0, a2 = 0.0;
 };
 
+// Converts a peaking filter's -3dB bandwidth (in octaves) to the Q the RBJ
+// formulas expect. Inverse of BW = 2*asinh(1/(2Q))/ln(2).
+inline double bandwidthOctavesToQ(double bandwidthOctaves) {
+    return 1.0 / (2.0 * std::sinh(bandwidthOctaves * M_LN2 / 2.0));
+}
+
 // RBJ cookbook peaking (bell) EQ. Positive gainDb boosts, negative cuts;
 // 0 dB reduces exactly to the identity filter.
 inline BiquadCoeffs computePeakingCoeffs(double sampleRate, double fc, double gainDb, double q) {

@@ -113,7 +113,6 @@ const GAIN_FREQ_MAX = 20000;
 const DUCK_BAND_LOW = 300;   // must match Types.h kCrossoverMid
 const DUCK_BAND_HIGH = 1800; // must match Types.h kCrossoverHigh
 const GAIN_VIZ_PAD_TOP = 6; // keeps the 0 dB resting line visible below the canvas edge
-const NOTCH_HALF_WIDTH_OCTAVES = 0.6; // visual width only, tracks Engine.h's kResonanceQ directionally
 
 let currentGainDb = 0;
 let currentResonance = { peaks: [] }; // [{freq, gainLinear}, ...], filled in once the engine reports real data
@@ -190,21 +189,24 @@ function drawGainReduction(canvas, gainDb, mode, resonance) {
     ctx.lineTo(cssWidth, y0);
     ctx.stroke();
     if (resonance && resonance.peaks) {
+      // Half of the live Bandwidth slider value - keeps the drawn width an
+      // honest reflection of the filter Q actually being applied, so
+      // experimenting with the slider is visually meaningful.
+      const halfWidthOctaves = parseFloat($('resonanceBandwidth').value) / 2;
       resonance.peaks.forEach((peak, idx) => {
-        drawNotchDip(ctx, freqToX, dbToY, cssWidth, y0, peak.freq, gainLinearToDb(peak.gainLinear), idx);
+        drawNotchDip(ctx, freqToX, dbToY, cssWidth, y0, peak.freq, gainLinearToDb(peak.gainLinear), idx, halfWidthOctaves);
       });
     }
   }
 }
 
 // One triangular dip for Resonance mode, centered on a dynamically detected
-// frequency - visual width is fixed for legibility, not the filter's real Q.
-// labelRow staggers each peak's label vertically so closely-spaced notches
-// (common once there are 3-4 of them) don't render overlapping text.
-function drawNotchDip(ctx, freqToX, dbToY, cssWidth, y0, freqHz, gainDb, labelRow) {
+// frequency. labelRow staggers each peak's label vertically so
+// closely-spaced notches don't render overlapping text.
+function drawNotchDip(ctx, freqToX, dbToY, cssWidth, y0, freqHz, gainDb, labelRow, halfWidthOctaves) {
   const xCenter = freqToX(freqHz);
-  const xLow = Math.max(0, freqToX(freqHz / Math.pow(2, NOTCH_HALF_WIDTH_OCTAVES)));
-  const xHigh = Math.min(cssWidth, freqToX(freqHz * Math.pow(2, NOTCH_HALF_WIDTH_OCTAVES)));
+  const xLow = Math.max(0, freqToX(freqHz / Math.pow(2, halfWidthOctaves)));
+  const xHigh = Math.min(cssWidth, freqToX(freqHz * Math.pow(2, halfWidthOctaves)));
   const yG = dbToY(gainDb);
   ctx.beginPath();
   ctx.moveTo(xLow, y0);
@@ -323,6 +325,9 @@ function applyAllControls() {
   port.postMessage({ type: 'setRatio', ratio: parseFloat($('ratio').value) });
   port.postMessage({ type: 'setAttackMs', attackMs: parseFloat($('attackMs').value) });
   port.postMessage({ type: 'setReleaseMs', releaseMs: parseFloat($('releaseMs').value) });
+  port.postMessage({ type: 'setResonanceNumPeaks', count: parseInt($('resonanceNumPeaks').value, 10) });
+  port.postMessage({ type: 'setResonanceBandwidthOctaves', bandwidthOctaves: parseFloat($('resonanceBandwidth').value) });
+  port.postMessage({ type: 'setResonanceMaxReductionDb', maxReductionDb: parseFloat($('resonanceMaxReduction').value) });
   for (let c = 0; c < 5; c++) {
     port.postMessage({ type: 'setMute', channel: c, muted: $(`mute${c}`).checked });
     port.postMessage({ type: 'setSolo', channel: c, soloed: $(`solo${c}`).checked });
@@ -390,6 +395,20 @@ function wireControls() {
   });
   $('releaseMs').addEventListener('change', () => {
     engineNode?.port.postMessage({ type: 'setReleaseMs', releaseMs: parseFloat($('releaseMs').value) });
+  });
+  $('resonanceNumPeaks').addEventListener('change', () => {
+    engineNode?.port.postMessage({ type: 'setResonanceNumPeaks', count: parseInt($('resonanceNumPeaks').value, 10) });
+  });
+  $('resonanceBandwidth').addEventListener('input', () => {
+    const oct = parseFloat($('resonanceBandwidth').value);
+    $('resonanceBandwidthReadout').textContent = `${oct.toFixed(2)} oct`;
+    engineNode?.port.postMessage({ type: 'setResonanceBandwidthOctaves', bandwidthOctaves: oct });
+    updateGainVisualization(); // redraw now so the notch-width preview tracks the slider even while paused
+  });
+  $('resonanceMaxReduction').addEventListener('input', () => {
+    const db = parseFloat($('resonanceMaxReduction').value);
+    $('resonanceMaxReductionReadout').textContent = `${db} dB`;
+    engineNode?.port.postMessage({ type: 'setResonanceMaxReductionDb', maxReductionDb: db });
   });
   for (let c = 0; c < 5; c++) {
     $(`mute${c}`).addEventListener('change', () => {
