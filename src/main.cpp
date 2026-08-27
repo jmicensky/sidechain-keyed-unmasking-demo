@@ -324,6 +324,10 @@ int main(int argc, char** argv) {
         {13.0, "Live compressor param change mid-playback: threshold -18dB, ratio 8:1, attack 1ms, release 400ms",
             [&]{ engine.setThresholdDb(-18.0); engine.setRatio(8.0);
                  engine.setAttackMs(1.0); engine.setReleaseMs(400.0); }},
+        {14.0, "Knee to 0 (hard knee) mid-playback - exercises the W->0 guard in GainComputer",
+            [&]{ engine.setKneeDb(0.0); }},
+        {15.0, "Knee to 24 (very soft) mid-playback",
+            [&]{ engine.setKneeDb(24.0); }},
     };
 
     std::cout << "\nRunning scripted timeline (" << durationSec << "s, "

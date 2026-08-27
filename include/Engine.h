@@ -123,6 +123,14 @@ public:
         gainComputer_.setParams(params_);
     }
 
+    // Knee width in dB (W in GainComputer's Eq. 2). 0 = hard knee (gain
+    // curve bends instantly at the threshold); larger = softer, wider
+    // transition centered on the threshold.
+    void setKneeDb(double kneeDb) {
+        params_.kneeDb = kneeDb;
+        gainComputer_.setParams(params_);
+    }
+
     void setAttackMs(double attackMs) {
         params_.attackMs = attackMs;
         detector_.setTimes(params_.attackMs, params_.releaseMs);

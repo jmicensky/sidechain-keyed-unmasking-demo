@@ -54,7 +54,12 @@ public:
         const double W = params_.kneeDb;
 
         double gainDb;
-        if (levelDb < T - W / 2.0) {
+        if (W < kMinKneeDb) {
+            // Hard knee: the quadratic transition branch below divides by W,
+            // so guard the W->0 limit explicitly rather than let it hit a
+            // division by zero on a sample that lands exactly at T.
+            gainDb = (levelDb <= T) ? 0.0 : (1.0 / R - 1.0) * (levelDb - T);
+        } else if (levelDb < T - W / 2.0) {
             gainDb = 0.0;
         } else if (levelDb > T + W / 2.0) {
             gainDb = (1.0 / R - 1.0) * (levelDb - T);
@@ -66,6 +71,7 @@ public:
     }
 
 private:
+    static constexpr double kMinKneeDb = 1e-6;
     CompressorParams params_;
 };
 

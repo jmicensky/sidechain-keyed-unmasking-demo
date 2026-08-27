@@ -112,6 +112,11 @@ void engine_set_ratio(Engine* e, double ratio) {
 }
 
 EMSCRIPTEN_KEEPALIVE
+void engine_set_knee_db(Engine* e, double kneeDb) {
+    e->setKneeDb(kneeDb);
+}
+
+EMSCRIPTEN_KEEPALIVE
 void engine_set_attack_ms(Engine* e, double attackMs) {
     e->setAttackMs(attackMs);
 }

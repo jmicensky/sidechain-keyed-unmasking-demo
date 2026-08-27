@@ -24,7 +24,7 @@
   .compressor-controls { margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e5e5e5; display: flex; flex-direction: column; gap: 8px; }
   .compressor-header { font-weight: 600; color: #444; }
   .compressor-header .hint { font-weight: 400; color: #999; }
-  #thresholdDb { vertical-align: middle; width: 160px; }
+  #thresholdDb, #kneeDb { vertical-align: middle; width: 160px; }
   #status { color: #666; font-size: 13px; }
   .gain-viz-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; font-size: 13px; color: #444; }
   .gain-viz-container { width: 100%; height: 150px; background: #fbfbfb; border: 1px solid #e0e0e0; border-radius: 4px; margin-bottom: 16px; }
@@ -85,6 +85,10 @@
       <label>Threshold:
         <input type="range" id="thresholdDb" min="-60" max="0" step="1" value="-30">
         <span id="thresholdReadout" class="time">-30 dB</span>
+      </label>
+      <label>Knee:
+        <input type="range" id="kneeDb" min="0" max="24" step="1" value="6">
+        <span id="kneeReadout" class="time">6 dB soft</span>
       </label>
       <label>Ratio:
         <select id="ratio">

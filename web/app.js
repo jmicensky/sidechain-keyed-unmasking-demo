@@ -319,6 +319,7 @@ function applyAllControls() {
   port.postMessage({ type: 'setKeyChannel', channel: parseInt($('keyChannel').value, 10) });
   port.postMessage({ type: 'setMode', mode: parseInt($('duckMode').value, 10) });
   port.postMessage({ type: 'setThresholdDb', thresholdDb: parseFloat($('thresholdDb').value) });
+  port.postMessage({ type: 'setKneeDb', kneeDb: parseFloat($('kneeDb').value) });
   port.postMessage({ type: 'setRatio', ratio: parseFloat($('ratio').value) });
   port.postMessage({ type: 'setAttackMs', attackMs: parseFloat($('attackMs').value) });
   port.postMessage({ type: 'setReleaseMs', releaseMs: parseFloat($('releaseMs').value) });
@@ -375,6 +376,11 @@ function wireControls() {
     const db = parseFloat($('thresholdDb').value);
     $('thresholdReadout').textContent = `${db} dB`;
     engineNode?.port.postMessage({ type: 'setThresholdDb', thresholdDb: db });
+  });
+  $('kneeDb').addEventListener('input', () => {
+    const db = parseFloat($('kneeDb').value);
+    $('kneeReadout').textContent = db === 0 ? 'Hard knee' : `${db} dB soft`;
+    engineNode?.port.postMessage({ type: 'setKneeDb', kneeDb: db });
   });
   $('ratio').addEventListener('change', () => {
     engineNode?.port.postMessage({ type: 'setRatio', ratio: parseFloat($('ratio').value) });
