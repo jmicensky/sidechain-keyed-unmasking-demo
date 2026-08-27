@@ -4,37 +4,6 @@
 
 namespace demo {
 
-// Plain coefficient set, so a caller can compute RBJ coefficients once (e.g.
-// the trig-heavy peaking formula) and broadcast the same {b0,b1,b2,a1,a2} to
-// several Biquad instances that each need independent filter state but
-// identical response - see setCoeffs() below and ResonanceSuppressor.h.
-struct BiquadCoeffs {
-    double b0 = 1.0, b1 = 0.0, b2 = 0.0, a1 = 0.0, a2 = 0.0;
-};
-
-// Converts a peaking filter's -3dB bandwidth (in octaves) to the Q the RBJ
-// formulas expect. Inverse of BW = 2*asinh(1/(2Q))/ln(2).
-inline double bandwidthOctavesToQ(double bandwidthOctaves) {
-    return 1.0 / (2.0 * std::sinh(bandwidthOctaves * M_LN2 / 2.0));
-}
-
-// RBJ cookbook peaking (bell) EQ. Positive gainDb boosts, negative cuts;
-// 0 dB reduces exactly to the identity filter.
-inline BiquadCoeffs computePeakingCoeffs(double sampleRate, double fc, double gainDb, double q) {
-    double A = std::pow(10.0, gainDb / 40.0);
-    double w0 = 2.0 * M_PI * fc / sampleRate;
-    double cosw0 = std::cos(w0);
-    double alpha = std::sin(w0) / (2.0 * q);
-    double a0 = 1.0 + alpha / A;
-    BiquadCoeffs c;
-    c.b0 = (1.0 + alpha * A) / a0;
-    c.b1 = (-2.0 * cosw0) / a0;
-    c.b2 = (1.0 - alpha * A) / a0;
-    c.a1 = (-2.0 * cosw0) / a0;
-    c.a2 = (1.0 - alpha / A) / a0;
-    return c;
-}
-
 // Standard RBJ cookbook biquad, transposed direct form II for numerical
 // stability. Used as the building block for Butterworth/LR crossover stages.
 class Biquad {
@@ -63,29 +32,6 @@ public:
         a1_ = (-2.0 * cosw0) / a0;
         a2_ = (1.0 - alpha) / a0;
         reset();
-    }
-
-    // Constant 0 dB peak-gain bandpass (RBJ cookbook), used as an analysis
-    // filter (see SpectralAnalyzer) rather than for audio shaping.
-    void setBandpass(double sampleRate, double fc, double q) {
-        double w0 = 2.0 * M_PI * fc / sampleRate;
-        double cosw0 = std::cos(w0);
-        double alpha = std::sin(w0) / (2.0 * q);
-        double a0 = 1.0 + alpha;
-        b0_ = alpha / a0;
-        b1_ = 0.0;
-        b2_ = -alpha / a0;
-        a1_ = (-2.0 * cosw0) / a0;
-        a2_ = (1.0 - alpha) / a0;
-        reset();
-    }
-
-    // Adopts a precomputed coefficient set without touching filter state
-    // (z1_/z2_) - lets a dynamic notch's center frequency/depth change every
-    // sample without clicking, and lets several instances share one set of
-    // (trig-heavy) coefficients instead of each recomputing them.
-    void setCoeffs(const BiquadCoeffs& c) {
-        b0_ = c.b0; b1_ = c.b1; b2_ = c.b2; a1_ = c.a1; a2_ = c.a2;
     }
 
     void reset() { z1_ = 0.0; z2_ = 0.0; }

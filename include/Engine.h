@@ -11,21 +11,41 @@
 
 namespace demo {
 
+// A single-tap fixed delay line, used to time-align the "dry" signal path
+// with Resonance mode's STFT processing latency (see Engine::process()) -
+// without this, blending an undelayed dry sample against a
+// SpectralResonanceSuppressor::kLatencySamples-delayed ducked sample would
+// smear the keyBlend crossfade across ~43ms of misalignment.
+class DelayLine {
+public:
+    void prepare(int delaySamples) {
+        buf_.assign(std::max(1, delaySamples), 0.0);
+        writePos_ = 0;
+    }
+    double process(double x) {
+        double delayed = buf_[writePos_];
+        buf_[writePos_] = x;
+        writePos_ = (writePos_ + 1) % buf_.size();
+        return delayed;
+    }
+
+private:
+    std::vector<double> buf_;
+    size_t writePos_ = 0;
+};
+
 // Per-channel state: its own crossover filterbank per side (Advanced mode
 // only needs this when the channel is non-key, but we keep it running
 // continuously so filter state stays settled and mute/unmute never clicks)
 // plus a smoothed audibility gain for mute/solo. Separate L/R filterbanks
-// preserve the stereo image instead of collapsing each stem to mono. The
-// notch filters (up to kMaxPeaks per side, cascaded in series - only the
-// first Engine::resonanceNumPeaks() are actually used each sample) are
-// Resonance mode's equivalent of the crossover - every channel gets its own
-// filter *state*, but every channel's notches share the same coefficients
-// each sample (computed once from the shared SpectralAnalyzer, see
-// Engine::process()).
+// preserve the stereo image instead of collapsing each stem to mono.
+// Resonance mode's ducking is handled centrally by Engine's single shared
+// SpectralResonanceSuppressor instead of per-channel filter state, since
+// STFT analysis/resynthesis needs all 10 signals (5 classes x L/R) and the
+// shared key spectrum processed together each hop.
 struct ChannelStrip {
     CrossoverFilterbank crossoverL;
     CrossoverFilterbank crossoverR;
-    std::array<Biquad, SpectralAnalyzer::kMaxPeaks> notchL, notchR;
     Smoother audibleGain; // 0 = silent, 1 = fully audible
     bool muted = false;
     bool soloed = false;
@@ -51,10 +71,9 @@ public:
         params_ = params;
         gainComputer_.prepare(params_);
         detector_.prepare(sampleRate, params_.attackMs, params_.releaseMs);
-        resonanceAnalyzer_.prepare(sampleRate, params_.attackMs, params_.releaseMs);
-        resonanceAnalyzer_.setActivePeakCount(resonanceNumPeaks_);
-        resonanceAnalyzer_.setBandwidthOctaves(resonanceBandwidthOctaves_);
-        resonanceQ_ = bandwidthOctavesToQ(resonanceBandwidthOctaves_);
+        spectralSuppressor_.prepare(sampleRate, params_.attackMs, params_.releaseMs);
+        spectralSuppressor_.setActivePeakCount(resonanceNumPeaks_);
+        spectralSuppressor_.setBandwidthOctaves(resonanceBandwidthOctaves_);
         safetyGainLinear_ = std::pow(10.0, params_.safetyGainDb / 20.0);
 
         for (int c = 0; c < kNumClasses; ++c) {
@@ -64,6 +83,8 @@ public:
             strips_[c].audibleGain.reset(1.0); // audible by default
             keyBlend_[c].prepare(sampleRate, kKeyRampMs);
             keyBlend_[c].reset(0.0);
+            dryDelayL_[c].prepare(SpectralResonanceSuppressor::kLatencySamples);
+            dryDelayR_[c].prepare(SpectralResonanceSuppressor::kLatencySamples);
         }
         recomputeAudibility();
     }
@@ -112,9 +133,8 @@ public:
         recomputeAudibility();
     }
 
-    // Live sidechain compressor parameter updates. gainComputer_ and the
-    // attack/release-driven detectors (detector_, resonanceAnalyzer_) are
-    // shared across all three DuckModes, so these apply to Basic/Advanced's
+    // Live sidechain compressor parameter updates. gainComputer_ is shared
+    // across all three DuckModes, so these apply to Basic/Advanced's
     // single-band detector *and* Resonance mode's per-peak detection with no
     // extra plumbing - there's only ever one set of compressor parameters.
     void setThresholdDb(double thresholdDb) {
@@ -137,21 +157,20 @@ public:
 
     // Resonance-mode-only settings (not shared with Basic/Advanced).
     void setResonanceNumPeaks(int count) {
-        resonanceNumPeaks_ = std::clamp(count, 1, SpectralAnalyzer::kMaxPeaks);
-        resonanceAnalyzer_.setActivePeakCount(resonanceNumPeaks_);
+        resonanceNumPeaks_ = std::clamp(count, 1, SpectralResonanceSuppressor::kMaxPeaks);
+        spectralSuppressor_.setActivePeakCount(resonanceNumPeaks_);
     }
 
-    // Notch bandwidth in octaves (the -3dB width of each peaking filter).
-    // Also re-derives the minimum spacing between peaks so wider notches
-    // automatically push peaks further apart and can't overlap - see
-    // SpectralAnalyzer::setBandwidthOctaves().
+    // Width (in octaves) of the smooth gain-reduction bump applied around
+    // each detected peak. Also re-derives the minimum spacing between peaks
+    // so wider bumps automatically push peaks further apart and can't
+    // overlap - see SpectralResonanceSuppressor::setBandwidthOctaves().
     void setResonanceBandwidthOctaves(double bandwidthOctaves) {
         resonanceBandwidthOctaves_ = std::clamp(bandwidthOctaves, 0.05, 4.0);
-        resonanceQ_ = bandwidthOctavesToQ(resonanceBandwidthOctaves_);
-        resonanceAnalyzer_.setBandwidthOctaves(resonanceBandwidthOctaves_);
+        spectralSuppressor_.setBandwidthOctaves(resonanceBandwidthOctaves_);
     }
 
-    // Ceiling on how deep any single notch may cut, in dB (magnitude - pass
+    // Ceiling on how deep any single peak may cut, in dB (magnitude - pass
     // 24 for "at most -24dB", not -24).
     void setResonanceMaxReductionDb(double maxReductionDb) {
         resonanceMaxReductionDb_ = std::clamp(maxReductionDb, 0.0, 60.0);
@@ -160,13 +179,13 @@ public:
     void setAttackMs(double attackMs) {
         params_.attackMs = attackMs;
         detector_.setTimes(params_.attackMs, params_.releaseMs);
-        resonanceAnalyzer_.setTimes(params_.attackMs, params_.releaseMs);
+        spectralSuppressor_.setTimes(params_.attackMs, params_.releaseMs);
     }
 
     void setReleaseMs(double releaseMs) {
         params_.releaseMs = releaseMs;
         detector_.setTimes(params_.attackMs, params_.releaseMs);
-        resonanceAnalyzer_.setTimes(params_.attackMs, params_.releaseMs);
+        spectralSuppressor_.setTimes(params_.attackMs, params_.releaseMs);
     }
 
     // Process one block into separate L/R buffers (each must have room for
@@ -183,40 +202,39 @@ public:
             // --- 1. Sidechain detector: current key channel's mono-summed
             //     raw sample, gated to silence if that channel is muted.
             //     Basic/Advanced use a single-band envelope+gain (g);
-            //     Resonance uses the multi-peak spectral analyzer instead
-            //     and builds one shared notch coefficient set per peak for
-            //     step 2.
+            //     Resonance runs all 10 signals through the shared STFT
+            //     suppressor at once (it needs every channel's spectrum
+            //     alongside the key's to build/apply one shared per-bin
+            //     gain mask each hop - see SpectralResonanceSuppressor).
             double keyRaw = stemsMono_[keyChannel_][sampleIndex_];
             bool keyMuted = strips_[keyChannel_].muted;
             double detectorInput = keyMuted ? 0.0 : keyRaw;
 
             double g = 1.0;
-            std::array<BiquadCoeffs, SpectralAnalyzer::kMaxPeaks> notchCoeffs;
+            std::array<double, SpectralResonanceSuppressor::kNumSignals> spectralOut{};
+            std::array<double, SpectralResonanceSuppressor::kNumSignals> dryDelayed{};
+
             if (mode_ == DuckMode::Resonance) {
-                resonanceAnalyzer_.tick(detectorInput);
-                double minGain = 1.0;
-                for (int p = 0; p < resonanceNumPeaks_; ++p) {
-                    // A single ~0.5-octave analysis band inherently captures
-                    // far less energy than the full-band detector
-                    // Basic/Advanced use for the same real signal (energy is
-                    // spread across all 32 bands), so the same
-                    // CompressorParams threshold would almost never trigger
-                    // here without this compensation. +12 dB is an
-                    // empirical match (measured against the real
-                    // Construction Scene stems) for comparable trigger
-                    // sensitivity across modes - not a physically exact
-                    // correction.
-                    double level = resonanceAnalyzer_.levelDb(p) + kResonanceLevelCompensationDb;
-                    double gp = unmaskEnabled_ ? gainComputer_.computeLinearGain(level) : 1.0;
-                    double gainDb = 20.0 * std::log10(std::max(gp, 1e-6));
-                    gainDb = std::max(gainDb, -resonanceMaxReductionDb_); // user-set ceiling on reduction depth
-                    gp = std::pow(10.0, gainDb / 20.0); // keep the linear gain consistent with the clamp
-                    resonanceFreq_[p] = resonanceAnalyzer_.freq(p);
-                    resonanceGainLinear_[p] = gp;
-                    notchCoeffs[p] = computePeakingCoeffs(sampleRate_, resonanceFreq_[p], gainDb, resonanceQ_);
-                    minGain = std::min(minGain, gp);
+                std::array<double, SpectralResonanceSuppressor::kNumSignals> spectralIn;
+                for (int c = 0; c < kNumClasses; ++c) {
+                    double rawL = stemsL_[c][sampleIndex_];
+                    double rawR = stemsR_[c][sampleIndex_];
+                    spectralIn[SpectralResonanceSuppressor::signalIndex(c, 0)] = rawL;
+                    spectralIn[SpectralResonanceSuppressor::signalIndex(c, 1)] = rawR;
+                    // Delayed to match the STFT path's algorithmic latency,
+                    // so the dry/ducked keyBlend crossfade stays time-aligned.
+                    dryDelayed[SpectralResonanceSuppressor::signalIndex(c, 0)] =
+                        dryDelayL_[c].process(rawL * safetyGainLinear_);
+                    dryDelayed[SpectralResonanceSuppressor::signalIndex(c, 1)] =
+                        dryDelayR_[c].process(rawR * safetyGainLinear_);
                 }
-                lastGainLinear_ = minGain; // deepest of the notch cuts, for the single-number readout
+                spectralSuppressor_.tick(detectorInput, spectralIn.data(), spectralOut.data(),
+                                          gainComputer_, unmaskEnabled_, kResonanceLevelCompensationDb,
+                                          resonanceMaxReductionDb_);
+                lastGainLinear_ = 1.0;
+                for (int p = 0; p < resonanceNumPeaks_; ++p) {
+                    lastGainLinear_ = std::min(lastGainLinear_, spectralSuppressor_.gainLinear(p));
+                }
             } else {
                 double levelDb = detector_.tick(detectorInput);
                 g = unmaskEnabled_ ? gainComputer_.computeLinearGain(levelDb) : 1.0;
@@ -232,28 +250,26 @@ public:
                 double rawR = stemsR_[c][sampleIndex_];
                 double keyBlend = keyBlend_[c].tick(); // 1 = acting as key/dry
 
-                double dryL = rawL * safetyGainLinear_;
-                double dryR = rawR * safetyGainLinear_;
-                double duckedL, duckedR;
+                double dryL, dryR, duckedL, duckedR;
 
                 if (mode_ == DuckMode::Basic) {
+                    dryL = rawL * safetyGainLinear_;
+                    dryR = rawR * safetyGainLinear_;
                     duckedL = rawL * g;
                     duckedR = rawR * g;
                 } else if (mode_ == DuckMode::Advanced) {
+                    dryL = rawL * safetyGainLinear_;
+                    dryR = rawR * safetyGainLinear_;
                     double bandsL[4], bandsR[4];
                     strips_[c].crossoverL.tick(rawL, bandsL);
                     strips_[c].crossoverR.tick(rawR, bandsR);
                     duckedL = bandsL[0] + bandsL[1] + g * bandsL[2] + bandsL[3];
                     duckedR = bandsR[0] + bandsR[1] + g * bandsR[2] + bandsR[3];
-                } else { // Resonance: resonanceNumPeaks_ cascaded dynamic notches, same coeffs on both sides
-                    duckedL = rawL;
-                    duckedR = rawR;
-                    for (int p = 0; p < resonanceNumPeaks_; ++p) {
-                        strips_[c].notchL[p].setCoeffs(notchCoeffs[p]);
-                        strips_[c].notchR[p].setCoeffs(notchCoeffs[p]);
-                        duckedL = strips_[c].notchL[p].tick(duckedL);
-                        duckedR = strips_[c].notchR[p].tick(duckedR);
-                    }
+                } else { // Resonance
+                    dryL = dryDelayed[SpectralResonanceSuppressor::signalIndex(c, 0)];
+                    dryR = dryDelayed[SpectralResonanceSuppressor::signalIndex(c, 1)];
+                    duckedL = spectralOut[SpectralResonanceSuppressor::signalIndex(c, 0)];
+                    duckedR = spectralOut[SpectralResonanceSuppressor::signalIndex(c, 1)];
                 }
 
                 double outL = keyBlend * dryL + (1.0 - keyBlend) * duckedL;
@@ -276,26 +292,38 @@ public:
     // no reduction). In Basic mode this is the gain applied to the whole
     // signal; in Advanced mode it's the gain applied only within the
     // 300 Hz-1.8 kHz ducked band; in Resonance mode it's the deepest of the
-    // notch cuts (see kCrossoverMid/kCrossoverHigh, and the resonance*()
-    // getters below for the full per-notch state).
+    // per-peak cuts (see kCrossoverMid/kCrossoverHigh, and the resonance*()
+    // getters below for the full per-peak state).
     double lastGainLinear() const { return lastGainLinear_; }
 
-    // Resonance mode's dynamic notch centers (Hz) and depths (linear gain,
-    // 1.0 = no cut) from the most recently processed sample - only
-    // meaningful while setMode(DuckMode::Resonance) is active. peakIndex
-    // ranges over [0, resonanceNumPeaks()). Exposed primarily so the UI can
-    // draw the notches at their real, moving frequencies instead of a fixed
-    // band. kMaxResonancePeaks is the compile-time upper bound (array size);
+    // Resonance mode's dynamic peak centers (Hz) and depths (linear gain,
+    // 1.0 = no cut) from the most recently processed hop - only meaningful
+    // while setMode(DuckMode::Resonance) is active. peakIndex ranges over
+    // [0, resonanceNumPeaks()). Exposed primarily so the UI can draw the
+    // notches at their real, moving frequencies instead of a fixed band.
+    // kMaxResonancePeaks is the compile-time upper bound (array size);
     // resonanceNumPeaks() is the live, user-set count actually in use.
-    static constexpr int kMaxResonancePeaks = SpectralAnalyzer::kMaxPeaks;
+    static constexpr int kMaxResonancePeaks = SpectralResonanceSuppressor::kMaxPeaks;
     int resonanceNumPeaks() const { return resonanceNumPeaks_; }
-    double resonanceFreq(int peakIndex) const { return resonanceFreq_[peakIndex]; }
-    double resonanceGainLinear(int peakIndex) const { return resonanceGainLinear_[peakIndex]; }
+    double resonanceFreq(int peakIndex) const { return spectralSuppressor_.freq(peakIndex); }
+    double resonanceGainLinear(int peakIndex) const { return spectralSuppressor_.gainLinear(peakIndex); }
+
+    // Resonance mode's fixed algorithmic latency (STFT analysis/resynthesis
+    // window), in samples at the engine's prepared sample rate. 0 in
+    // Basic/Advanced (they're sample-accurate with no lookahead).
+    static constexpr int resonanceLatencySamples() { return SpectralResonanceSuppressor::kLatencySamples; }
 
 private:
     static constexpr double kAudibleRampMs = 8.0;
     static constexpr double kKeyRampMs = 30.0;
-    static constexpr double kResonanceLevelCompensationDb = 12.0; // see process()
+    // A single ~1-octave-wide analysis bump inherently captures far less
+    // energy than the full-band detector Basic/Advanced use for the same
+    // real signal, so the same CompressorParams threshold would almost
+    // never trigger here without this compensation. +12 dB is an empirical
+    // match (measured against the real Construction Scene stems) for
+    // comparable trigger sensitivity across modes - not a physically exact
+    // correction.
+    static constexpr double kResonanceLevelCompensationDb = 12.0;
 
     void recomputeAudibility() {
         bool anySoloed = false;
@@ -322,31 +350,24 @@ private:
     CompressorParams params_;
 
     // Resonance-mode-only settings. Defaults match the values this project
-    // shipped with before these became live-adjustable (4 peaks, ~1.16
-    // octaves bandwidth). Note the old fixed 3-band minimum separation was
-    // actually narrower than this bandwidth (~0.6 vs ~1.16 octaves), so
-    // notches could already overlap before setBandwidthOctaves() started
-    // deriving separation from the real bandwidth - see
-    // SpectralAnalyzer::setBandwidthOctaves().
+    // shipped with before these became live-adjustable.
     int resonanceNumPeaks_ = 4;
     double resonanceBandwidthOctaves_ = 1.16;
-    double resonanceQ_ = 1.2;
     double resonanceMaxReductionDb_ = 24.0;
 
     EnvelopeFollower detector_;
     GainComputer gainComputer_;
-    SpectralAnalyzer resonanceAnalyzer_;
+    SpectralResonanceSuppressor spectralSuppressor_;
 
     std::array<ChannelStrip, kNumClasses> strips_;
     std::array<Smoother, kNumClasses> keyBlend_;
+    std::array<DelayLine, kNumClasses> dryDelayL_, dryDelayR_;
     std::array<std::vector<float>, kNumClasses> stemsL_;
     std::array<std::vector<float>, kNumClasses> stemsR_;
     std::array<std::vector<float>, kNumClasses> stemsMono_; // sidechain detector input only
     size_t numFrames_ = 0;
     size_t sampleIndex_ = 0;
     double lastGainLinear_ = 1.0;
-    std::array<double, SpectralAnalyzer::kMaxPeaks> resonanceFreq_{};
-    std::array<double, SpectralAnalyzer::kMaxPeaks> resonanceGainLinear_{};
 };
 
 } // namespace demo
