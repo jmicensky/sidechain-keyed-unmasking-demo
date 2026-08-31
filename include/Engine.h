@@ -8,6 +8,7 @@
 #include "GainComputer.h"
 #include "Crossover.h"
 #include "ResonanceSuppressor.h"
+#include "WdrcCompressor.h"
 
 namespace demo {
 
@@ -75,6 +76,12 @@ public:
         spectralSuppressor_.setActivePeakCount(resonanceNumPeaks_);
         spectralSuppressor_.setBandwidthOctaves(resonanceBandwidthOctaves_);
         safetyGainLinear_ = std::pow(10.0, params_.safetyGainDb / 20.0);
+
+        wdrcCompressor_.prepare(sampleRate);
+        wdrcCompressor_.setThresholdDb(wdrcThresholdDb_);
+        wdrcCompressor_.setRatio(wdrcRatio_);
+        wdrcCompressor_.setMakeupGainDb(wdrcMakeupGainDb_);
+        wdrcCompressor_.setBypassed(wdrcBypassed_);
 
         for (int c = 0; c < kNumClasses; ++c) {
             strips_[c].crossoverL.prepare(sampleRate);
@@ -174,6 +181,29 @@ public:
     // 24 for "at most -24dB", not -24).
     void setResonanceMaxReductionDb(double maxReductionDb) {
         resonanceMaxReductionDb_ = std::clamp(maxReductionDb, 0.0, 60.0);
+    }
+
+    // Output-bus WDRC compressor (see WdrcCompressor.h) - a separate stage
+    // from the sidechain-keyed ducking compressor above. Applied once to
+    // the final 5-channel mix, after ducking, not per-channel or per-mode.
+    void setWdrcBypassed(bool bypassed) {
+        wdrcBypassed_ = bypassed;
+        wdrcCompressor_.setBypassed(bypassed);
+    }
+
+    void setWdrcThresholdDb(double thresholdDb) {
+        wdrcThresholdDb_ = thresholdDb;
+        wdrcCompressor_.setThresholdDb(thresholdDb);
+    }
+
+    void setWdrcRatio(double ratio) {
+        wdrcRatio_ = ratio;
+        wdrcCompressor_.setRatio(ratio);
+    }
+
+    void setWdrcMakeupGainDb(double makeupGainDb) {
+        wdrcMakeupGainDb_ = makeupGainDb;
+        wdrcCompressor_.setMakeupGainDb(makeupGainDb);
     }
 
     void setAttackMs(double attackMs) {
@@ -279,8 +309,14 @@ public:
                 mixR += audible * outR;
             }
 
-            outputL[i] = static_cast<float>(mixL);
-            outputR[i] = static_cast<float>(mixR);
+            // --- 3. Output-bus WDRC compressor, applied once to the final
+            //     mix of all 5 channels - independent of duck mode and of
+            //     the sidechain-keyed compressor above.
+            double finalL, finalR;
+            wdrcCompressor_.tick(mixL, mixR, finalL, finalR);
+
+            outputL[i] = static_cast<float>(finalL);
+            outputR[i] = static_cast<float>(finalR);
             ++sampleIndex_;
         }
     }
@@ -355,9 +391,20 @@ private:
     double resonanceBandwidthOctaves_ = 1.16;
     double resonanceMaxReductionDb_ = 24.0;
 
+    // Output-bus WDRC settings. Starts bypassed so loading the app doesn't
+    // change existing default behavior; threshold/ratio default to a mild,
+    // typical WDRC starting point (gentler than the ducking compressor's
+    // punchier defaults - WDRC is meant to gently compress most normal-level
+    // material, not just react to loud transients).
+    bool wdrcBypassed_ = true;
+    double wdrcThresholdDb_ = -24.0;
+    double wdrcRatio_ = 2.0;
+    double wdrcMakeupGainDb_ = 0.0;
+
     EnvelopeFollower detector_;
     GainComputer gainComputer_;
     SpectralResonanceSuppressor spectralSuppressor_;
+    WdrcCompressor wdrcCompressor_;
 
     std::array<ChannelStrip, kNumClasses> strips_;
     std::array<Smoother, kNumClasses> keyBlend_;

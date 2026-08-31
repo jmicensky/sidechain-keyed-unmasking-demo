@@ -336,6 +336,14 @@ int main(int argc, char** argv) {
             [&]{ engine.setResonanceNumPeaks(8); engine.setResonanceBandwidthOctaves(0.1); }},
         {19.0, "Resonance: max reduction clamped to 3dB",
             [&]{ engine.setResonanceMaxReductionDb(3.0); }},
+        {20.0, "WDRC output compressor: unbypass, threshold -30dB, ratio 3:1",
+            [&]{ engine.setWdrcBypassed(false); engine.setWdrcThresholdDb(-30.0); engine.setWdrcRatio(3.0); }},
+        {21.0, "WDRC: add +6dB makeup gain",
+            [&]{ engine.setWdrcMakeupGainDb(6.0); }},
+        {22.0, "WDRC: sweep to a hard-limiting ratio (10:1) mid-playback",
+            [&]{ engine.setWdrcRatio(10.0); }},
+        {23.0, "WDRC: re-bypass mid-playback",
+            [&]{ engine.setWdrcBypassed(true); }},
     };
 
     std::cout << "\nRunning scripted timeline (" << durationSec << "s, "

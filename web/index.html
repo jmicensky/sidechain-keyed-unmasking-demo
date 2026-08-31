@@ -24,7 +24,7 @@
   .compressor-controls { margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e5e5e5; display: flex; flex-direction: column; gap: 8px; }
   .compressor-header { font-weight: 600; color: #444; }
   .compressor-header .hint { font-weight: 400; color: #999; }
-  #thresholdDb, #kneeDb, #resonanceBandwidth, #resonanceMaxReduction { vertical-align: middle; width: 160px; }
+  #thresholdDb, #kneeDb, #resonanceBandwidth, #resonanceMaxReduction, #wdrcThresholdDb, #wdrcRatio, #wdrcMakeupGainDb { vertical-align: middle; width: 160px; }
   #status { color: #666; font-size: 13px; }
   .gain-viz-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; font-size: 13px; color: #444; }
   .gain-viz-container { width: 100%; height: 150px; background: #fbfbfb; border: 1px solid #e0e0e0; border-radius: 4px; margin-bottom: 16px; }
@@ -136,6 +136,23 @@
       <label>Max Reduction:
         <input type="range" id="resonanceMaxReduction" min="0" max="40" step="1" value="24">
         <span id="resonanceMaxReductionReadout" class="time">24 dB</span>
+      </label>
+    </div>
+
+    <div class="compressor-controls">
+      <div class="compressor-header">Output Compressor (WDRC) <span class="hint">applied once to the final 5-channel mix, independent of duck mode</span></div>
+      <label><input type="checkbox" id="wdrcBypassed" checked> Bypassed</label>
+      <label>Threshold:
+        <input type="range" id="wdrcThresholdDb" min="-50" max="0" step="1" value="-24">
+        <span id="wdrcThresholdReadout" class="time">-24 dB</span>
+      </label>
+      <label>Ratio:
+        <input type="range" id="wdrcRatio" min="1" max="10" step="0.1" value="2">
+        <span id="wdrcRatioReadout" class="time">2.0:1</span>
+      </label>
+      <label>Makeup Gain:
+        <input type="range" id="wdrcMakeupGainDb" min="-12" max="24" step="1" value="0">
+        <span id="wdrcMakeupGainReadout" class="time">0 dB</span>
       </label>
     </div>
   </div>

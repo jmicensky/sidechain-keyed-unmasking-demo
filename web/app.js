@@ -387,6 +387,10 @@ function applyAllControls() {
   port.postMessage({ type: 'setResonanceNumPeaks', count: parseInt($('resonanceNumPeaks').value, 10) });
   port.postMessage({ type: 'setResonanceBandwidthOctaves', bandwidthOctaves: parseFloat($('resonanceBandwidth').value) });
   port.postMessage({ type: 'setResonanceMaxReductionDb', maxReductionDb: parseFloat($('resonanceMaxReduction').value) });
+  port.postMessage({ type: 'setWdrcBypassed', bypassed: $('wdrcBypassed').checked });
+  port.postMessage({ type: 'setWdrcThresholdDb', thresholdDb: parseFloat($('wdrcThresholdDb').value) });
+  port.postMessage({ type: 'setWdrcRatio', ratio: parseFloat($('wdrcRatio').value) });
+  port.postMessage({ type: 'setWdrcMakeupGainDb', makeupGainDb: parseFloat($('wdrcMakeupGainDb').value) });
   for (let c = 0; c < 5; c++) {
     port.postMessage({ type: 'setMute', channel: c, muted: $(`mute${c}`).checked });
     port.postMessage({ type: 'setSolo', channel: c, soloed: $(`solo${c}`).checked });
@@ -468,6 +472,24 @@ function wireControls() {
     const db = parseFloat($('resonanceMaxReduction').value);
     $('resonanceMaxReductionReadout').textContent = `${db} dB`;
     engineNode?.port.postMessage({ type: 'setResonanceMaxReductionDb', maxReductionDb: db });
+  });
+  $('wdrcBypassed').addEventListener('change', () => {
+    engineNode?.port.postMessage({ type: 'setWdrcBypassed', bypassed: $('wdrcBypassed').checked });
+  });
+  $('wdrcThresholdDb').addEventListener('input', () => {
+    const db = parseFloat($('wdrcThresholdDb').value);
+    $('wdrcThresholdReadout').textContent = `${db} dB`;
+    engineNode?.port.postMessage({ type: 'setWdrcThresholdDb', thresholdDb: db });
+  });
+  $('wdrcRatio').addEventListener('input', () => {
+    const r = parseFloat($('wdrcRatio').value);
+    $('wdrcRatioReadout').textContent = `${r.toFixed(1)}:1`;
+    engineNode?.port.postMessage({ type: 'setWdrcRatio', ratio: r });
+  });
+  $('wdrcMakeupGainDb').addEventListener('input', () => {
+    const db = parseFloat($('wdrcMakeupGainDb').value);
+    $('wdrcMakeupGainReadout').textContent = `${db} dB`;
+    engineNode?.port.postMessage({ type: 'setWdrcMakeupGainDb', makeupGainDb: db });
   });
   for (let c = 0; c < 5; c++) {
     $(`mute${c}`).addEventListener('change', () => {

@@ -75,6 +75,14 @@ class EngineProcessor extends AudioWorkletProcessor {
         m._engine_set_resonance_bandwidth_octaves(e, msg.bandwidthOctaves); break;
       case 'setResonanceMaxReductionDb':
         m._engine_set_resonance_max_reduction_db(e, msg.maxReductionDb); break;
+      case 'setWdrcBypassed':
+        m._engine_set_wdrc_bypassed(e, msg.bypassed ? 1 : 0); break;
+      case 'setWdrcThresholdDb':
+        m._engine_set_wdrc_threshold_db(e, msg.thresholdDb); break;
+      case 'setWdrcRatio':
+        m._engine_set_wdrc_ratio(e, msg.ratio); break;
+      case 'setWdrcMakeupGainDb':
+        m._engine_set_wdrc_makeup_gain_db(e, msg.makeupGainDb); break;
       case 'seek':
         m._engine_reset_playhead(e); break;
       default:

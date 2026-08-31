@@ -126,6 +126,28 @@ void engine_set_release_ms(Engine* e, double releaseMs) {
     e->setReleaseMs(releaseMs);
 }
 
+// Output-bus WDRC compressor (see Engine::setWdrc*() doc comment) - applied
+// once to the final 5-channel mix, independent of duck mode.
+EMSCRIPTEN_KEEPALIVE
+void engine_set_wdrc_bypassed(Engine* e, int bypassed) {
+    e->setWdrcBypassed(bypassed != 0);
+}
+
+EMSCRIPTEN_KEEPALIVE
+void engine_set_wdrc_threshold_db(Engine* e, double thresholdDb) {
+    e->setWdrcThresholdDb(thresholdDb);
+}
+
+EMSCRIPTEN_KEEPALIVE
+void engine_set_wdrc_ratio(Engine* e, double ratio) {
+    e->setWdrcRatio(ratio);
+}
+
+EMSCRIPTEN_KEEPALIVE
+void engine_set_wdrc_makeup_gain_db(Engine* e, double makeupGainDb) {
+    e->setWdrcMakeupGainDb(makeupGainDb);
+}
+
 // Resonance-mode-only settings (see Engine::setResonance*() doc comments) -
 // not shared with Basic/Advanced.
 EMSCRIPTEN_KEEPALIVE
