@@ -148,6 +148,11 @@ void engine_set_wdrc_makeup_gain_db(Engine* e, double makeupGainDb) {
     e->setWdrcMakeupGainDb(makeupGainDb);
 }
 
+EMSCRIPTEN_KEEPALIVE
+double engine_wdrc_gain_reduction_db(Engine* e) {
+    return e->wdrcGainReductionDb();
+}
+
 // Resonance-mode-only settings (see Engine::setResonance*() doc comments) -
 // not shared with Basic/Advanced.
 EMSCRIPTEN_KEEPALIVE

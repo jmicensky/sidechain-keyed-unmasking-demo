@@ -22,8 +22,12 @@
   .channel-header label { font-size: 13px; color: #333; }
   .controls { margin-top: 18px; padding-top: 14px; border-top: 1px solid #eee; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
   .compressor-controls { margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e5e5e5; display: flex; flex-direction: column; gap: 8px; }
-  .compressor-header { font-weight: 600; color: #444; }
+  .compressor-header { font-weight: 600; color: #444; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .compressor-header .hint { font-weight: 400; color: #999; }
+  .gr-meter { display: inline-flex; align-items: center; gap: 5px; font-weight: 400; }
+  .gr-meter-track { width: 60px; height: 5px; background: #eee; border-radius: 3px; overflow: hidden; }
+  .gr-meter-fill { display: block; height: 100%; width: 0%; background: #c98a3a; }
+  .gr-meter-label { font-size: 11px; color: #999; font-variant-numeric: tabular-nums; min-width: 34px; }
   #thresholdDb, #kneeDb, #resonanceBandwidth, #resonanceMaxReduction, #wdrcThresholdDb, #wdrcRatio, #wdrcMakeupGainDb { vertical-align: middle; width: 160px; }
   #status { color: #666; font-size: 13px; }
   .gain-viz-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; font-size: 13px; color: #444; }
@@ -140,7 +144,13 @@
     </div>
 
     <div class="compressor-controls">
-      <div class="compressor-header">Output Compressor (WDRC) <span class="hint">applied once to the final 5-channel mix, independent of duck mode</span></div>
+      <div class="compressor-header">
+        Output Compressor (WDRC) <span class="hint">applied once to the final 5-channel mix, independent of duck mode</span>
+        <span class="gr-meter">
+          <span class="gr-meter-track"><span id="wdrcGrFill" class="gr-meter-fill"></span></span>
+          <span id="wdrcGrReadout" class="gr-meter-label">0.0 dB</span>
+        </span>
+      </div>
       <label><input type="checkbox" id="wdrcBypassed" checked> Bypassed</label>
       <label>Threshold:
         <input type="range" id="wdrcThresholdDb" min="-50" max="0" step="1" value="-24">

@@ -143,6 +143,7 @@ class EngineProcessor extends AudioWorkletProcessor {
       const e = this._enginePtr;
       const playhead = m._engine_playhead(e);
       const gainLinear = m._engine_last_gain_linear(e);
+      const wdrcGainReductionDb = m._engine_wdrc_gain_reduction_db(e);
       // Queried live (not cached) since the peak count can change mid-playback.
       const numPeaks = m._engine_resonance_num_peaks(e);
       const peaks = [];
@@ -152,7 +153,7 @@ class EngineProcessor extends AudioWorkletProcessor {
           gainLinear: m._engine_resonance_gain_linear(e, p),
         });
       }
-      this.port.postMessage({ type: 'playhead', frame: playhead, gainLinear, resonance: { peaks } });
+      this.port.postMessage({ type: 'playhead', frame: playhead, gainLinear, wdrcGainReductionDb, resonance: { peaks } });
     }
 
     return true;

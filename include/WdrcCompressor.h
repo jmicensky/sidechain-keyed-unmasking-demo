@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include "Crossover.h"
@@ -64,6 +65,7 @@ public:
             // costs nothing and can never subtly color the signal.
             outL = inL;
             outR = inR;
+            lastGainReductionDb_ = 0.0;
             return;
         }
 
@@ -72,19 +74,27 @@ public:
         filterbankR_.tick(inR, bandsR);
 
         double compressedL = 0.0, compressedR = 0.0;
+        double minGainDb = 0.0; // deepest cut among the 4 bands, for the meter
         for (int b = 0; b < kNumBands; ++b) {
             double mono = 0.5 * (bandsL[b] + bandsR[b]);
             double levelDb = bandDetectors_[b].tick(mono);
             double g = gainComputer_.computeLinearGain(levelDb);
+            minGainDb = std::min(minGainDb, 20.0 * std::log10(std::max(g, 1e-6)));
             compressedL += bandsL[b] * g;
             compressedR += bandsR[b] * g;
         }
+        lastGainReductionDb_ = minGainDb;
         compressedL *= makeupGainLinear_;
         compressedR *= makeupGainLinear_;
 
         outL = (1.0 - blend) * inL + blend * compressedL;
         outR = (1.0 - blend) * inR + blend * compressedR;
     }
+
+    // Deepest per-band cut from the most recently processed sample, in dB
+    // (0 = no reduction, negative = reduction amount) - for a gain-reduction
+    // meter. Always 0 while bypassed.
+    double lastGainReductionDb() const { return lastGainReductionDb_; }
 
 private:
     // Fixed WDRC-typical timing, not exposed as a control - the point of
@@ -101,6 +111,7 @@ private:
     CompressorParams params_;
     double makeupGainLinear_ = 1.0;
     Smoother bypassBlend_;
+    double lastGainReductionDb_ = 0.0;
 };
 
 } // namespace demo

@@ -349,6 +349,11 @@ public:
     // Basic/Advanced (they're sample-accurate with no lookahead).
     static constexpr int resonanceLatencySamples() { return SpectralResonanceSuppressor::kLatencySamples; }
 
+    // Deepest per-band cut the WDRC stage applied on the most recently
+    // processed sample, in dB (0 = no reduction). Always 0 while bypassed -
+    // for a small gain-reduction meter next to the WDRC controls.
+    double wdrcGainReductionDb() const { return wdrcCompressor_.lastGainReductionDb(); }
+
 private:
     static constexpr double kAudibleRampMs = 8.0;
     static constexpr double kKeyRampMs = 30.0;

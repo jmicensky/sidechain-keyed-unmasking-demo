@@ -292,6 +292,7 @@ function ensureAudioGraph() {
           currentGainDb = gainLinearToDb(msg.gainLinear);
           currentResonance = msg.resonance || currentResonance;
           updateGainVisualization();
+          updateWdrcMeter(msg.wdrcGainReductionDb || 0);
         }
       };
     });
@@ -371,6 +372,17 @@ function updateGainVisualization() {
     $('gainDbReadout').textContent = `${currentGainDb.toFixed(1)} dB`;
   }
   drawGainReduction($('gainViz'), currentGainDb, mode, currentResonance);
+}
+
+// Small/subtle meter next to the WDRC header - just a fill bar and a
+// number, not a full EQ-style graph like the sidechain/resonance meter
+// above (this stage has no frequency shape to show, just one overall
+// amount of reduction).
+const WDRC_METER_MAX_DB = 24;
+function updateWdrcMeter(reductionDb) {
+  const pct = Math.min(100, (Math.abs(reductionDb) / WDRC_METER_MAX_DB) * 100);
+  $('wdrcGrFill').style.width = `${pct}%`;
+  $('wdrcGrReadout').textContent = `${reductionDb.toFixed(1)} dB`;
 }
 
 function applyAllControls() {
@@ -564,3 +576,4 @@ refAudio.addEventListener('ended', () => {
 buildChannelRows();
 wireControls();
 updateGainVisualization();
+updateWdrcMeter(0);
