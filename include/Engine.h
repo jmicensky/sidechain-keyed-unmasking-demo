@@ -35,18 +35,18 @@ private:
     size_t writePos_ = 0;
 };
 
-// Per-channel state: its own crossover filterbank per side (Advanced mode
-// only needs this when the channel is non-key, but we keep it running
-// continuously so filter state stays settled and mute/unmute never clicks)
-// plus a smoothed audibility gain for mute/solo. Separate L/R filterbanks
-// preserve the stereo image instead of collapsing each stem to mono.
+// Per-channel state: a 2-point crossover split per side (below the active
+// unmask range / within it / above it - see Engine::updateUnmaskRange()),
+// kept running continuously so filter state stays settled and mute/unmute
+// never clicks, plus a smoothed audibility gain for mute/solo. Separate L/R
+// splits preserve the stereo image instead of collapsing each stem to mono.
 // Resonance mode's ducking is handled centrally by Engine's single shared
 // SpectralResonanceSuppressor instead of per-channel filter state, since
 // STFT analysis/resynthesis needs all 10 signals (5 classes x L/R) and the
 // shared key spectrum processed together each hop.
 struct ChannelStrip {
-    CrossoverFilterbank crossoverL;
-    CrossoverFilterbank crossoverR;
+    LR4Split unmaskHighSplitL, unmaskHighSplitR; // splits off content above the active range
+    LR4Split unmaskLowSplitL, unmaskLowSplitR;   // splits the remainder into below/within the range
     Smoother audibleGain; // 0 = silent, 1 = fully audible
     bool muted = false;
     bool soloed = false;
@@ -86,8 +86,6 @@ public:
         wdrcCompressor_.setReleaseMs(wdrcReleaseMs_);
 
         for (int c = 0; c < kNumClasses; ++c) {
-            strips_[c].crossoverL.prepare(sampleRate);
-            strips_[c].crossoverR.prepare(sampleRate);
             strips_[c].audibleGain.prepare(sampleRate, kAudibleRampMs);
             strips_[c].audibleGain.reset(1.0); // audible by default
             keyBlend_[c].prepare(sampleRate, kKeyRampMs);
@@ -95,6 +93,7 @@ public:
             dryDelayL_[c].prepare(SpectralResonanceSuppressor::kLatencySamples);
             dryDelayR_[c].prepare(SpectralResonanceSuppressor::kLatencySamples);
         }
+        updateUnmaskRange(keyChannel_); // Advanced mode's ducked band starts matching the default key channel
         recomputeAudibility();
     }
 
@@ -127,6 +126,10 @@ public:
     void setKeyChannel(int channel) {
         keyChannel_ = channel;
         updateKeyBlendTargets();
+        // Advanced duck mode's ducked band follows the newly-selected key
+        // channel's own frequency range - see updateUnmaskRange() and
+        // Types.h's kUnmaskFrequencyRanges.
+        updateUnmaskRange(channel);
     }
 
     void setMute(int channel, bool muted) {
@@ -306,11 +309,19 @@ public:
                 } else if (mode_ == DuckMode::Advanced) {
                     dryL = rawL * safetyGainLinear_;
                     dryR = rawR * safetyGainLinear_;
-                    double bandsL[4], bandsR[4];
-                    strips_[c].crossoverL.tick(rawL, bandsL);
-                    strips_[c].crossoverR.tick(rawR, bandsR);
-                    duckedL = bandsL[0] + bandsL[1] + g * bandsL[2] + bandsL[3];
-                    duckedR = bandsR[0] + bandsR[1] + g * bandsR[2] + bandsR[3];
+                    // Split into below/within/above the active unmask
+                    // range (see updateUnmaskRange()); only the within-
+                    // range content gets ducked by g, below/above pass
+                    // straight through - the ducked band tracks the key
+                    // channel's own frequency range instead of being fixed.
+                    double loA_L, aboveL, belowL, inRangeL;
+                    strips_[c].unmaskHighSplitL.tick(rawL, loA_L, aboveL);
+                    strips_[c].unmaskLowSplitL.tick(loA_L, belowL, inRangeL);
+                    double loA_R, aboveR, belowR, inRangeR;
+                    strips_[c].unmaskHighSplitR.tick(rawR, loA_R, aboveR);
+                    strips_[c].unmaskLowSplitR.tick(loA_R, belowR, inRangeR);
+                    duckedL = belowL + aboveL + g * inRangeL;
+                    duckedR = belowR + aboveR + g * inRangeR;
                 } else { // Resonance
                     dryL = dryDelayed[SpectralResonanceSuppressor::signalIndex(c, 0)];
                     dryR = dryDelayed[SpectralResonanceSuppressor::signalIndex(c, 1)];
@@ -342,10 +353,10 @@ public:
 
     // Sidechain-computed gain from the most recently processed sample (1.0 =
     // no reduction). In Basic mode this is the gain applied to the whole
-    // signal; in Advanced mode it's the gain applied only within the
-    // 300 Hz-1.8 kHz ducked band; in Resonance mode it's the deepest of the
-    // per-peak cuts (see kCrossoverMid/kCrossoverHigh, and the resonance*()
-    // getters below for the full per-peak state).
+    // signal; in Advanced mode it's the gain applied only within the active
+    // unmask range (see unmaskLowHz()/unmaskHighHz()); in Resonance mode
+    // it's the deepest of the per-peak cuts (see the resonance*() getters
+    // below for the full per-peak state).
     double lastGainLinear() const { return lastGainLinear_; }
 
     // Resonance mode's dynamic peak centers (Hz) and depths (linear gain,
@@ -369,6 +380,12 @@ public:
     // processed sample, in dB (0 = no reduction). Always 0 while bypassed -
     // for a small gain-reduction meter next to the WDRC controls.
     double wdrcGainReductionDb() const { return wdrcCompressor_.lastGainReductionDb(); }
+
+    // Advanced duck mode's currently active ducked band - tracks the key
+    // channel (see setKeyChannel()/updateUnmaskRange()). For the UI to show
+    // plainly that the band changed along with the key channel selection.
+    double unmaskLowHz() const { return unmaskLowHz_; }
+    double unmaskHighHz() const { return unmaskHighHz_; }
 
 private:
     static constexpr double kAudibleRampMs = 8.0;
@@ -399,12 +416,33 @@ private:
         }
     }
 
+    // Reconfigures every channel's Advanced-mode split points to the given
+    // class's frequency range (Types.h's kUnmaskFrequencyRanges), so the
+    // ducked band tracks whichever channel is currently unmasked. All 5
+    // strips get the same two edges - only the filter *state* is
+    // per-channel, matching the reasoning already used for the shared
+    // sidechain gain g: the point is ducking every OTHER channel within the
+    // key channel's own range, not each channel's own range.
+    void updateUnmaskRange(int channel) {
+        const UnmaskFreqRange& range = kUnmaskFrequencyRanges[channel];
+        unmaskLowHz_ = range.lowHz;
+        unmaskHighHz_ = range.highHz;
+        for (int c = 0; c < kNumClasses; ++c) {
+            strips_[c].unmaskHighSplitL.prepare(sampleRate_, unmaskHighHz_);
+            strips_[c].unmaskHighSplitR.prepare(sampleRate_, unmaskHighHz_);
+            strips_[c].unmaskLowSplitL.prepare(sampleRate_, unmaskLowHz_);
+            strips_[c].unmaskLowSplitR.prepare(sampleRate_, unmaskLowHz_);
+        }
+    }
+
     double sampleRate_ = 48000.0;
     DuckMode mode_ = DuckMode::Advanced;
     bool unmaskEnabled_ = false;
     int keyChannel_ = kDialogue;
     double safetyGainLinear_ = 1.0;
     CompressorParams params_;
+    double unmaskLowHz_ = kUnmaskFrequencyRanges[kDialogue].lowHz;
+    double unmaskHighHz_ = kUnmaskFrequencyRanges[kDialogue].highHz;
 
     // Resonance-mode-only settings. Defaults match the values this project
     // shipped with before these became live-adjustable.

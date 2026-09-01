@@ -28,6 +28,9 @@
   .gr-meter-track { width: 60px; height: 5px; background: #eee; border-radius: 3px; overflow: hidden; }
   .gr-meter-fill { display: block; height: 100%; width: 0%; background: #c98a3a; }
   .gr-meter-label { font-size: 11px; color: #999; font-variant-numeric: tabular-nums; min-width: 34px; }
+  .range-badge { background: #eef4fb; border: 1px solid #d3e3f5; border-radius: 4px; padding: 6px 10px; font-size: 13px; color: #2c5a8a; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .range-badge strong { font-variant-numeric: tabular-nums; }
+  .range-badge .hint { color: #6a8fb5; }
   #thresholdDb, #kneeDb, #resonanceBandwidth, #resonanceMaxReduction, #wdrcThresholdDb, #wdrcRatio, #wdrcMakeupGainDb, #wdrcAttackMs, #wdrcReleaseMs { vertical-align: middle; width: 160px; }
   #status { color: #666; font-size: 13px; }
   .gain-viz-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; font-size: 13px; color: #444; }
@@ -83,10 +86,14 @@
     <label>Mode:
       <select id="duckMode">
         <option value="0">Basic (full-band)</option>
-        <option value="1" selected>Advanced (band-limited 300Hz&ndash;1.8kHz)</option>
+        <option value="1" selected>Advanced (band-limited to key channel's range)</option>
         <option value="2">Resonance (4 dynamic notches, tracks key's spectral peaks)</option>
       </select>
     </label>
+    <div class="range-badge">
+      Advanced-mode ducked band: <strong id="unmaskRangeReadout">400Hz&ndash;7kHz</strong>
+      <span class="hint">tracks Key Channel (currently <span id="unmaskRangeChannelName">Dialogue</span>) - other channels get ducked only in this range</span>
+    </div>
 
     <div class="compressor-controls">
       <div class="compressor-header">Sidechain Compressor <span class="hint">(applies to all modes, including Resonance)</span></div>

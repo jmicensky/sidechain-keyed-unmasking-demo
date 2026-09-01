@@ -6,6 +6,19 @@
 
 const CLASS_NAMES = ['Dialogue', 'Music', 'Background Noise', 'Safety Alerts', 'Other'];
 
+// Mirrors Types.h's kUnmaskFrequencyRanges (same order as CLASS_NAMES).
+// Advanced duck mode only ducks other channels within whichever range
+// matches the currently-selected key channel - this table drives the
+// "Advanced-mode ducked band" badge and the gain-viz notch position, kept
+// in sync with the C++ side by hand since it's a fixed, rarely-changed table.
+const UNMASK_CHANNEL_RANGES = [
+  { lowHz: 400, highHz: 7000 },   // Dialogue
+  { lowHz: 75, highHz: 12000 },   // Music
+  { lowHz: 60, highHz: 2000 },    // Background Noise
+  { lowHz: 300, highHz: 2000 },   // Safety Alerts
+  { lowHz: 700, highHz: 12000 },  // Other
+];
+
 // Each scene's stems live in their own folder with their own file-naming
 // convention (the two scenes on disk don't match each other), so every
 // scene lists its own filenames explicitly rather than assuming a pattern.
@@ -122,9 +135,11 @@ function setPlayheadFraction(divId, fraction) {
 // currently being applied.
 //   Mode 0 (Basic)     - ducks the whole spectrum: one horizontal line at
 //                        the current dB level.
-//   Mode 1 (Advanced)  - ducks only 300 Hz-1.8 kHz (see Types.h
-//                        kCrossoverMid/kCrossoverHigh): flat at 0 dB
-//                        outside that band, dips only within it.
+//   Mode 1 (Advanced)  - ducks only within the active key channel's own
+//                        frequency range (see UNMASK_CHANNEL_RANGES above,
+//                        mirrored from Types.h kUnmaskFrequencyRanges): flat
+//                        at 0 dB outside that band, dips only within it. The
+//                        band moves when the Key Channel selection changes.
 //   Mode 2 (Resonance) - ducks several independently-moving frequencies
 //                        (the key's loudest, mutually-separated spectral
 //                        peaks): flat baseline with one notch dip per peak
@@ -133,9 +148,14 @@ function setPlayheadFraction(divId, fraction) {
 const GAIN_DB_MIN = -30;
 const GAIN_FREQ_MIN = 20;
 const GAIN_FREQ_MAX = 20000;
-const DUCK_BAND_LOW = 300;   // must match Types.h kCrossoverMid
-const DUCK_BAND_HIGH = 1800; // must match Types.h kCrossoverHigh
 const GAIN_VIZ_PAD_TOP = 6; // keeps the 0 dB resting line visible below the canvas edge
+
+// The Advanced-mode ducked band tracks whichever channel is the current key
+// (see UNMASK_CHANNEL_RANGES), not a fixed pair of edges.
+function currentUnmaskRange() {
+  const c = parseInt($('keyChannel').value, 10);
+  return UNMASK_CHANNEL_RANGES[c] || UNMASK_CHANNEL_RANGES[0];
+}
 
 let currentGainDb = 0;
 let currentResonance = { peaks: [] }; // [{freq, gainLinear}, ...], filled in once the engine reports real data
@@ -172,17 +192,24 @@ function drawGainReduction(canvas, gainDb, mode, resonance) {
     ctx.fillText(`${db}`, 3, y < 10 ? y + 11 : y - 3);
   });
 
-  // Frequency gridlines, with the fixed-band mode's edges highlighted
-  [100, 300, 1000, 1800, 10000].forEach((f) => {
+  // Frequency gridlines. In Advanced mode the ducked band's own edges are
+  // highlighted (and move with the Key Channel selection); other modes just
+  // show fixed context lines.
+  const unmaskRange = currentUnmaskRange();
+  const gridFreqs = mode === 1
+    ? [100, 1000, 10000, unmaskRange.lowHz, unmaskRange.highHz]
+    : [100, 1000, 10000];
+  gridFreqs.forEach((f) => {
     const x = freqToX(f);
-    const isCrossover = f === DUCK_BAND_LOW || f === DUCK_BAND_HIGH;
-    ctx.strokeStyle = isCrossover ? '#c4c4c4' : '#eee';
+    const isBandEdge = mode === 1 && (f === unmaskRange.lowHz || f === unmaskRange.highHz);
+    ctx.strokeStyle = isBandEdge ? '#c4c4c4' : '#eee';
     ctx.beginPath();
     ctx.moveTo(x + 0.5, 0);
     ctx.lineTo(x + 0.5, cssHeight);
     ctx.stroke();
     ctx.fillStyle = '#999';
-    ctx.fillText(f >= 1000 ? `${f / 1000}k` : `${f}`, Math.min(cssWidth - 22, x + 3), cssHeight - 3);
+    const label = f >= 1000 ? `${f / 1000}k` : `${Math.round(f)}`;
+    ctx.fillText(label, Math.min(cssWidth - 22, x + 3), cssHeight - 3);
   });
 
   const y0 = dbToY(0);
@@ -196,8 +223,8 @@ function drawGainReduction(canvas, gainDb, mode, resonance) {
     ctx.lineTo(cssWidth, yG);
     ctx.stroke();
   } else if (mode === 1) {
-    const xLow = freqToX(DUCK_BAND_LOW);
-    const xHigh = freqToX(DUCK_BAND_HIGH);
+    const xLow = freqToX(unmaskRange.lowHz);
+    const xHigh = freqToX(unmaskRange.highHz);
     ctx.beginPath();
     ctx.moveTo(0, y0);
     ctx.lineTo(xLow, y0);
@@ -374,6 +401,18 @@ function updateGainVisualization() {
   drawGainReduction($('gainViz'), currentGainDb, mode, currentResonance);
 }
 
+// Keeps the "Advanced-mode ducked band" badge in sync with the Key Channel
+// select - reads straight from UNMASK_CHANNEL_RANGES (not the engine), so it
+// updates instantly on dropdown change even before a scene is loaded or Play
+// is ever pressed.
+function updateUnmaskRangeBadge() {
+  const c = parseInt($('keyChannel').value, 10);
+  const range = UNMASK_CHANNEL_RANGES[c] || UNMASK_CHANNEL_RANGES[0];
+  const fmtHz = (hz) => (hz >= 1000 ? `${hz / 1000}kHz` : `${hz}Hz`);
+  $('unmaskRangeReadout').textContent = `${fmtHz(range.lowHz)}–${fmtHz(range.highHz)}`;
+  $('unmaskRangeChannelName').textContent = CLASS_NAMES[c];
+}
+
 // Small/subtle meter next to the WDRC header - just a fill bar and a
 // number, not a full EQ-style graph like the sidechain/resonance meter
 // above (this stage has no frequency shape to show, just one overall
@@ -449,6 +488,8 @@ function wireControls() {
   });
   $('keyChannel').addEventListener('change', () => {
     engineNode?.port.postMessage({ type: 'setKeyChannel', channel: parseInt($('keyChannel').value, 10) });
+    updateUnmaskRangeBadge();
+    updateGainVisualization(); // redraw so the ducked-band box tracks the new key channel's range
   });
   $('duckMode').addEventListener('change', () => {
     engineNode?.port.postMessage({ type: 'setMode', mode: parseInt($('duckMode').value, 10) });
@@ -587,5 +628,6 @@ refAudio.addEventListener('ended', () => {
 
 buildChannelRows();
 wireControls();
+updateUnmaskRangeBadge();
 updateGainVisualization();
 updateWdrcMeter(0);
