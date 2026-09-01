@@ -116,6 +116,13 @@ void engine_set_knee_db(Engine* e, double kneeDb) {
     e->setKneeDb(kneeDb);
 }
 
+// Ceiling on Basic/Advanced ducking depth - see Engine::setMaxReductionDb()
+// doc comment. Distinct from engine_set_resonance_max_reduction_db below.
+EMSCRIPTEN_KEEPALIVE
+void engine_set_max_reduction_db(Engine* e, double maxReductionDb) {
+    e->setMaxReductionDb(maxReductionDb);
+}
+
 EMSCRIPTEN_KEEPALIVE
 void engine_set_attack_ms(Engine* e, double attackMs) {
     e->setAttackMs(attackMs);

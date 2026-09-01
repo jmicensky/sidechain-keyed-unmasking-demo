@@ -65,6 +65,8 @@ class EngineProcessor extends AudioWorkletProcessor {
         m._engine_set_ratio(e, msg.ratio); break;
       case 'setKneeDb':
         m._engine_set_knee_db(e, msg.kneeDb); break;
+      case 'setMaxReductionDb':
+        m._engine_set_max_reduction_db(e, msg.maxReductionDb); break;
       case 'setAttackMs':
         m._engine_set_attack_ms(e, msg.attackMs); break;
       case 'setReleaseMs':

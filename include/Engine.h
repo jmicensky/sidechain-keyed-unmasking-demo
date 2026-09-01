@@ -210,6 +210,18 @@ public:
         for (int c = 0; c < kNumClasses; ++c) syncPerChannelGainComputer(c);
     }
 
+    // Ceiling on how deep the Sidechain Compressor's threshold/ratio law may
+    // cut, in dB (magnitude - pass 6 for "at most -6dB"). Applied to Basic
+    // mode's full-band ducking and both Advanced-mode sub-modes (SummedBus
+    // and PerChannel - see clampGainLinear()) - anywhere the shared
+    // threshold/ratio/knee law computes a gain directly. Independent of and
+    // never applied to Resonance mode's own separate Max Reduction
+    // (resonanceMaxReductionDb_), which continues to clamp each detected
+    // peak's cut on its own - see setResonanceMaxReductionDb().
+    void setMaxReductionDb(double maxReductionDb) {
+        maxReductionDb_ = std::clamp(maxReductionDb, 0.0, 40.0);
+    }
+
     // Resonance-mode-only settings (not shared with Basic/Advanced).
     void setResonanceNumPeaks(int count) {
         resonanceNumPeaks_ = std::clamp(count, 1, SpectralResonanceSuppressor::kMaxPeaks);
@@ -336,6 +348,7 @@ public:
             } else {
                 sidechainLevelDb = detector_.tick(detectorInput);
                 g = unmaskEnabled_ ? gainComputer_.computeLinearGain(sidechainLevelDb) : 1.0;
+                g = clampGainLinear(g); // covers Basic mode directly, and Advanced-SummedBus via the "gForChannel = g" default below
                 lastGainLinear_ = g;
             }
 
@@ -382,6 +395,7 @@ public:
                     double gForChannel = g;
                     if (perChannelAdvanced) {
                         gForChannel = perChannelGainComputer_[c].computeLinearGain(sidechainLevelDb);
+                        gForChannel = clampGainLinear(gForChannel);
                         if (c != keyChannel_) minChannelGain = std::min(minChannelGain, gForChannel);
                     }
                     lastChannelGainLinear_[c] = gForChannel; // for the per-channel gain-reduction meter UI
@@ -519,6 +533,14 @@ private:
         perChannelGainComputer_[c].setParams(p);
     }
 
+    // Floors a linear gain at maxReductionDb_'s ceiling (never boosts - a
+    // gain already above that floor, i.e. cutting less, passes through
+    // unchanged). See setMaxReductionDb().
+    double clampGainLinear(double linearGain) const {
+        double floorLinear = std::pow(10.0, -maxReductionDb_ / 20.0);
+        return std::max(linearGain, floorLinear);
+    }
+
     double sampleRate_ = 48000.0;
     DuckMode mode_ = DuckMode::Advanced;
     bool unmaskEnabled_ = false;
@@ -536,6 +558,10 @@ private:
     std::array<double, kNumClasses> channelThresholdDb_{};
     std::array<double, kNumClasses> channelRatio_{};
     std::array<double, kNumClasses> lastChannelGainLinear_{1.0, 1.0, 1.0, 1.0, 1.0};
+    // Ceiling on Basic/Advanced ducking depth - see setMaxReductionDb().
+    // Default pulls reductions toward a more transparent -2 to -6dB range
+    // rather than letting the raw threshold/ratio law cut arbitrarily deep.
+    double maxReductionDb_ = 6.0;
 
     // Resonance-mode-only settings. Defaults match the values this project
     // shipped with before these became live-adjustable.
