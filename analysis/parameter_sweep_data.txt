@@ -1,0 +1,128 @@
+SIDECHAIN COMPRESSOR PARAMETER SWEEP -- FULL DATA
+Construction Scene, Dialogue priority class, Advanced (Summed-bus) duck mode
+Masking margin = Dialogue level minus estimated masker level, band-limited to 400Hz-7kHz
+STOI = Extended STOI (ESTOI) against the dry Dialogue stem
+======================================================================
+
+RUN 1
+  Source folder: -36Thesh20dBKnee_AttackFast_ReleaseSlow_4Ratio_2026-09-01_1105
+  Settings: Threshold -36 dB | Ratio 4:1 | Knee 20 dB | Attack 5 ms | Release 400 ms | Max Reduction 24 dB
+  Masking margin, mean / worst-case (dB):
+    Unprocessed    -3.32 /  -35.86
+    Basic           6.41 /  -35.83
+    Advanced        5.49 /  -35.91
+  STOI:
+    Unprocessed  0.393
+    Basic        0.588
+    Advanced     0.514
+  Advanced gain over unprocessed: margin +8.81 dB, STOI +0.121
+
+RUN 2  *** FOLDER NAME MISMATCH -- see note at bottom ***
+  Source folder: -24Thesh20dBKnee_AttackFast_ReleaseSlow_4Ratio_2026-09-01_1107
+  Settings: Threshold -36 dB | Ratio 4:1 | Knee 20 dB | Attack 5 ms | Release 400 ms | Max Reduction 24 dB
+  Masking margin, mean / worst-case (dB):
+    Unprocessed    -3.32 /  -35.86
+    Basic           6.41 /  -35.83
+    Advanced        5.49 /  -35.91
+  STOI:
+    Unprocessed  0.393
+    Basic        0.588
+    Advanced     0.514
+  Advanced gain over unprocessed: margin +8.81 dB, STOI +0.121
+
+RUN 3
+  Source folder: -48Thesh12dBKnee_AttackFast_ReleaseSlow_LowRatio_2026-09-01_1048
+  Settings: Threshold -48 dB | Ratio 1.5:1 | Knee 12 dB | Attack 5 ms | Release 400 ms | Max Reduction 24 dB
+  Masking margin, mean / worst-case (dB):
+    Unprocessed    -3.32 /  -35.86
+    Basic           6.29 /  -35.13
+    Advanced        5.34 /  -35.23
+  STOI:
+    Unprocessed  0.393
+    Basic        0.604
+    Advanced     0.517
+  Advanced gain over unprocessed: margin +8.66 dB, STOI +0.124
+
+RUN 4
+  Source folder: -48Thesh12dBKnee_AttackFast_Releasemedium_LowRatio_2026-09-01_1052
+  Settings: Threshold -48 dB | Ratio 1.5:1 | Knee 12 dB | Attack 5 ms | Release 120 ms | Max Reduction 24 dB
+  Masking margin, mean / worst-case (dB):
+    Unprocessed    -3.32 /  -35.86
+    Basic           4.52 /  -35.49
+    Advanced        3.87 /  -35.57
+  STOI:
+    Unprocessed  0.393
+    Basic        0.562
+    Advanced     0.506
+  Advanced gain over unprocessed: margin +7.20 dB, STOI +0.113
+
+RUN 5
+  Source folder: -36Thesh12dBKnee_AttackXFast_Releasemedium_LowRatio_2026-09-01_1057
+  Settings: Threshold -36 dB | Ratio 1.5:1 | Knee 12 dB | Attack 1 ms | Release 120 ms | Max Reduction 24 dB
+  Masking margin, mean / worst-case (dB):
+    Unprocessed    -3.32 /  -35.86
+    Basic           0.95 /  -35.83
+    Advanced        0.70 /  -35.90
+  STOI:
+    Unprocessed  0.393
+    Basic        0.484
+    Advanced     0.462
+  Advanced gain over unprocessed: margin +4.02 dB, STOI +0.069
+
+RUN 6
+  Source folder: -36Thesh12dBKnee_AttackFast_ReleaseSlow_LowRatio_2026-09-01_1101
+  Settings: Threshold -36 dB | Ratio 1.5:1 | Knee 12 dB | Attack 5 ms | Release 400 ms | Max Reduction 24 dB
+  Masking margin, mean / worst-case (dB):
+    Unprocessed    -3.32 /  -35.86
+    Basic           0.90 /  -35.85
+    Advanced        0.63 /  -35.92
+  STOI:
+    Unprocessed  0.393
+    Basic        0.488
+    Advanced     0.455
+  Advanced gain over unprocessed: margin +3.95 dB, STOI +0.062
+
+RUN 7
+  Source folder: -48Thesh12dBKnee_Attackslow_Releasemedium_LowRatio_2026-09-01_1055
+  Settings: Threshold -48 dB | Ratio 1.5:1 | Knee 12 dB | Attack 50 ms | Release 120 ms | Max Reduction 24 dB
+  Masking margin, mean / worst-case (dB):
+    Unprocessed    -3.32 /  -35.86
+    Basic           0.88 /  -35.85
+    Advanced        0.60 /  -35.92
+  STOI:
+    Unprocessed  0.393
+    Basic        0.490
+    Advanced     0.459
+  Advanced gain over unprocessed: margin +3.92 dB, STOI +0.066
+
+RUN 8
+  Source folder: -36Thesh12dBKnee_AttackMedium_Releasemedium_LowRatio_2026-09-01_1100
+  Settings: Threshold -36 dB | Ratio 1.5:1 | Knee 12 dB | Attack 15 ms | Release 120 ms | Max Reduction 24 dB
+  Masking margin, mean / worst-case (dB):
+    Unprocessed    -3.32 /  -35.86
+    Basic          -1.26 /  -35.85
+    Advanced       -1.54 /  -35.92
+  STOI:
+    Unprocessed  0.393
+    Basic        0.434
+    Advanced     0.426
+  Advanced gain over unprocessed: margin +1.78 dB, STOI +0.033
+
+RUN 9
+  Source folder: -24Thesh6dBKnee_AttackFast_ReleaseSlow_4Ratio_2026-09-01_1104
+  Settings: Threshold -24 dB | Ratio 4:1 | Knee 6 dB | Attack 5 ms | Release 400 ms | Max Reduction 24 dB
+  Masking margin, mean / worst-case (dB):
+    Unprocessed    -3.32 /  -35.86
+    Basic          -2.23 /  -35.85
+    Advanced       -2.44 /  -35.92
+  STOI:
+    Unprocessed  0.393
+    Basic        0.409
+    Advanced     0.406
+  Advanced gain over unprocessed: margin +0.88 dB, STOI +0.013
+
+----------------------------------------------------------------------
+NOTE ON RUN 2: its source folder is named with a -24dB threshold prefix,
+but the settings log saved with that export confirms -36dB was actually
+rendered -- it is an exact duplicate of Run 1, not a genuine -24dB/20dB-knee
+data point. Kept in this list rather than dropped, for transparency.
