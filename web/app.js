@@ -6,6 +6,19 @@
 
 const CLASS_NAMES = ['Dialogue', 'Music', 'Background Noise', 'Safety Alerts', 'Other'];
 
+// The WDRC compressor's per-class focus range. Must stay in sync with
+// WdrcCompressor.h's kWdrcChannelRanges - duplicated here (rather than
+// queried from the engine) so the "Focused range" badge updates instantly
+// when the Key Channel dropdown changes, even before Play is ever pressed
+// (the engine only reports state while process() is actually running).
+const WDRC_CHANNEL_RANGES = [
+  { lowHz: 400, highHz: 7000 },   // Dialogue
+  { lowHz: 75, highHz: 12000 },   // Music
+  { lowHz: 60, highHz: 2000 },    // Background Noise
+  { lowHz: 300, highHz: 2000 },   // Safety Alerts
+  { lowHz: 700, highHz: 12000 },  // Other
+];
+
 // Each scene's stems live in their own folder with their own file-naming
 // convention (the two scenes on disk don't match each other), so every
 // scene lists its own filenames explicitly rather than assuming a pattern.
@@ -385,6 +398,20 @@ function updateWdrcMeter(reductionDb) {
   $('wdrcGrReadout').textContent = `${reductionDb.toFixed(1)} dB`;
 }
 
+function fmtHz(hz) {
+  return hz >= 1000 ? `${hz / 1000}kHz` : `${hz}Hz`;
+}
+
+// Updates the "Focused range" badge from the current Key Channel selection.
+// Called on that dropdown's own change event (instant feedback - see
+// WDRC_CHANNEL_RANGES) as well as at load time, independent of playback.
+function updateWdrcRangeBadge() {
+  const c = parseInt($('keyChannel').value, 10);
+  const range = WDRC_CHANNEL_RANGES[c];
+  $('wdrcRangeReadout').textContent = `${fmtHz(range.lowHz)}–${fmtHz(range.highHz)}`;
+  $('wdrcRangeChannelName').textContent = CLASS_NAMES[c];
+}
+
 function applyAllControls() {
   if (!engineNode) return;
   const port = engineNode.port;
@@ -449,6 +476,7 @@ function wireControls() {
   });
   $('keyChannel').addEventListener('change', () => {
     engineNode?.port.postMessage({ type: 'setKeyChannel', channel: parseInt($('keyChannel').value, 10) });
+    updateWdrcRangeBadge();
   });
   $('duckMode').addEventListener('change', () => {
     engineNode?.port.postMessage({ type: 'setMode', mode: parseInt($('duckMode').value, 10) });
@@ -589,3 +617,4 @@ buildChannelRows();
 wireControls();
 updateGainVisualization();
 updateWdrcMeter(0);
+updateWdrcRangeBadge();

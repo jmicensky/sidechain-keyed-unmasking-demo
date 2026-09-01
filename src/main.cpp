@@ -348,6 +348,10 @@ int main(int argc, char** argv) {
             [&]{ engine.setWdrcBypassed(false); engine.setWdrcAttackMs(-5.0); engine.setWdrcReleaseMs(9000.0); }},
         {25.0, "WDRC: slow-acting end of the literature range (attack 50ms, release 3000ms)",
             [&]{ engine.setWdrcAttackMs(50.0); engine.setWdrcReleaseMs(3000.0); }},
+        {26.0, "WDRC: back to moderate settings, then key Safety Alerts->Music while active (range 300-2000Hz -> 75-12000Hz)",
+            [&]{ engine.setWdrcRatio(3.0); engine.setWdrcAttackMs(5.0); engine.setWdrcReleaseMs(80.0); engine.setKeyChannel(kMusic); }},
+        {27.0, "WDRC: key channel back to Safety Alerts (range back to 300-2000Hz), still active",
+            [&]{ engine.setKeyChannel(kSafetyAlerts); }},
         // NOTE: with this specific combination still active from earlier
         // events (ratio 10:1, +6dB makeup gain) plus this 50ms attack, the
         // click detector below will flag one real >0.35 jump around
