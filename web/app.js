@@ -48,6 +48,15 @@ let engineNode = null;
 let workletReady = null; // Promise, resolves once the AudioWorklet's WASM module has loaded
 let numFrames = 0;
 let sampleRate = 48000;
+// Independent copies of the currently-loaded scene's stems/blend, retained
+// specifically for "Export All Examples" offline renders. The live
+// loadStems postMessage below TRANSFERS its buffers (zero-copy, for
+// playback performance) which detaches them - these retained copies exist
+// so export can reuse the same sample data without re-fetching from the
+// network on every click.
+let retainedStemsL = null, retainedStemsR = null;
+let retainedBlendL = null, retainedBlendR = null;
+let retainedNumFrames = 0;
 let decomposedRunning = false;
 let blendBlobUrl = null; // revoked and replaced on every scene load
 
@@ -366,6 +375,15 @@ async function loadScene(sceneKey) {
   const channelsL = stems.map((s) => s.left.subarray(0, numFrames));
   const channelsR = stems.map((s) => s.right.subarray(0, numFrames));
 
+  // Retain independent copies before the transferring postMessage below
+  // detaches channelsL/R's buffers - see the module-level comment above.
+  retainedStemsL = channelsL.map((c) => c.slice());
+  retainedStemsR = channelsR.map((c) => c.slice());
+  const blendStereo = extractStereo(blendAudioBuf);
+  retainedBlendL = blendStereo.left.subarray(0, numFrames).slice();
+  retainedBlendR = blendStereo.right.subarray(0, numFrames).slice();
+  retainedNumFrames = numFrames;
+
   drawWaveform($('wave-blend'), blendMono.subarray(0, numFrames), '#555');
   for (let c = 0; c < 5; c++) {
     drawWaveform($(`wave${c}`), monoForWaveform[c], '#4a7fd6');
@@ -479,9 +497,13 @@ function updateWdrcMeter(reductionDb) {
   $('wdrcGrReadout').textContent = `${reductionDb.toFixed(1)} dB`;
 }
 
-function applyAllControls() {
-  if (!engineNode) return;
-  const port = engineNode.port;
+// Reads every control's current DOM value and pushes it to `port` (the live
+// engine's port by default). Also used to configure a temporary offline
+// engine instance for "Export All Examples" (see exportAllExamples()) so
+// an export captures exactly what's currently dialed in on the page.
+function applyAllControls(port) {
+  port = port || engineNode?.port;
+  if (!port) return;
   port.postMessage({ type: 'setUnmaskEnabled', enabled: $('unmaskEnabled').checked });
   port.postMessage({ type: 'setKeyChannel', channel: parseInt($('keyChannel').value, 10) });
   port.postMessage({ type: 'setMode', mode: parseInt($('duckMode').value, 10) });
@@ -508,6 +530,293 @@ function applyAllControls() {
   for (let c = 0; c < 5; c++) {
     port.postMessage({ type: 'setMute', channel: c, muted: $(`mute${c}`).checked });
     port.postMessage({ type: 'setSolo', channel: c, soloed: $(`solo${c}`).checked });
+  }
+}
+
+// ---------------------------------------------------------------------
+// "Export All Examples" - renders unprocessed / basic / processed (whatever
+// duck mode is currently selected) offline, using exactly the settings
+// currently dialed in on the page, and bundles them into a downloadable
+// zip. Basic and "processed" force Unmask on (otherwise, if the live
+// Unmask checkbox happens to be off, "processed" would trivially be
+// identical to "unprocessed" - not a useful comparison), and Basic always
+// forces Basic mode as a fixed reference point regardless of what's
+// selected; "processed" leaves the current mode (Basic/Advanced-SummedBus/
+// Advanced-PerChannel/Resonance) untouched.
+// ---------------------------------------------------------------------
+
+// Minimal RIFF/WAVE writer, IEEE float32 stereo - same format
+// (DR_WAVE_FORMAT_IEEE_FLOAT) as the native CLI's --static export mode
+// (see src/main.cpp writeWavStereo / analysis/compute_metrics.py), so
+// these browser exports can be fed into the same analysis pipeline.
+function encodeWavStereo(left, right, sr) {
+  const numFrames = left.length;
+  const blockAlign = 2 * 4; // 2 channels x 4 bytes (float32)
+  const dataSize = numFrames * blockAlign;
+  const buf = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buf);
+  let o = 0;
+  const writeStr = (s) => { for (let i = 0; i < s.length; i++) view.setUint8(o++, s.charCodeAt(i)); };
+  writeStr('RIFF');
+  view.setUint32(o, 36 + dataSize, true); o += 4;
+  writeStr('WAVE');
+  writeStr('fmt ');
+  view.setUint32(o, 16, true); o += 4;
+  view.setUint16(o, 3, true); o += 2; // format 3 = IEEE float
+  view.setUint16(o, 2, true); o += 2; // channels
+  view.setUint32(o, sr, true); o += 4;
+  view.setUint32(o, sr * blockAlign, true); o += 4; // byte rate
+  view.setUint16(o, blockAlign, true); o += 2;
+  view.setUint16(o, 32, true); o += 2; // bits per sample
+  writeStr('data');
+  view.setUint32(o, dataSize, true); o += 4;
+  for (let i = 0; i < numFrames; i++) {
+    view.setFloat32(o, left[i], true); o += 4;
+    view.setFloat32(o, right[i], true); o += 4;
+  }
+  return new Uint8Array(buf);
+}
+
+// Table-based CRC32 (standard zlib/ZIP polynomial) - needed for the ZIP
+// central directory; a per-bit implementation would be noticeably slow
+// over the ~30MB a full-length float32 stereo WAV works out to.
+const CRC_TABLE = (() => {
+  const table = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    table[n] = c >>> 0;
+  }
+  return table;
+})();
+function crc32(bytes) {
+  let crc = 0xFFFFFFFF;
+  for (let i = 0; i < bytes.length; i++) crc = CRC_TABLE[(crc ^ bytes[i]) & 0xFF] ^ (crc >>> 8);
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+
+// Minimal STORE-only (uncompressed) ZIP writer - no external dependency,
+// matching this project's zero-third-party-library web/ stack. Compression
+// wouldn't help much here anyway (WAV audio is already high-entropy), and
+// STORE keeps this simple: local file header + data per entry, then a
+// central directory, then the end-of-central-directory record.
+function createZip(files) {
+  const encoder = new TextEncoder();
+  const localParts = [];
+  const centralParts = [];
+  let offset = 0;
+  const now = new Date();
+  const dosTime = ((now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1)) & 0xFFFF;
+  const dosDate = (((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate()) & 0xFFFF;
+
+  for (const file of files) {
+    const nameBytes = encoder.encode(file.name);
+    const data = file.data;
+    const crc = crc32(data);
+
+    const local = new DataView(new ArrayBuffer(30));
+    local.setUint32(0, 0x04034b50, true);
+    local.setUint16(4, 20, true);
+    local.setUint16(6, 0, true);
+    local.setUint16(8, 0, true); // compression = store
+    local.setUint16(10, dosTime, true);
+    local.setUint16(12, dosDate, true);
+    local.setUint32(14, crc, true);
+    local.setUint32(18, data.length, true);
+    local.setUint32(22, data.length, true);
+    local.setUint16(26, nameBytes.length, true);
+    local.setUint16(28, 0, true);
+    localParts.push(new Uint8Array(local.buffer), nameBytes, data);
+
+    const central = new DataView(new ArrayBuffer(46));
+    central.setUint32(0, 0x02014b50, true);
+    central.setUint16(4, 20, true);
+    central.setUint16(6, 20, true);
+    central.setUint16(8, 0, true);
+    central.setUint16(10, 0, true);
+    central.setUint16(12, dosTime, true);
+    central.setUint16(14, dosDate, true);
+    central.setUint32(16, crc, true);
+    central.setUint32(20, data.length, true);
+    central.setUint32(24, data.length, true);
+    central.setUint16(28, nameBytes.length, true);
+    central.setUint16(30, 0, true);
+    central.setUint16(32, 0, true);
+    central.setUint16(34, 0, true);
+    central.setUint16(36, 0, true);
+    central.setUint32(38, 0, true);
+    central.setUint32(42, offset, true);
+    centralParts.push(new Uint8Array(central.buffer), nameBytes);
+
+    offset += 30 + nameBytes.length + data.length;
+  }
+
+  const centralDirOffset = offset;
+  const centralDirSize = centralParts.reduce((sum, p) => sum + p.length, 0);
+
+  const eocd = new DataView(new ArrayBuffer(22));
+  eocd.setUint32(0, 0x06054b50, true);
+  eocd.setUint16(4, 0, true);
+  eocd.setUint16(6, 0, true);
+  eocd.setUint16(8, files.length, true);
+  eocd.setUint16(10, files.length, true);
+  eocd.setUint32(12, centralDirSize, true);
+  eocd.setUint32(16, centralDirOffset, true);
+  eocd.setUint16(20, 0, true);
+
+  return new Blob([...localParts, ...centralParts, new Uint8Array(eocd.buffer)], { type: 'application/zip' });
+}
+
+function fmtExportTimestamp(date) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}_${pad(date.getHours())}${pad(date.getMinutes())}`;
+}
+
+// Slug + human-readable manifest line describing whatever duck mode is
+// currently selected - used both for the "processed" file's name and for
+// the settings.txt manifest bundled into the export.
+// `summary` is always a single line (safe to concatenate inline);
+// `detail`, when present, is extra indented lines meant to be appended on
+// their own line(s) below the summary - see buildExportManifest().
+function describeCurrentMode() {
+  const duckMode = parseInt($('duckMode').value, 10);
+  if (duckMode === 0) return { slug: 'basic', summary: 'Basic', detail: '' };
+  if (duckMode === 2) {
+    return {
+      slug: 'resonance',
+      summary: `Resonance (peaks=${$('resonanceNumPeaks').value}, bandwidth=${$('resonanceBandwidth').value}oct, maxReduction=${$('resonanceMaxReduction').value}dB)`,
+      detail: '',
+    };
+  }
+  const perChannel = parseInt($('advancedDuckingMode').value, 10) === 1;
+  if (!perChannel) {
+    return { slug: 'advanced_summedbus', summary: 'Advanced (Summed-bus)', detail: '' };
+  }
+  const perChannelLines = CLASS_NAMES.map((name, c) =>
+    `    ${name}: threshold=${$(`chThresholdDb${c}`).value}dB ratio=${$(`chRatio${c}`).value}:1`).join('\n');
+  return {
+    slug: 'advanced_perchannel',
+    summary: 'Advanced (Per-channel)',
+    detail: perChannelLines,
+  };
+}
+
+function buildExportManifest(folderName) {
+  const mode = describeCurrentMode();
+  const keyName = CLASS_NAMES[parseInt($('keyChannel').value, 10)];
+  const lines = [
+    `Export: ${folderName}`,
+    `Generated: ${new Date().toISOString()}`,
+    `Scene: ${$('sceneSelect').selectedOptions[0].textContent}`,
+    `Key channel: ${keyName}`,
+    '',
+    'Sidechain Compressor (shared, used by basic.wav and by processed.wav unless overridden by per-channel knobs):',
+    `  Threshold: ${$('thresholdDb').value}dB  Ratio: ${$('ratio').value}:1  Knee: ${$('kneeDb').value}dB`,
+    `  Attack: ${$('attackMs').value}ms  Release: ${$('releaseMs').value}ms  Max Reduction: ${$('maxReductionDb').value}dB`,
+    '',
+    'basic.wav: Basic mode, Unmask forced on, Sidechain Compressor settings above.',
+    `processed_${mode.slug}.wav: ${mode.summary} (Unmask forced on)${mode.detail ? '\n' + mode.detail : ''}`,
+    'unprocessed.wav: scene reference blend, unmodified.',
+  ];
+  return lines.join('\n');
+}
+
+function setExportStatus(msg) {
+  const el = $('exportStatus');
+  if (el) el.textContent = msg;
+}
+
+// Renders one full clip through a temporary, fully offline engine instance
+// (OfflineAudioContext + the same engine-processor AudioWorklet used for
+// live playback - reused as-is, since it doesn't distinguish online vs.
+// offline contexts) configured from the page's current control values via
+// applyAllControls(), with optional forced overrides. Explicitly waits for
+// 'ready' and 'stemsLoaded' before calling startRendering() - unlike live
+// playback (which stays suspended until Play is pressed, giving the async
+// WASM module load plenty of time to finish), OfflineAudioContext starts
+// pulling render quanta immediately, so without this wait the first quanta
+// could silently render as silence while the module was still loading.
+async function renderOfflineCondition({ forceMode, forceUnmaskEnabled = true } = {}) {
+  const offlineCtx = new OfflineAudioContext(2, retainedNumFrames, sampleRate);
+  await offlineCtx.audioWorklet.addModule('engine-worklet.js');
+  const node = new AudioWorkletNode(offlineCtx, 'engine-processor', {
+    numberOfInputs: 0,
+    numberOfOutputs: 1,
+    outputChannelCount: [2],
+  });
+  node.connect(offlineCtx.destination);
+
+  await new Promise((resolve, reject) => {
+    node.port.onmessage = (event) => {
+      const msg = event.data;
+      if (msg.type === 'ready') {
+        applyAllControls(node.port);
+        if (forceMode !== undefined) node.port.postMessage({ type: 'setMode', mode: forceMode });
+        if (forceUnmaskEnabled) node.port.postMessage({ type: 'setUnmaskEnabled', enabled: true });
+
+        const chL = retainedStemsL.map((c) => c.slice());
+        const chR = retainedStemsR.map((c) => c.slice());
+        node.port.postMessage(
+          { type: 'loadStems', channelsL: chL, channelsR: chR, numFrames: retainedNumFrames },
+          [...chL.map((c) => c.buffer), ...chR.map((c) => c.buffer)]
+        );
+      } else if (msg.type === 'stemsLoaded') {
+        resolve();
+      }
+    };
+    node.onprocessorerror = (e) => reject(new Error('AudioWorkletProcessor error during offline render'));
+  });
+
+  const rendered = await offlineCtx.startRendering();
+  return { left: rendered.getChannelData(0).slice(), right: rendered.getChannelData(1).slice() };
+}
+
+async function exportAllExamples() {
+  if (!retainedStemsL) {
+    setExportStatus('Load a scene first.');
+    return;
+  }
+  const btn = $('exportAllBtn');
+  btn.disabled = true;
+  try {
+    const projectName = ($('exportProjectName').value || 'export').trim().replace(/[\\/:*?"<>|]/g, '_');
+    localStorage.setItem('exportProjectName', projectName);
+    const folderName = `${projectName}_${fmtExportTimestamp(new Date())}`;
+
+    setExportStatus('Rendering 1/3: unprocessed...');
+    const unprocessed = { left: retainedBlendL, right: retainedBlendR };
+
+    setExportStatus('Rendering 2/3: basic...');
+    const basic = await renderOfflineCondition({ forceMode: 0, forceUnmaskEnabled: true });
+
+    const mode = describeCurrentMode();
+    setExportStatus(`Rendering 3/3: processed (${mode.slug})...`);
+    const processed = await renderOfflineCondition({ forceUnmaskEnabled: true });
+
+    setExportStatus('Zipping...');
+    const files = [
+      { name: `${folderName}/unprocessed.wav`, data: encodeWavStereo(unprocessed.left, unprocessed.right, sampleRate) },
+      { name: `${folderName}/basic.wav`, data: encodeWavStereo(basic.left, basic.right, sampleRate) },
+      { name: `${folderName}/processed_${mode.slug}.wav`, data: encodeWavStereo(processed.left, processed.right, sampleRate) },
+      { name: `${folderName}/settings.txt`, data: new TextEncoder().encode(buildExportManifest(folderName)) },
+    ];
+    const zipBlob = createZip(files);
+
+    const url = URL.createObjectURL(zipBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${folderName}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+
+    setExportStatus(`Exported ${folderName}.zip`);
+  } catch (err) {
+    console.error(err);
+    setExportStatus(`Export failed: ${err.message}`);
+  } finally {
+    btn.disabled = false;
   }
 }
 
@@ -694,6 +1003,17 @@ function wireControls() {
     }
   });
 
+  $('exportAllBtn').addEventListener('click', exportAllExamples);
+  $('exportProjectName').addEventListener('input', () => {
+    // Persist on every keystroke, not just on export - typing a name and
+    // reloading before ever clicking export shouldn't lose it.
+    try {
+      localStorage.setItem('exportProjectName', $('exportProjectName').value);
+    } catch (err) {
+      // ignore - see the startup restore's try/catch for why
+    }
+  });
+
   // Decomposed mix Play/Pause — starting it pauses the reference so only
   // one of the two is ever audible.
   $('playBtn').addEventListener('click', async () => {
@@ -742,6 +1062,14 @@ refAudio.addEventListener('timeupdate', () => {
 refAudio.addEventListener('ended', () => {
   $('refPlayBtn').textContent = 'Play';
 });
+
+try {
+  const savedProjectName = localStorage.getItem('exportProjectName');
+  if (savedProjectName) $('exportProjectName').value = savedProjectName;
+} catch (err) {
+  // localStorage can throw in some private-browsing configurations - the
+  // field just stays at its default placeholder value, harmless.
+}
 
 buildChannelRows();
 wireControls();

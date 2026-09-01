@@ -8,6 +8,9 @@
   h1 { font-size: 20px; margin-bottom: 4px; }
   h2 { font-size: 15px; text-transform: uppercase; letter-spacing: 0.04em; color: #444; margin: 0 0 10px; }
   .loadbar { display: flex; align-items: center; gap: 10px; margin: 14px 0 20px; }
+  .loadbar.export-bar { margin-top: -8px; flex-wrap: wrap; }
+  .export-bar #exportProjectName { width: 160px; padding: 3px 6px; }
+  .export-bar-note { flex-basis: 100%; }
   .panel { border: 1px solid #d8d8d8; border-radius: 8px; padding: 14px 18px 18px; margin: 14px 0; }
   .transport { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
   .transport button { min-width: 64px; }
@@ -57,6 +60,13 @@
   </select>
   <button id="loadBtn">Load Scene</button>
   <span id="status">Not loaded</span>
+</div>
+
+<div class="loadbar export-bar">
+  <input type="text" id="exportProjectName" placeholder="Project name" value="export">
+  <button id="exportAllBtn">Export All Examples</button>
+  <span id="exportStatus" class="hint"></span>
+  <span class="hint export-bar-note">renders unprocessed / basic / whatever mode is currently selected, using today's settings, into one downloaded zip</span>
 </div>
 
 <section class="panel">
