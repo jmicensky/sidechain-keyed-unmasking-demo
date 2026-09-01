@@ -1,8 +1,10 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <filesystem>
 #include <functional>
 #include <iostream>
+#include <map>
 #include <random>
 #include <string>
 #include <vector>
@@ -226,10 +228,240 @@ static int countClicks(const std::vector<float>& buf, float threshold) {
 }
 
 // ---------------------------------------------------------------------
+// Static-condition export mode (--static): renders one full clip under a
+// single fixed configuration with NO mid-clip parameter changes, for
+// generating comparable data across conditions (unprocessed/basic/advanced)
+// for objective intelligibility-metric analysis - see
+// analysis/compute_metrics.py. Deliberately a separate code path from the
+// scripted-timeline demo below main(): that path exists specifically to
+// exercise click/pop-free mid-playback changes, which is the opposite of
+// what a fixed-condition measurement needs. Only loads real scene stems -
+// never falls back to the synthetic generators above, so there is no RNG
+// anywhere in this path and a given command line is fully deterministic.
+// ---------------------------------------------------------------------
+
+struct SceneSpec {
+    std::vector<std::string> aliases; // acceptable --scene values
+    std::string dir;                  // includes trailing slash
+    std::string stemFiles[5];         // indexed like ClassIndex: Dialogue, Music, BG, Safety, Other
+    std::string blendFile;            // mastered reference "whole blend" track
+};
+
+static const std::vector<SceneSpec>& sceneTable() {
+    static const std::vector<SceneSpec> table = {
+        {{"Construction Scene", "Construction", "construction"}, "Construction Scene/",
+         {"Dialogue.wav", "MUSIC.wav", "BKG.wav", "SAFETY.wav", "OTHER.wav"}, "WHOLE BLEND.wav"},
+        {{"PublicTransit Scene", "PublicTransit", "publicTransit"}, "PublicTransit Scene/",
+         {"Dialogue_PublicTransit_01.wav", "MUSIC_publictransit_01.wav", "BKG_PublicTransit_01.wav",
+          "SAFETY_publictransit_01.wav", "OTHER_publictransit_01.wav"}, "WholeBlend_publictransit.wav"},
+    };
+    return table;
+}
+
+static const SceneSpec* findScene(const std::string& name) {
+    for (const auto& s : sceneTable()) {
+        for (const auto& alias : s.aliases) {
+            if (alias == name) return &s;
+        }
+    }
+    return nullptr;
+}
+
+static bool parseKeyChannel(const std::string& name, int& outIndex) {
+    for (int c = 0; c < kNumClasses; ++c) {
+        if (name == classIndexToName(c)) {
+            outIndex = c;
+            return true;
+        }
+    }
+    return false;
+}
+
+static std::map<std::string, std::string> parseFlags(int argc, char** argv, int startIndex) {
+    std::map<std::string, std::string> flags;
+    for (int i = startIndex; i + 1 < argc; i += 2) {
+        std::string key = argv[i];
+        if (key.size() > 2 && key[0] == '-' && key[1] == '-') {
+            flags[key.substr(2)] = argv[i + 1];
+        }
+    }
+    return flags;
+}
+
+static double flagDouble(const std::map<std::string, std::string>& flags, const std::string& key, double def) {
+    auto it = flags.find(key);
+    return it != flags.end() ? std::stod(it->second) : def;
+}
+
+static std::string flagString(const std::map<std::string, std::string>& flags, const std::string& key) {
+    auto it = flags.find(key);
+    return it != flags.end() ? it->second : std::string();
+}
+
+static void printStaticUsage() {
+    std::cerr <<
+        "Usage: demo_engine_cli --static --scene <name> --key <ClassName> "
+        "--mode <unprocessed|basic|advanced> --out <path.wav>\n"
+        "         [--threshold dB] [--ratio r] [--knee dB] [--attack ms] "
+        "[--release ms] [--max-reduction dB]\n"
+        "  --scene: \"Construction Scene\" or \"PublicTransit Scene\" "
+        "(aliases: Construction, PublicTransit)\n"
+        "  --key:   Dialogue | Music | \"Background Noise\" | \"Safety Alerts\" | Other\n"
+        "  --mode:  unprocessed (scene's reference blend, no engine involved) | "
+        "basic | advanced (Summed-bus)\n"
+        "  Compressor flags are ignored for --mode unprocessed. For basic/advanced "
+        "they default to Types.h's CompressorParams/Engine defaults if omitted -\n"
+        "  pass the same values to both a basic and an advanced run to isolate the "
+        "effect of band-limiting in a comparison.\n";
+}
+
+// mode=unprocessed: the scene's mastered reference blend is NOT a
+// bit-identical sum of the 5 raw stems (verified empirically against the
+// Construction scene - RMS difference ~8% of the signal's own RMS, most
+// likely from mixing-stage level trims), and it's the same file the browser
+// demo's "Unprocessed" reference panel plays - so it's treated as the single
+// canonical unprocessed baseline rather than computing a second, slightly
+// different one by resumming raw stems through the engine. Read+rewrite
+// (not a raw filesystem copy) so the output format matches the basic/
+// advanced exports exactly (float32 stereo WAV) for the analysis script.
+static int runStaticUnprocessed(const SceneSpec& scene, const std::string& outPath) {
+    std::vector<float> blendL, blendR;
+    double blendSr;
+    std::string blendPath = scene.dir + scene.blendFile;
+    if (!loadWavStereo(blendPath, blendL, blendR, blendSr)) {
+        std::cerr << "Failed to load reference blend " << blendPath << "\n";
+        return 1;
+    }
+    writeWavStereo(outPath, blendL, blendR, blendSr);
+    int clicks = countClicks(blendL, 0.35f) + countClicks(blendR, 0.35f);
+    std::cout << "Wrote " << outPath << " (" << blendL.size() << " frames, mode=unprocessed, "
+              << "reused scene reference blend " << blendPath << " verbatim)\n"
+              << "[self-check] Click detector: " << clicks << " sample-to-sample jumps > 0.35 amplitude\n";
+    return 0;
+}
+
+static int runStaticDucked(const SceneSpec& scene, int keyChannel, const std::string& modeName,
+                            const std::map<std::string, std::string>& flags, const std::string& outPath) {
+    std::array<std::vector<float>, kNumClasses> stemsL, stemsR;
+    double loadedSampleRate = kSampleRate;
+    bool ok = true;
+    for (int c = 0; c < kNumClasses; ++c) {
+        double sr;
+        std::string path = scene.dir + scene.stemFiles[c];
+        if (!loadWavStereo(path, stemsL[c], stemsR[c], sr)) {
+            std::cerr << "Failed to load " << classIndexToName(c) << " from " << path << "\n";
+            ok = false;
+        } else {
+            loadedSampleRate = sr;
+        }
+    }
+    if (!ok) return 1;
+
+    size_t minLen = stemsL[0].size();
+    for (int c = 1; c < kNumClasses; ++c) minLen = std::min(minLen, stemsL[c].size());
+    for (int c = 0; c < kNumClasses; ++c) {
+        stemsL[c].resize(minLen);
+        stemsR[c].resize(minLen);
+    }
+
+    CompressorParams params; // Types.h defaults, overridden by any flags given below
+    params.thresholdDb = flagDouble(flags, "threshold", params.thresholdDb);
+    params.ratio        = flagDouble(flags, "ratio", params.ratio);
+    params.kneeDb        = flagDouble(flags, "knee", params.kneeDb);
+    params.attackMs       = flagDouble(flags, "attack", params.attackMs);
+    params.releaseMs      = flagDouble(flags, "release", params.releaseMs);
+    double maxReductionDb = flagDouble(flags, "max-reduction", 6.0); // matches Engine.h's own default
+
+    Engine engine;
+    engine.prepare(loadedSampleRate, params);
+    engine.loadStems(stemsL, stemsR);
+    // Fixed configuration applied once, before any processing - no mid-clip
+    // changes, unlike the scripted-timeline path below main().
+    engine.setMode(modeName == "basic" ? DuckMode::Basic : DuckMode::Advanced);
+    engine.setAdvancedDuckingMode(AdvancedDuckingMode::SummedBus); // task scope: Summed-bus only, see spec
+    engine.setUnmaskEnabled(true);
+    engine.setKeyChannel(keyChannel);
+    engine.setMaxReductionDb(maxReductionDb);
+    // WDRC output stage stays at its default (bypassed) - out of scope for
+    // this metric, which is specifically about the sidechain-keyed ducking.
+
+    size_t totalFrames = engine.numFrames();
+    std::vector<float> outputL(totalFrames, 0.0f);
+    std::vector<float> outputR(totalFrames, 0.0f);
+
+    size_t frame = 0;
+    while (frame < totalFrames) {
+        size_t blockLen = std::min(static_cast<size_t>(kBlockSize), totalFrames - frame);
+        engine.process(outputL.data() + frame, outputR.data() + frame, blockLen);
+        frame += blockLen;
+    }
+
+    writeWavStereo(outPath, outputL, outputR, loadedSampleRate);
+    int clicks = countClicks(outputL, 0.35f) + countClicks(outputR, 0.35f);
+    std::cout << "Wrote " << outPath << " (" << totalFrames << " frames)\n"
+              << "  key=" << classIndexToName(keyChannel) << " mode=" << modeName
+              << " threshold=" << params.thresholdDb << "dB ratio=" << params.ratio
+              << ":1 knee=" << params.kneeDb << "dB attack=" << params.attackMs
+              << "ms release=" << params.releaseMs << "ms maxReduction=" << maxReductionDb
+              << "dB safetyGain=" << params.safetyGainDb << "dB\n"
+              << "[self-check] Click detector: " << clicks << " sample-to-sample jumps > 0.35 amplitude\n";
+    if (clicks > 0) {
+        std::cout << "  WARNING: unexpected discontinuity in a static (no mid-clip changes) "
+                     "render - investigate before treating this as valid measurement data.\n";
+    }
+    return 0;
+}
+
+static int runStaticExport(int argc, char** argv) {
+    auto flags = parseFlags(argc, argv, 2); // argv[1] == "--static"
+
+    std::string sceneName = flagString(flags, "scene");
+    std::string keyName = flagString(flags, "key");
+    std::string modeName = flagString(flags, "mode");
+    std::string outPath = flagString(flags, "out");
+
+    if (sceneName.empty() || keyName.empty() || modeName.empty() || outPath.empty()) {
+        printStaticUsage();
+        return 1;
+    }
+    if (modeName != "unprocessed" && modeName != "basic" && modeName != "advanced") {
+        std::cerr << "Unknown --mode '" << modeName << "' (expected unprocessed, basic, or advanced)\n";
+        return 1;
+    }
+
+    const SceneSpec* scene = findScene(sceneName);
+    if (!scene) {
+        std::cerr << "Unknown --scene '" << sceneName << "'\n";
+        return 1;
+    }
+
+    int keyChannel;
+    if (!parseKeyChannel(keyName, keyChannel)) {
+        std::cerr << "Unknown --key '" << keyName << "' (expected Dialogue, Music, "
+                     "\"Background Noise\", \"Safety Alerts\", or Other)\n";
+        return 1;
+    }
+
+    std::filesystem::path outFsPath(outPath);
+    if (outFsPath.has_parent_path()) {
+        std::filesystem::create_directories(outFsPath.parent_path());
+    }
+
+    if (modeName == "unprocessed") {
+        return runStaticUnprocessed(*scene, outPath);
+    }
+    return runStaticDucked(*scene, keyChannel, modeName, flags, outPath);
+}
+
+// ---------------------------------------------------------------------
 // Main: build 5 stems (real or synthetic), run a scripted event timeline
 // through the Engine, write output.wav, run self-checks.
 // ---------------------------------------------------------------------
 int main(int argc, char** argv) {
+    if (argc >= 2 && std::string(argv[1]) == "--static") {
+        return runStaticExport(argc, argv);
+    }
+
     std::cout << "=== Sidechain-Keyed Unmasking Demo Engine - CLI test harness ===\n";
 
     bool flatOk = checkCrossoverFlatness();
