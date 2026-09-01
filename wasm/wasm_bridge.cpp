@@ -166,19 +166,6 @@ double engine_wdrc_gain_reduction_db(Engine* e) {
     return e->wdrcGainReductionDb();
 }
 
-// The WDRC compressor's currently active frequency window - tracks the key
-// channel automatically (see engine_set_key_channel), so the UI can show
-// plainly that it changed rather than the user having to infer it.
-EMSCRIPTEN_KEEPALIVE
-double engine_wdrc_active_low_hz(Engine* e) {
-    return e->wdrcActiveLowHz();
-}
-
-EMSCRIPTEN_KEEPALIVE
-double engine_wdrc_active_high_hz(Engine* e) {
-    return e->wdrcActiveHighHz();
-}
-
 // Resonance-mode-only settings (see Engine::setResonance*() doc comments) -
 // not shared with Basic/Advanced.
 EMSCRIPTEN_KEEPALIVE

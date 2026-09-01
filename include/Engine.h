@@ -84,7 +84,6 @@ public:
         wdrcCompressor_.setBypassed(wdrcBypassed_);
         wdrcCompressor_.setAttackMs(wdrcAttackMs_);
         wdrcCompressor_.setReleaseMs(wdrcReleaseMs_);
-        wdrcCompressor_.setActiveChannel(keyChannel_); // stay in sync with Engine's actual default, not WdrcCompressor's own
 
         for (int c = 0; c < kNumClasses; ++c) {
             strips_[c].crossoverL.prepare(sampleRate);
@@ -128,10 +127,6 @@ public:
     void setKeyChannel(int channel) {
         keyChannel_ = channel;
         updateKeyBlendTargets();
-        // The WDRC output compressor focuses its frequency range on
-        // whichever class is currently unmasked - see WdrcCompressor's
-        // class doc comment and kWdrcChannelRanges.
-        wdrcCompressor_.setActiveChannel(channel);
     }
 
     void setMute(int channel, bool muted) {
@@ -374,12 +369,6 @@ public:
     // processed sample, in dB (0 = no reduction). Always 0 while bypassed -
     // for a small gain-reduction meter next to the WDRC controls.
     double wdrcGainReductionDb() const { return wdrcCompressor_.lastGainReductionDb(); }
-
-    // The WDRC compressor's currently active frequency window - tracks the
-    // key channel (see setKeyChannel()). For the UI to show plainly that
-    // the compressed band changed along with the key channel selection.
-    double wdrcActiveLowHz() const { return wdrcCompressor_.activeLowHz(); }
-    double wdrcActiveHighHz() const { return wdrcCompressor_.activeHighHz(); }
 
 private:
     static constexpr double kAudibleRampMs = 8.0;
