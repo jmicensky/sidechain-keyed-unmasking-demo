@@ -307,7 +307,7 @@ static void printStaticUsage() {
         "  --scene: \"Construction Scene\" or \"PublicTransit Scene\" "
         "(aliases: Construction, PublicTransit)\n"
         "  --key:   Dialogue | Music | \"Background Noise\" | \"Safety Alerts\" | Other\n"
-        "  --mode:  unprocessed (scene's reference blend, no engine involved) | "
+        "  --mode:  unprocessed (true sum of the 5 raw stems, Unmask off) | "
         "basic | advanced (Summed-bus)\n"
         "  Compressor flags are ignored for --mode unprocessed. For basic/advanced "
         "they default to Types.h's CompressorParams/Engine defaults if omitted -\n"
@@ -315,27 +315,75 @@ static void printStaticUsage() {
         "effect of band-limiting in a comparison.\n";
 }
 
-// mode=unprocessed: the scene's mastered reference blend is NOT a
-// bit-identical sum of the 5 raw stems (verified empirically against the
-// Construction scene - RMS difference ~8% of the signal's own RMS, most
-// likely from mixing-stage level trims), and it's the same file the browser
-// demo's "Unprocessed" reference panel plays - so it's treated as the single
-// canonical unprocessed baseline rather than computing a second, slightly
-// different one by resumming raw stems through the engine. Read+rewrite
-// (not a raw filesystem copy) so the output format matches the basic/
-// advanced exports exactly (float32 stereo WAV) for the analysis script.
+// mode=unprocessed: renders the true, unweighted sum of the 5 raw stems -
+// via Engine in Basic mode with unmaskEnabled=false, so it goes through
+// literally the same dry-path arithmetic (raw * safetyGainLinear_, summed)
+// that basic/advanced ducking's own dry/unducked content uses, rather than
+// reusing the scene's separately-bounced mastered reference blend file.
+//
+// An earlier version of this function reused that reference blend
+// directly, on the reasoning that it's the same file the browser demo's
+// "Unprocessed" panel plays. That turned out to be the wrong call: the
+// blend is NOT a bit-identical sum of the 5 raw stems (confirmed - overall
+// RMS difference ~8% of the signal's own RMS), and per-stem best-fit level
+// analysis shows the mismatch doesn't even localize to one stem (Dialogue's
+// own best-fit scale factor is +0.01dB, essentially exact; Music and
+// Background show larger deviations, -0.23dB and -0.14dB) - most likely a
+// DAW export inconsistency between when the blend was bounced and when the
+// stems were bounced. Since basic/advanced ducking is computed from the
+// stem files directly, comparing them against a baseline that was bounced
+// separately (and isn't even guaranteed to be internally consistent with
+// those exact stem levels) risks contaminating every metric with a mixing
+// artifact unrelated to the sidechain ducking being evaluated. Building
+// the baseline from the same stems the engine actually processes removes
+// that risk entirely, at the cost of the baseline no longer being
+// literally the same file the browser's reference panel plays (which is
+// still fine for its purpose there - a listening reference, not a
+// measurement baseline).
 static int runStaticUnprocessed(const SceneSpec& scene, const std::string& outPath) {
-    std::vector<float> blendL, blendR;
-    double blendSr;
-    std::string blendPath = scene.dir + scene.blendFile;
-    if (!loadWavStereo(blendPath, blendL, blendR, blendSr)) {
-        std::cerr << "Failed to load reference blend " << blendPath << "\n";
-        return 1;
+    std::array<std::vector<float>, kNumClasses> stemsL, stemsR;
+    double loadedSampleRate = kSampleRate;
+    bool ok = true;
+    for (int c = 0; c < kNumClasses; ++c) {
+        double sr;
+        std::string path = scene.dir + scene.stemFiles[c];
+        if (!loadWavStereo(path, stemsL[c], stemsR[c], sr)) {
+            std::cerr << "Failed to load " << classIndexToName(c) << " from " << path << "\n";
+            ok = false;
+        } else {
+            loadedSampleRate = sr;
+        }
     }
-    writeWavStereo(outPath, blendL, blendR, blendSr);
-    int clicks = countClicks(blendL, 0.35f) + countClicks(blendR, 0.35f);
-    std::cout << "Wrote " << outPath << " (" << blendL.size() << " frames, mode=unprocessed, "
-              << "reused scene reference blend " << blendPath << " verbatim)\n"
+    if (!ok) return 1;
+
+    size_t minLen = stemsL[0].size();
+    for (int c = 1; c < kNumClasses; ++c) minLen = std::min(minLen, stemsL[c].size());
+    for (int c = 0; c < kNumClasses; ++c) {
+        stemsL[c].resize(minLen);
+        stemsR[c].resize(minLen);
+    }
+
+    CompressorParams params; // defaults - irrelevant here since unmaskEnabled=false forces g=1 regardless
+    Engine engine;
+    engine.prepare(loadedSampleRate, params);
+    engine.loadStems(stemsL, stemsR);
+    engine.setMode(DuckMode::Basic); // simplest dry-path arithmetic; mode is otherwise moot with Unmask off
+    engine.setUnmaskEnabled(false);
+
+    size_t totalFrames = engine.numFrames();
+    std::vector<float> outputL(totalFrames, 0.0f);
+    std::vector<float> outputR(totalFrames, 0.0f);
+    size_t frame = 0;
+    while (frame < totalFrames) {
+        size_t blockLen = std::min(static_cast<size_t>(kBlockSize), totalFrames - frame);
+        engine.process(outputL.data() + frame, outputR.data() + frame, blockLen);
+        frame += blockLen;
+    }
+
+    writeWavStereo(outPath, outputL, outputR, loadedSampleRate);
+    int clicks = countClicks(outputL, 0.35f) + countClicks(outputR, 0.35f);
+    std::cout << "Wrote " << outPath << " (" << totalFrames << " frames, mode=unprocessed, "
+              << "true sum of the 5 raw stems via Engine, Unmask off)\n"
               << "[self-check] Click detector: " << clicks << " sample-to-sample jumps > 0.35 amplitude\n";
     return 0;
 }

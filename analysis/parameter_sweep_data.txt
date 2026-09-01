@@ -2,164 +2,163 @@ SIDECHAIN COMPRESSOR PARAMETER SWEEP -- FULL DATA
 Construction Scene, Dialogue priority class, Advanced (Summed-bus) duck mode
 Masking margin = Dialogue level minus estimated masker level, band-limited to 400Hz-7kHz
 STOI = Extended STOI (ESTOI) against the dry Dialogue stem
+Unprocessed baseline = true sum of the 5 raw stems (Basic mode, Unmask off),
+NOT the scene reference blend - see note at bottom.
 ======================================================================
 
 RUN 1
   Source folder: -36Thesh20dBKnee_AttackFast_ReleaseSlow_4Ratio_2026-09-01_1105
   Settings: Threshold -36 dB | Ratio 4:1 | Knee 20 dB | Attack 5 ms | Release 400 ms | Max Reduction 24 dB
   Masking margin, mean / worst-case (dB):
-    Unprocessed      -3.32 /  -35.86
-    Basic             6.41 /  -35.83
-    Advanced          5.49 /  -35.91
+    Unprocessed        -3.19 /    -35.85
+    Basic               6.41 /    -35.83
+    Advanced            5.49 /    -35.91
   STOI:
     Unprocessed  0.393
     Basic        0.588
     Advanced     0.514
   Advanced gain over unprocessed:
-    Mean margin gain:       +8.81 dB
-    Worst-case margin gain: -0.05 dB
+    Mean margin gain:       +8.68 dB
     STOI gain:              +0.121
 
 RUN 2
   Source folder: -48Thesh12dBKnee_AttackFast_ReleaseSlow_LowRatio_2026-09-01_1048
   Settings: Threshold -48 dB | Ratio 1.5:1 | Knee 12 dB | Attack 5 ms | Release 400 ms | Max Reduction 24 dB
   Masking margin, mean / worst-case (dB):
-    Unprocessed      -3.32 /  -35.86
-    Basic             6.29 /  -35.13
-    Advanced          5.34 /  -35.23
+    Unprocessed        -3.19 /    -35.85
+    Basic               6.29 /    -35.13
+    Advanced            5.34 /    -35.23
   STOI:
     Unprocessed  0.393
     Basic        0.604
     Advanced     0.517
   Advanced gain over unprocessed:
-    Mean margin gain:       +8.66 dB
-    Worst-case margin gain: +0.63 dB
+    Mean margin gain:       +8.53 dB
     STOI gain:              +0.124
 
 RUN 3
   Source folder: -48Thesh12dBKnee_AttackFast_Releasemedium_LowRatio_2026-09-01_1052
   Settings: Threshold -48 dB | Ratio 1.5:1 | Knee 12 dB | Attack 5 ms | Release 120 ms | Max Reduction 24 dB
   Masking margin, mean / worst-case (dB):
-    Unprocessed      -3.32 /  -35.86
-    Basic             4.52 /  -35.49
-    Advanced          3.87 /  -35.57
+    Unprocessed        -3.19 /    -35.85
+    Basic               4.52 /    -35.49
+    Advanced            3.87 /    -35.57
   STOI:
     Unprocessed  0.393
     Basic        0.562
     Advanced     0.506
   Advanced gain over unprocessed:
-    Mean margin gain:       +7.20 dB
-    Worst-case margin gain: +0.29 dB
+    Mean margin gain:       +7.07 dB
     STOI gain:              +0.113
 
 RUN 4
   Source folder: -36Thesh12dBKnee_AttackXFast_Releasemedium_LowRatio_2026-09-01_1057
   Settings: Threshold -36 dB | Ratio 1.5:1 | Knee 12 dB | Attack 1 ms | Release 120 ms | Max Reduction 24 dB
   Masking margin, mean / worst-case (dB):
-    Unprocessed      -3.32 /  -35.86
-    Basic             0.95 /  -35.83
-    Advanced          0.70 /  -35.90
+    Unprocessed        -3.19 /    -35.85
+    Basic               0.95 /    -35.83
+    Advanced            0.70 /    -35.90
   STOI:
     Unprocessed  0.393
     Basic        0.484
     Advanced     0.462
   Advanced gain over unprocessed:
-    Mean margin gain:       +4.02 dB
-    Worst-case margin gain: -0.04 dB
-    STOI gain:              +0.069
+    Mean margin gain:       +3.89 dB
+    STOI gain:              +0.068
 
 RUN 5
   Source folder: -36Thesh12dBKnee_AttackFast_ReleaseSlow_LowRatio_2026-09-01_1101
   Settings: Threshold -36 dB | Ratio 1.5:1 | Knee 12 dB | Attack 5 ms | Release 400 ms | Max Reduction 24 dB
   Masking margin, mean / worst-case (dB):
-    Unprocessed      -3.32 /  -35.86
-    Basic             0.90 /  -35.85
-    Advanced          0.63 /  -35.92
+    Unprocessed        -3.19 /    -35.85
+    Basic               0.90 /    -35.85
+    Advanced            0.63 /    -35.92
   STOI:
     Unprocessed  0.393
     Basic        0.488
     Advanced     0.455
   Advanced gain over unprocessed:
-    Mean margin gain:       +3.95 dB
-    Worst-case margin gain: -0.06 dB
+    Mean margin gain:       +3.83 dB
     STOI gain:              +0.062
 
 RUN 6
   Source folder: -48Thesh12dBKnee_Attackslow_Releasemedium_LowRatio_2026-09-01_1055
   Settings: Threshold -48 dB | Ratio 1.5:1 | Knee 12 dB | Attack 50 ms | Release 120 ms | Max Reduction 24 dB
   Masking margin, mean / worst-case (dB):
-    Unprocessed      -3.32 /  -35.86
-    Basic             0.88 /  -35.85
-    Advanced          0.60 /  -35.92
+    Unprocessed        -3.19 /    -35.85
+    Basic               0.88 /    -35.85
+    Advanced            0.60 /    -35.92
   STOI:
     Unprocessed  0.393
     Basic        0.490
     Advanced     0.459
   Advanced gain over unprocessed:
-    Mean margin gain:       +3.92 dB
-    Worst-case margin gain: -0.06 dB
+    Mean margin gain:       +3.79 dB
     STOI gain:              +0.066
 
 RUN 7
   Source folder: -24Thesh20dBKnee_AttackFast_ReleaseSlow_4Ratio_2026-09-01_1217
   Settings: Threshold -24 dB | Ratio 4:1 | Knee 20 dB | Attack 5 ms | Release 400 ms | Max Reduction 24 dB
   Masking margin, mean / worst-case (dB):
-    Unprocessed      -3.32 /  -35.86
-    Basic            -1.27 /  -35.85
-    Advanced         -1.51 /  -35.92
+    Unprocessed        -3.19 /    -35.85
+    Basic              -1.27 /    -35.85
+    Advanced           -1.51 /    -35.92
   STOI:
     Unprocessed  0.393
     Basic        0.434
     Advanced     0.423
   Advanced gain over unprocessed:
-    Mean margin gain:       +1.81 dB
-    Worst-case margin gain: -0.06 dB
-    STOI gain:              +0.030
+    Mean margin gain:       +1.68 dB
+    STOI gain:              +0.029
 
 RUN 8
   Source folder: -36Thesh12dBKnee_AttackMedium_Releasemedium_LowRatio_2026-09-01_1100
   Settings: Threshold -36 dB | Ratio 1.5:1 | Knee 12 dB | Attack 15 ms | Release 120 ms | Max Reduction 24 dB
   Masking margin, mean / worst-case (dB):
-    Unprocessed      -3.32 /  -35.86
-    Basic            -1.26 /  -35.85
-    Advanced         -1.54 /  -35.92
+    Unprocessed        -3.19 /    -35.85
+    Basic              -1.26 /    -35.85
+    Advanced           -1.54 /    -35.92
   STOI:
     Unprocessed  0.393
     Basic        0.434
     Advanced     0.426
   Advanced gain over unprocessed:
-    Mean margin gain:       +1.78 dB
-    Worst-case margin gain: -0.06 dB
+    Mean margin gain:       +1.65 dB
     STOI gain:              +0.033
 
 RUN 9
   Source folder: -24Thesh6dBKnee_AttackFast_ReleaseSlow_4Ratio_2026-09-01_1104
   Settings: Threshold -24 dB | Ratio 4:1 | Knee 6 dB | Attack 5 ms | Release 400 ms | Max Reduction 24 dB
   Masking margin, mean / worst-case (dB):
-    Unprocessed      -3.32 /  -35.86
-    Basic            -2.23 /  -35.85
-    Advanced         -2.44 /  -35.92
+    Unprocessed        -3.19 /    -35.85
+    Basic              -2.23 /    -35.85
+    Advanced           -2.44 /    -35.92
   STOI:
     Unprocessed  0.393
     Basic        0.409
     Advanced     0.406
   Advanced gain over unprocessed:
-    Mean margin gain:       +0.88 dB
-    Worst-case margin gain: -0.06 dB
+    Mean margin gain:       +0.75 dB
     STOI gain:              +0.013
 
 ----------------------------------------------------------------------
-All nine runs are distinct configurations (the earlier duplicate at
-threshold -24dB/20dB-knee has been replaced with a genuine re-render;
-its own settings.txt now confirms -24dB was actually rendered).
+All nine runs are distinct configurations.
 
-NOTE ON WORST-CASE MARGIN GAIN: unlike mean margin gain (+0.88 to
-+8.81dB across the sweep), worst-case margin gain stays close to
-zero for every run (-0.06 to +0.63dB). The single worst-margin frame
-in this ~80s clip is dominated by a moment where Dialogue itself is
-near its own gating floor, so it is barely affected by ducking
-strength regardless of compressor settings -- these settings mainly
-improve typical/average masking margin, not the single worst instant.
+NOTE ON THE UNPROCESSED BASELINE: this is the TRUE SUM of the 5 raw
+stem files (Dialogue + Music + Background + Safety + Other), rendered
+via the engine in Basic mode with Unmask off - NOT the scene's
+separately-bounced "WHOLE BLEND.wav" reference file used earlier.
+That reference blend was found to differ from the raw stem sum by
+~8% RMS overall, most likely a DAW export inconsistency, and did not
+clearly localize to any single stem (best-fit per-stem level check:
+Dialogue +0.01dB, Music -0.23dB, Background -0.14dB, Safety -0.07dB,
+Other -0.02dB). Using the raw stem sum instead removes any risk of
+that mixing-stage inconsistency contaminating the margin/STOI
+metrics, since basic/advanced ducking is computed from those exact
+stem files. Effect on the numbers was small, as expected: unprocessed
+mean margin moved from -3.32dB to -3.19dB; basic/advanced values are
+unchanged (already computed from the real stems); STOI moved by
+<0.001 in every run; rankings are unaffected.
 
 ======================================================================
 PSYCHOACOUSTIC PARTIAL-LOUDNESS / MASKED-THRESHOLD ESTIMATE
@@ -179,67 +178,68 @@ Dialogue), valid because Dialogue always takes the dry/unducked path
 regardless of duck mode. Averaged over frames where Dialogue's own
 loudness exceeds 10% of its peak (770/955 frames, 80.6%, for this clip).
 Row order matches the mean-margin-gain ranking above, for direct
-cross-reference.
+cross-reference. "Unprocessed" here is also the true stem sum (see
+note in the section above), not the reference blend.
 
 RUN 1: -36Thesh20dBKnee_AttackFast_ReleaseSlow_4Ratio_2026-09-01_1105
   Percent of Dialogue's loudness masked:
-    Unprocessed  53.5%
+    Unprocessed  53.4%
     Basic        36.3%
     Advanced     42.3%
-  Reduction (Advanced vs unprocessed): +11.2 percentage points
+  Reduction (Advanced vs unprocessed): +11.1 percentage points
 
 RUN 2: -48Thesh12dBKnee_AttackFast_ReleaseSlow_LowRatio_2026-09-01_1048
   Percent of Dialogue's loudness masked:
-    Unprocessed  53.5%
+    Unprocessed  53.4%
     Basic        34.1%
     Advanced     41.3%
-  Reduction (Advanced vs unprocessed): +12.2 percentage points
+  Reduction (Advanced vs unprocessed): +12.1 percentage points
 
 RUN 3: -48Thesh12dBKnee_AttackFast_Releasemedium_LowRatio_2026-09-01_1052
   Percent of Dialogue's loudness masked:
-    Unprocessed  53.5%
+    Unprocessed  53.4%
     Basic        39.1%
     Advanced     44.3%
-  Reduction (Advanced vs unprocessed): +9.2 percentage points
+  Reduction (Advanced vs unprocessed): +9.1 percentage points
 
 RUN 4: -36Thesh12dBKnee_AttackXFast_Releasemedium_LowRatio_2026-09-01_1057
   Percent of Dialogue's loudness masked:
-    Unprocessed  53.5%
+    Unprocessed  53.4%
     Basic        46.2%
     Advanced     48.7%
-  Reduction (Advanced vs unprocessed): +4.8 percentage points
+  Reduction (Advanced vs unprocessed): +4.7 percentage points
 
 RUN 5: -36Thesh12dBKnee_AttackFast_ReleaseSlow_LowRatio_2026-09-01_1101
   Percent of Dialogue's loudness masked:
-    Unprocessed  53.5%
+    Unprocessed  53.4%
     Basic        45.2%
     Advanced     48.1%
-  Reduction (Advanced vs unprocessed): +5.4 percentage points
+  Reduction (Advanced vs unprocessed): +5.3 percentage points
 
 RUN 6: -48Thesh12dBKnee_Attackslow_Releasemedium_LowRatio_2026-09-01_1055
   Percent of Dialogue's loudness masked:
-    Unprocessed  53.5%
+    Unprocessed  53.4%
     Basic        45.6%
     Advanced     48.4%
-  Reduction (Advanced vs unprocessed): +5.1 percentage points
+  Reduction (Advanced vs unprocessed): +5.0 percentage points
 
 RUN 7: -24Thesh20dBKnee_AttackFast_ReleaseSlow_4Ratio_2026-09-01_1217
   Percent of Dialogue's loudness masked:
-    Unprocessed  53.5%
+    Unprocessed  53.4%
     Basic        50.1%
     Advanced     51.3%
   Reduction (Advanced vs unprocessed): +2.1 percentage points
 
 RUN 8: -36Thesh12dBKnee_AttackMedium_Releasemedium_LowRatio_2026-09-01_1100
   Percent of Dialogue's loudness masked:
-    Unprocessed  53.5%
+    Unprocessed  53.4%
     Basic        50.3%
     Advanced     51.5%
-  Reduction (Advanced vs unprocessed): +2.0 percentage points
+  Reduction (Advanced vs unprocessed): +1.9 percentage points
 
 RUN 9: -24Thesh6dBKnee_AttackFast_ReleaseSlow_4Ratio_2026-09-01_1104
   Percent of Dialogue's loudness masked:
-    Unprocessed  53.5%
+    Unprocessed  53.4%
     Basic        52.2%
     Advanced     52.5%
   Reduction (Advanced vs unprocessed): +0.9 percentage points

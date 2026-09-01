@@ -4,6 +4,12 @@
 % "UnMasking Exports/" (9 runs, Construction Scene, Dialogue priority class,
 % Advanced/Summed-bus duck mode). Margin/STOI gain = processed - unprocessed.
 % Ranked by mean margin gain, best to worst.
+%
+% Unprocessed baseline is the true sum of the 5 raw stems (Basic mode,
+% Unmask off), not the scene's separately-bounced reference blend - the
+% blend was found to differ from the raw stem sum by ~8% RMS overall (most
+% likely a DAW export inconsistency), which risked contaminating the
+% baseline with an artifact unrelated to ducking.
 
 \begin{table}[h]
 \centering
@@ -17,15 +23,15 @@ band). Ranked by mean margin gain.}
 \toprule
 \textbf{\#} & {\textbf{Thr.} (\si{\decibel})} & {\textbf{Ratio}} & {\textbf{Knee} (\si{\decibel})} & {\textbf{Atk.} (\si{\milli\second})} & {\textbf{Rel.} (\si{\milli\second})} & {\textbf{Mean Margin Gain} (\si{\decibel})} & {\textbf{STOI Gain}} \\
 \midrule
-1 & -36 & 4.0 & 20 & 5  & 400 & +8.81 & +0.121 \\
-2 & -48 & 1.5 & 12 & 5  & 400 & +8.66 & +0.124 \\
-3 & -48 & 1.5 & 12 & 5  & 120 & +7.20 & +0.113 \\
-4 & -36 & 1.5 & 12 & 1  & 120 & +4.02 & +0.069 \\
-5 & -36 & 1.5 & 12 & 5  & 400 & +3.95 & +0.062 \\
-6 & -48 & 1.5 & 12 & 50 & 120 & +3.92 & +0.066 \\
-7 & -24 & 4.0 & 20 & 5  & 400 & +1.81 & +0.030 \\
-8 & -36 & 1.5 & 12 & 15 & 120 & +1.78 & +0.033 \\
-9 & -24 & 4.0 & 6  & 5  & 400 & +0.88 & +0.013 \\
+1 & -36 & 4.0 & 20 & 5  & 400 & +8.68 & +0.121 \\
+2 & -48 & 1.5 & 12 & 5  & 400 & +8.53 & +0.124 \\
+3 & -48 & 1.5 & 12 & 5  & 120 & +7.07 & +0.113 \\
+4 & -36 & 1.5 & 12 & 1  & 120 & +3.89 & +0.068 \\
+5 & -36 & 1.5 & 12 & 5  & 400 & +3.83 & +0.062 \\
+6 & -48 & 1.5 & 12 & 50 & 120 & +3.79 & +0.066 \\
+7 & -24 & 4.0 & 20 & 5  & 400 & +1.68 & +0.029 \\
+8 & -36 & 1.5 & 12 & 15 & 120 & +1.65 & +0.033 \\
+9 & -24 & 4.0 & 6  & 5  & 400 & +0.75 & +0.013 \\
 \bottomrule
 \end{tabular}
 \end{table}

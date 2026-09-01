@@ -48,14 +48,15 @@ let engineNode = null;
 let workletReady = null; // Promise, resolves once the AudioWorklet's WASM module has loaded
 let numFrames = 0;
 let sampleRate = 48000;
-// Independent copies of the currently-loaded scene's stems/blend, retained
-// specifically for "Export All Examples" offline renders. The live
-// loadStems postMessage below TRANSFERS its buffers (zero-copy, for
-// playback performance) which detaches them - these retained copies exist
-// so export can reuse the same sample data without re-fetching from the
-// network on every click.
+// Independent copies of the currently-loaded scene's stems, retained
+// specifically for "Export All Examples" offline renders (including its
+// "unprocessed" condition, rendered via the engine with Unmask off rather
+// than reusing the scene's separately-bounced reference blend - see
+// exportAllExamples()). The live loadStems postMessage below TRANSFERS its
+// buffers (zero-copy, for playback performance) which detaches them -
+// these retained copies exist so export can reuse the same sample data
+// without re-fetching from the network on every click.
 let retainedStemsL = null, retainedStemsR = null;
-let retainedBlendL = null, retainedBlendR = null;
 let retainedNumFrames = 0;
 let decomposedRunning = false;
 let blendBlobUrl = null; // revoked and replaced on every scene load
@@ -379,9 +380,6 @@ async function loadScene(sceneKey) {
   // detaches channelsL/R's buffers - see the module-level comment above.
   retainedStemsL = channelsL.map((c) => c.slice());
   retainedStemsR = channelsR.map((c) => c.slice());
-  const blendStereo = extractStereo(blendAudioBuf);
-  retainedBlendL = blendStereo.left.subarray(0, numFrames).slice();
-  retainedBlendR = blendStereo.right.subarray(0, numFrames).slice();
   retainedNumFrames = numFrames;
 
   drawWaveform($('wave-blend'), blendMono.subarray(0, numFrames), '#555');
@@ -716,7 +714,7 @@ function buildExportManifest(folderName) {
     '',
     'basic.wav: Basic mode, Unmask forced on, Sidechain Compressor settings above.',
     `processed_${mode.slug}.wav: ${mode.summary} (Unmask forced on)${mode.detail ? '\n' + mode.detail : ''}`,
-    'unprocessed.wav: scene reference blend, unmodified.',
+    'unprocessed.wav: true sum of the 5 raw stems (Basic mode, Unmask off) - not the scene reference blend.',
   ];
   return lines.join('\n');
 }
@@ -736,7 +734,7 @@ function setExportStatus(msg) {
 // WASM module load plenty of time to finish), OfflineAudioContext starts
 // pulling render quanta immediately, so without this wait the first quanta
 // could silently render as silence while the module was still loading.
-async function renderOfflineCondition({ forceMode, forceUnmaskEnabled = true } = {}) {
+async function renderOfflineCondition({ forceMode, forceUnmaskEnabled } = {}) {
   const offlineCtx = new OfflineAudioContext(2, retainedNumFrames, sampleRate);
   await offlineCtx.audioWorklet.addModule('engine-worklet.js');
   const node = new AudioWorkletNode(offlineCtx, 'engine-processor', {
@@ -752,7 +750,11 @@ async function renderOfflineCondition({ forceMode, forceUnmaskEnabled = true } =
       if (msg.type === 'ready') {
         applyAllControls(node.port);
         if (forceMode !== undefined) node.port.postMessage({ type: 'setMode', mode: forceMode });
-        if (forceUnmaskEnabled) node.port.postMessage({ type: 'setUnmaskEnabled', enabled: true });
+        // Explicit undefined check (not a truthy check) - forceUnmaskEnabled
+        // can legitimately be false (the "unprocessed" condition forces it
+        // off), which a truthy check would silently skip and leave at
+        // whatever applyAllControls() just set from the live page instead.
+        if (forceUnmaskEnabled !== undefined) node.port.postMessage({ type: 'setUnmaskEnabled', enabled: forceUnmaskEnabled });
 
         const chL = retainedStemsL.map((c) => c.slice());
         const chR = retainedStemsR.map((c) => c.slice());
@@ -784,7 +786,13 @@ async function exportAllExamples() {
     const folderName = `${projectName}_${fmtExportTimestamp(new Date())}`;
 
     setExportStatus('Rendering 1/3: unprocessed...');
-    const unprocessed = { left: retainedBlendL, right: retainedBlendR };
+    // True sum of the 5 raw stems (Basic mode, Unmask off) rather than the
+    // scene's separately-bounced reference blend - the blend isn't
+    // guaranteed to be level-consistent with the stems the engine actually
+    // processes (confirmed on Construction Scene: ~8% RMS difference,
+    // likely a DAW export inconsistency), which would contaminate every
+    // metric computed against it with an artifact unrelated to ducking.
+    const unprocessed = await renderOfflineCondition({ forceMode: 0, forceUnmaskEnabled: false });
 
     setExportStatus('Rendering 2/3: basic...');
     const basic = await renderOfflineCondition({ forceMode: 0, forceUnmaskEnabled: true });
