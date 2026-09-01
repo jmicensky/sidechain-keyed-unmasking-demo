@@ -31,6 +31,11 @@
   .range-badge { background: #eef4fb; border: 1px solid #d3e3f5; border-radius: 4px; padding: 6px 10px; font-size: 13px; color: #2c5a8a; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
   .range-badge strong { font-variant-numeric: tabular-nums; }
   .range-badge .hint { color: #6a8fb5; }
+  fieldset.channel-knobs { border: none; margin: 4px 0 0; padding: 0; display: flex; gap: 16px; font-size: 12px; color: #444; }
+  fieldset.channel-knobs:disabled { opacity: 0.4; }
+  fieldset.channel-knobs label { display: inline-flex; align-items: center; gap: 4px; }
+  fieldset.channel-knobs input[type=range] { width: 90px; vertical-align: middle; }
+  fieldset.channel-knobs .readout { font-variant-numeric: tabular-nums; min-width: 46px; display: inline-block; }
   #thresholdDb, #kneeDb, #resonanceBandwidth, #resonanceMaxReduction, #wdrcThresholdDb, #wdrcRatio, #wdrcMakeupGainDb, #wdrcAttackMs, #wdrcReleaseMs { vertical-align: middle; width: 160px; }
   #status { color: #666; font-size: 13px; }
   .gain-viz-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; font-size: 13px; color: #444; }
@@ -94,6 +99,13 @@
       Advanced-mode ducked band: <strong id="unmaskRangeReadout">400Hz&ndash;7kHz</strong>
       <span class="hint">tracks Key Channel (currently <span id="unmaskRangeChannelName">Dialogue</span>) - other channels get ducked only in this range</span>
     </div>
+    <label>Advanced ducking:
+      <select id="advancedDuckingMode">
+        <option value="0" selected>Summed bus (one shared compressor)</option>
+        <option value="1">Per-channel (independent threshold/ratio per channel, knobs below)</option>
+      </select>
+      <span class="hint">only affects Advanced mode's ducking - see the Threshold/Ratio knobs on each channel row below</span>
+    </label>
 
     <div class="compressor-controls">
       <div class="compressor-header">Sidechain Compressor <span class="hint">(applies to all modes, including Resonance)</span></div>

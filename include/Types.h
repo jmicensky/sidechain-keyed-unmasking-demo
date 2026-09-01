@@ -65,6 +65,21 @@ inline constexpr UnmaskFreqRange kUnmaskFrequencyRanges[kNumClasses] = {
     {700.0, 12000.0},  // kOther
 };
 
+// How Advanced duck mode's within-range gain is computed:
+//   SummedBus   - one shared GainComputer (the "Sidechain Compressor" panel's
+//                 Threshold/Ratio/Knee) drives every non-key channel's
+//                 in-range content identically. Mathematically equivalent to
+//                 summing the non-key channels into one bus and compressing
+//                 that once (gain is linear, so per-channel-then-sum and
+//                 sum-then-compress give the same result when every channel
+//                 shares one gain) - the default, and the lighter-weight
+//                 option (effectively one compressor).
+//   PerChannel  - each of the 5 channels gets its own threshold/ratio (still
+//                 driven by the same shared sidechain detector level/knee/
+//                 attack/release - only the compression law's threshold and
+//                 ratio go independent per channel).
+enum class AdvancedDuckingMode { SummedBus, PerChannel };
+
 // Fixed compressor parameters, from Section 3.3 (Eq. 2), matched to the
 // literature values discussed for the paper (Kowalewski et al. 2018 /
 // Chen et al. 2021 style fast-acting release, adjust here if the paper's

@@ -126,6 +126,23 @@ void engine_set_release_ms(Engine* e, double releaseMs) {
     e->setReleaseMs(releaseMs);
 }
 
+// Advanced duck mode only (see Types.h AdvancedDuckingMode). 0 = SummedBus,
+// 1 = PerChannel.
+EMSCRIPTEN_KEEPALIVE
+void engine_set_advanced_ducking_mode(Engine* e, int mode) {
+    e->setAdvancedDuckingMode(mode == 1 ? AdvancedDuckingMode::PerChannel : AdvancedDuckingMode::SummedBus);
+}
+
+EMSCRIPTEN_KEEPALIVE
+void engine_set_channel_threshold_db(Engine* e, int channel, double thresholdDb) {
+    e->setChannelThresholdDb(channel, thresholdDb);
+}
+
+EMSCRIPTEN_KEEPALIVE
+void engine_set_channel_ratio(Engine* e, int channel, double ratio) {
+    e->setChannelRatio(channel, ratio);
+}
+
 // Output-bus WDRC compressor (see Engine::setWdrc*() doc comment) - applied
 // once to the final 5-channel mix, independent of duck mode.
 EMSCRIPTEN_KEEPALIVE

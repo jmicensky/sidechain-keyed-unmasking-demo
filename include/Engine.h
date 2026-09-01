@@ -92,6 +92,11 @@ public:
             keyBlend_[c].reset(0.0);
             dryDelayL_[c].prepare(SpectralResonanceSuppressor::kLatencySamples);
             dryDelayR_[c].prepare(SpectralResonanceSuppressor::kLatencySamples);
+            // Per-channel Advanced ducking starts matched to the shared
+            // "summed bus" values (see setAdvancedDuckingMode()).
+            channelThresholdDb_[c] = params_.thresholdDb;
+            channelRatio_[c] = params_.ratio;
+            syncPerChannelGainComputer(c);
         }
         updateUnmaskRange(keyChannel_); // Advanced mode's ducked band starts matching the default key channel
         recomputeAudibility();
@@ -132,6 +137,40 @@ public:
         updateUnmaskRange(channel);
     }
 
+    // Advanced duck mode only - see Types.h's AdvancedDuckingMode doc
+    // comment. Switching into PerChannel seeds every channel's independent
+    // threshold/ratio from whatever the shared "summed bus" values are at
+    // that exact instant, so they start matched and then diverge freely -
+    // switching back to SummedBus doesn't erase those per-channel values,
+    // it just stops using them until PerChannel is re-engaged (at which
+    // point they're reseeded from the shared values again).
+    void setAdvancedDuckingMode(AdvancedDuckingMode mode) {
+        bool entering = (mode == AdvancedDuckingMode::PerChannel &&
+                          advancedDuckingMode_ != AdvancedDuckingMode::PerChannel);
+        advancedDuckingMode_ = mode;
+        if (entering) {
+            for (int c = 0; c < kNumClasses; ++c) {
+                channelThresholdDb_[c] = params_.thresholdDb;
+                channelRatio_[c] = params_.ratio;
+                syncPerChannelGainComputer(c);
+            }
+        }
+    }
+
+    // Per-channel threshold/ratio, only used while
+    // setAdvancedDuckingMode(PerChannel) is active (see above) - inert
+    // otherwise. Ratio is clamped to [1, 10] (unity to a hard-limiting
+    // 10:1), matching the UI's per-channel ratio knob range.
+    void setChannelThresholdDb(int channel, double thresholdDb) {
+        channelThresholdDb_[channel] = thresholdDb;
+        syncPerChannelGainComputer(channel);
+    }
+
+    void setChannelRatio(int channel, double ratio) {
+        channelRatio_[channel] = std::clamp(ratio, 1.0, 10.0);
+        syncPerChannelGainComputer(channel);
+    }
+
     void setMute(int channel, bool muted) {
         strips_[channel].muted = muted;
         recomputeAudibility();
@@ -161,10 +200,14 @@ public:
 
     // Knee width in dB (W in GainComputer's Eq. 2). 0 = hard knee (gain
     // curve bends instantly at the threshold); larger = softer, wider
-    // transition centered on the threshold.
+    // transition centered on the threshold. Shared by both Advanced ducking
+    // modes - see Types.h's AdvancedDuckingMode - so the per-channel
+    // GainComputers need re-syncing too, even though their threshold/ratio
+    // are independent.
     void setKneeDb(double kneeDb) {
         params_.kneeDb = kneeDb;
         gainComputer_.setParams(params_);
+        for (int c = 0; c < kNumClasses; ++c) syncPerChannelGainComputer(c);
     }
 
     // Resonance-mode-only settings (not shared with Basic/Advanced).
@@ -260,6 +303,12 @@ public:
             double detectorInput = keyMuted ? 0.0 : keyRaw;
 
             double g = 1.0;
+            // Only set (and only meaningful) outside Resonance mode - the
+            // shared sidechain level in dB, used both by the SummedBus gain
+            // (g, above) and by Advanced/PerChannel's independent per-
+            // channel GainComputers below, which read the same detected
+            // level but apply their own threshold/ratio to it.
+            double sidechainLevelDb = 0.0;
             std::array<double, SpectralResonanceSuppressor::kNumSignals> spectralOut{};
             std::array<double, SpectralResonanceSuppressor::kNumSignals> dryDelayed{};
 
@@ -285,10 +334,20 @@ public:
                     lastGainLinear_ = std::min(lastGainLinear_, spectralSuppressor_.gainLinear(p));
                 }
             } else {
-                double levelDb = detector_.tick(detectorInput);
-                g = unmaskEnabled_ ? gainComputer_.computeLinearGain(levelDb) : 1.0;
+                sidechainLevelDb = detector_.tick(detectorInput);
+                g = unmaskEnabled_ ? gainComputer_.computeLinearGain(sidechainLevelDb) : 1.0;
                 lastGainLinear_ = g;
             }
+
+            // In Advanced + PerChannel mode, each non-key channel ducks by
+            // its own independent gain instead of the shared g - tracked
+            // here (deepest cut among the audibly-ducked, non-key channels)
+            // so lastGainLinear_ still reports something meaningful for the
+            // meter/gain-viz instead of the now-unused shared g.
+            bool perChannelAdvanced = mode_ == DuckMode::Advanced &&
+                                       advancedDuckingMode_ == AdvancedDuckingMode::PerChannel &&
+                                       unmaskEnabled_;
+            double minChannelGain = 1.0;
 
             // --- 2. Per-channel processing + smoothed mix, L and R run
             //     through identical per-sample math (same g, same keyBlend)
@@ -320,8 +379,13 @@ public:
                     double loA_R, aboveR, belowR, inRangeR;
                     strips_[c].unmaskHighSplitR.tick(rawR, loA_R, aboveR);
                     strips_[c].unmaskLowSplitR.tick(loA_R, belowR, inRangeR);
-                    duckedL = belowL + aboveL + g * inRangeL;
-                    duckedR = belowR + aboveR + g * inRangeR;
+                    double gForChannel = g;
+                    if (perChannelAdvanced) {
+                        gForChannel = perChannelGainComputer_[c].computeLinearGain(sidechainLevelDb);
+                        if (c != keyChannel_) minChannelGain = std::min(minChannelGain, gForChannel);
+                    }
+                    duckedL = belowL + aboveL + gForChannel * inRangeL;
+                    duckedR = belowR + aboveR + gForChannel * inRangeR;
                 } else { // Resonance
                     dryL = dryDelayed[SpectralResonanceSuppressor::signalIndex(c, 0)];
                     dryR = dryDelayed[SpectralResonanceSuppressor::signalIndex(c, 1)];
@@ -335,6 +399,7 @@ public:
                 mixL += audible * outL;
                 mixR += audible * outR;
             }
+            if (perChannelAdvanced) lastGainLinear_ = minChannelGain;
 
             // --- 3. Output-bus WDRC compressor, applied once to the final
             //     mix of all 5 channels - independent of duck mode and of
@@ -435,6 +500,16 @@ private:
         }
     }
 
+    // Pushes channel c's independent threshold/ratio, plus the shared knee
+    // (GainComputer has no use for attack/release - those only matter to
+    // the shared EnvelopeFollower detector), into its own GainComputer.
+    void syncPerChannelGainComputer(int c) {
+        CompressorParams p = params_;
+        p.thresholdDb = channelThresholdDb_[c];
+        p.ratio = channelRatio_[c];
+        perChannelGainComputer_[c].setParams(p);
+    }
+
     double sampleRate_ = 48000.0;
     DuckMode mode_ = DuckMode::Advanced;
     bool unmaskEnabled_ = false;
@@ -443,6 +518,14 @@ private:
     CompressorParams params_;
     double unmaskLowHz_ = kUnmaskFrequencyRanges[kDialogue].lowHz;
     double unmaskHighHz_ = kUnmaskFrequencyRanges[kDialogue].highHz;
+
+    // Advanced duck mode's SummedBus-vs-PerChannel choice (Types.h) and the
+    // per-channel state it uses when PerChannel is active - see
+    // setAdvancedDuckingMode()/setChannelThresholdDb()/setChannelRatio().
+    AdvancedDuckingMode advancedDuckingMode_ = AdvancedDuckingMode::SummedBus;
+    std::array<GainComputer, kNumClasses> perChannelGainComputer_;
+    std::array<double, kNumClasses> channelThresholdDb_{};
+    std::array<double, kNumClasses> channelRatio_{};
 
     // Resonance-mode-only settings. Defaults match the values this project
     // shipped with before these became live-adjustable.

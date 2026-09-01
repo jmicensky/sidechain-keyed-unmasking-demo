@@ -413,6 +413,31 @@ function updateUnmaskRangeBadge() {
   $('unmaskRangeChannelName').textContent = CLASS_NAMES[c];
 }
 
+// Keeps each channel row's Threshold/Ratio fieldset in sync with the
+// Advanced-ducking-mode toggle and the Key Channel selection:
+//  - enabled only in Per-channel mode, and only for non-key channels (the
+//    key channel's own audio always takes the dry path in Advanced mode, so
+//    its knobs would have no audible effect - see the "Key channel row"
+//    design decision)
+//  - while in Summed-bus mode, every knob's displayed value live-tracks the
+//    shared Sidechain Compressor panel's Threshold/Ratio, so it's visually
+//    obvious they're one shared compressor until Per-channel is engaged
+function updateChannelKnobsState() {
+  const mode = parseInt($('advancedDuckingMode').value, 10);
+  const keyIdx = parseInt($('keyChannel').value, 10);
+  const sharedThreshold = parseFloat($('thresholdDb').value);
+  const sharedRatio = parseFloat($('ratio').value);
+  for (let c = 0; c < 5; c++) {
+    $(`channelKnobs${c}`).disabled = (mode !== 1) || (c === keyIdx);
+    if (mode === 0) {
+      $(`chThresholdDb${c}`).value = sharedThreshold;
+      $(`chThresholdReadout${c}`).textContent = `${sharedThreshold} dB`;
+      $(`chRatio${c}`).value = sharedRatio;
+      $(`chRatioReadout${c}`).textContent = `${sharedRatio.toFixed(1)}:1`;
+    }
+  }
+}
+
 // Small/subtle meter next to the WDRC header - just a fill bar and a
 // number, not a full EQ-style graph like the sidechain/resonance meter
 // above (this stage has no frequency shape to show, just one overall
@@ -435,6 +460,11 @@ function applyAllControls() {
   port.postMessage({ type: 'setRatio', ratio: parseFloat($('ratio').value) });
   port.postMessage({ type: 'setAttackMs', attackMs: parseFloat($('attackMs').value) });
   port.postMessage({ type: 'setReleaseMs', releaseMs: parseFloat($('releaseMs').value) });
+  port.postMessage({ type: 'setAdvancedDuckingMode', mode: parseInt($('advancedDuckingMode').value, 10) });
+  for (let c = 0; c < 5; c++) {
+    port.postMessage({ type: 'setChannelThresholdDb', channel: c, thresholdDb: parseFloat($(`chThresholdDb${c}`).value) });
+    port.postMessage({ type: 'setChannelRatio', channel: c, ratio: parseFloat($(`chRatio${c}`).value) });
+  }
   port.postMessage({ type: 'setResonanceNumPeaks', count: parseInt($('resonanceNumPeaks').value, 10) });
   port.postMessage({ type: 'setResonanceBandwidthOctaves', bandwidthOctaves: parseFloat($('resonanceBandwidth').value) });
   port.postMessage({ type: 'setResonanceMaxReductionDb', maxReductionDb: parseFloat($('resonanceMaxReduction').value) });
@@ -464,6 +494,16 @@ function buildChannelRows() {
         <label><input type="checkbox" id="mute${c}"> Mute</label>
         <label><input type="checkbox" id="solo${c}"> Solo</label>
       </div>
+      <fieldset class="channel-knobs" id="channelKnobs${c}" disabled>
+        <label>Threshold:
+          <input type="range" id="chThresholdDb${c}" min="-60" max="0" step="1" value="-30">
+          <span id="chThresholdReadout${c}" class="readout">-30 dB</span>
+        </label>
+        <label>Ratio:
+          <input type="range" id="chRatio${c}" min="1" max="10" step="0.1" value="4">
+          <span id="chRatioReadout${c}" class="readout">4.0:1</span>
+        </label>
+      </fieldset>
       <div class="waveform-container">
         <canvas id="wave${c}" class="waveform"></canvas>
         <div id="playhead${c}" class="playhead"></div>
@@ -490,7 +530,41 @@ function wireControls() {
     engineNode?.port.postMessage({ type: 'setKeyChannel', channel: parseInt($('keyChannel').value, 10) });
     updateUnmaskRangeBadge();
     updateGainVisualization(); // redraw so the ducked-band box tracks the new key channel's range
+    updateChannelKnobsState(); // the newly-keyed channel's own knobs go inert
   });
+  $('advancedDuckingMode').addEventListener('change', () => {
+    const mode = parseInt($('advancedDuckingMode').value, 10);
+    if (mode === 1) {
+      // Entering Per-channel: show each knob starting at the shared
+      // "summed bus" values - the engine seeds its own independent
+      // per-channel state from those same shared values at this exact
+      // instant (see Engine::setAdvancedDuckingMode()), so this display
+      // update and the engine's internal state agree without needing to
+      // separately post setChannelThresholdDb/setChannelRatio for all 5.
+      const sharedThreshold = parseFloat($('thresholdDb').value);
+      const sharedRatio = parseFloat($('ratio').value);
+      for (let c = 0; c < 5; c++) {
+        $(`chThresholdDb${c}`).value = sharedThreshold;
+        $(`chThresholdReadout${c}`).textContent = `${sharedThreshold} dB`;
+        $(`chRatio${c}`).value = sharedRatio;
+        $(`chRatioReadout${c}`).textContent = `${sharedRatio.toFixed(1)}:1`;
+      }
+    }
+    engineNode?.port.postMessage({ type: 'setAdvancedDuckingMode', mode });
+    updateChannelKnobsState();
+  });
+  for (let c = 0; c < 5; c++) {
+    $(`chThresholdDb${c}`).addEventListener('input', () => {
+      const db = parseFloat($(`chThresholdDb${c}`).value);
+      $(`chThresholdReadout${c}`).textContent = `${db} dB`;
+      engineNode?.port.postMessage({ type: 'setChannelThresholdDb', channel: c, thresholdDb: db });
+    });
+    $(`chRatio${c}`).addEventListener('input', () => {
+      const r = parseFloat($(`chRatio${c}`).value);
+      $(`chRatioReadout${c}`).textContent = `${r.toFixed(1)}:1`;
+      engineNode?.port.postMessage({ type: 'setChannelRatio', channel: c, ratio: r });
+    });
+  }
   $('duckMode').addEventListener('change', () => {
     engineNode?.port.postMessage({ type: 'setMode', mode: parseInt($('duckMode').value, 10) });
     updateGainVisualization();
@@ -499,6 +573,7 @@ function wireControls() {
     const db = parseFloat($('thresholdDb').value);
     $('thresholdReadout').textContent = `${db} dB`;
     engineNode?.port.postMessage({ type: 'setThresholdDb', thresholdDb: db });
+    updateChannelKnobsState(); // Summed-bus mode: per-channel knobs live-track this
   });
   $('kneeDb').addEventListener('input', () => {
     const db = parseFloat($('kneeDb').value);
@@ -507,6 +582,7 @@ function wireControls() {
   });
   $('ratio').addEventListener('change', () => {
     engineNode?.port.postMessage({ type: 'setRatio', ratio: parseFloat($('ratio').value) });
+    updateChannelKnobsState(); // Summed-bus mode: per-channel knobs live-track this
   });
   $('attackMs').addEventListener('change', () => {
     engineNode?.port.postMessage({ type: 'setAttackMs', attackMs: parseFloat($('attackMs').value) });
@@ -629,5 +705,6 @@ refAudio.addEventListener('ended', () => {
 buildChannelRows();
 wireControls();
 updateUnmaskRangeBadge();
+updateChannelKnobsState();
 updateGainVisualization();
 updateWdrcMeter(0);
