@@ -403,6 +403,8 @@ function applyAllControls() {
   port.postMessage({ type: 'setWdrcThresholdDb', thresholdDb: parseFloat($('wdrcThresholdDb').value) });
   port.postMessage({ type: 'setWdrcRatio', ratio: parseFloat($('wdrcRatio').value) });
   port.postMessage({ type: 'setWdrcMakeupGainDb', makeupGainDb: parseFloat($('wdrcMakeupGainDb').value) });
+  port.postMessage({ type: 'setWdrcAttackMs', attackMs: parseFloat($('wdrcAttackMs').value) });
+  port.postMessage({ type: 'setWdrcReleaseMs', releaseMs: parseFloat($('wdrcReleaseMs').value) });
   for (let c = 0; c < 5; c++) {
     port.postMessage({ type: 'setMute', channel: c, muted: $(`mute${c}`).checked });
     port.postMessage({ type: 'setSolo', channel: c, soloed: $(`solo${c}`).checked });
@@ -502,6 +504,16 @@ function wireControls() {
     const db = parseFloat($('wdrcMakeupGainDb').value);
     $('wdrcMakeupGainReadout').textContent = `${db} dB`;
     engineNode?.port.postMessage({ type: 'setWdrcMakeupGainDb', makeupGainDb: db });
+  });
+  $('wdrcAttackMs').addEventListener('input', () => {
+    const ms = parseFloat($('wdrcAttackMs').value);
+    $('wdrcAttackReadout').textContent = `${ms} ms`;
+    engineNode?.port.postMessage({ type: 'setWdrcAttackMs', attackMs: ms });
+  });
+  $('wdrcReleaseMs').addEventListener('input', () => {
+    const ms = parseFloat($('wdrcReleaseMs').value);
+    $('wdrcReleaseReadout').textContent = `${ms} ms`;
+    engineNode?.port.postMessage({ type: 'setWdrcReleaseMs', releaseMs: ms });
   });
   for (let c = 0; c < 5; c++) {
     $(`mute${c}`).addEventListener('change', () => {

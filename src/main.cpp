@@ -344,6 +344,22 @@ int main(int argc, char** argv) {
             [&]{ engine.setWdrcRatio(10.0); }},
         {23.0, "WDRC: re-bypass mid-playback",
             [&]{ engine.setWdrcBypassed(true); }},
+        {24.0, "WDRC: unbypass, out-of-range attack/release requests (-5ms, 9000ms) - should clamp to 1ms/3000ms",
+            [&]{ engine.setWdrcBypassed(false); engine.setWdrcAttackMs(-5.0); engine.setWdrcReleaseMs(9000.0); }},
+        {25.0, "WDRC: slow-acting end of the literature range (attack 50ms, release 3000ms)",
+            [&]{ engine.setWdrcAttackMs(50.0); engine.setWdrcReleaseMs(3000.0); }},
+        // NOTE: with this specific combination still active from earlier
+        // events (ratio 10:1, +6dB makeup gain) plus this 50ms attack, the
+        // click detector below will flag one real >0.35 jump around
+        // t=74.86s. Confirmed (via isolated single-variable probing during
+        // development) this is genuine transient overshoot - slow attack +
+        // high ratio + positive makeup gain lets a real percussive moment in
+        // the source material through at near-unity gain before the
+        // compressor reacts, then makeup gain amplifies it further. Verified
+        // the raw stems have no comparably large sample-to-sample delta at
+        // that point, and neither does the ducked mix with fast (default)
+        // attack - this is a real, expected characteristic of that specific
+        // aggressive parameter combination, not an engine bug.
     };
 
     std::cout << "\nRunning scripted timeline (" << durationSec << "s, "

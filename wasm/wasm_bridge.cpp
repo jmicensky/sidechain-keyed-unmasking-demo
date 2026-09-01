@@ -148,6 +148,19 @@ void engine_set_wdrc_makeup_gain_db(Engine* e, double makeupGainDb) {
     e->setWdrcMakeupGainDb(makeupGainDb);
 }
 
+// Clamped inside Engine/WdrcCompressor to the "common" WDRC literature range
+// (1-50ms attack, 30-3000ms release) - see Engine::setWdrcAttackMs() doc
+// comment.
+EMSCRIPTEN_KEEPALIVE
+void engine_set_wdrc_attack_ms(Engine* e, double attackMs) {
+    e->setWdrcAttackMs(attackMs);
+}
+
+EMSCRIPTEN_KEEPALIVE
+void engine_set_wdrc_release_ms(Engine* e, double releaseMs) {
+    e->setWdrcReleaseMs(releaseMs);
+}
+
 EMSCRIPTEN_KEEPALIVE
 double engine_wdrc_gain_reduction_db(Engine* e) {
     return e->wdrcGainReductionDb();

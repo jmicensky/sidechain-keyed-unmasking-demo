@@ -82,6 +82,8 @@ public:
         wdrcCompressor_.setRatio(wdrcRatio_);
         wdrcCompressor_.setMakeupGainDb(wdrcMakeupGainDb_);
         wdrcCompressor_.setBypassed(wdrcBypassed_);
+        wdrcCompressor_.setAttackMs(wdrcAttackMs_);
+        wdrcCompressor_.setReleaseMs(wdrcReleaseMs_);
 
         for (int c = 0; c < kNumClasses; ++c) {
             strips_[c].crossoverL.prepare(sampleRate);
@@ -204,6 +206,20 @@ public:
     void setWdrcMakeupGainDb(double makeupGainDb) {
         wdrcMakeupGainDb_ = makeupGainDb;
         wdrcCompressor_.setMakeupGainDb(makeupGainDb);
+    }
+
+    // Clamped inside WdrcCompressor to the "common" WDRC literature range
+    // (1-50ms attack, 30-3000ms release) - see its setAttackMs()/
+    // setReleaseMs() doc comment. Separate from the sidechain compressor's
+    // setAttackMs()/setReleaseMs() below - the two stages don't share timing.
+    void setWdrcAttackMs(double attackMs) {
+        wdrcAttackMs_ = attackMs;
+        wdrcCompressor_.setAttackMs(attackMs);
+    }
+
+    void setWdrcReleaseMs(double releaseMs) {
+        wdrcReleaseMs_ = releaseMs;
+        wdrcCompressor_.setReleaseMs(releaseMs);
     }
 
     void setAttackMs(double attackMs) {
@@ -405,6 +421,8 @@ private:
     double wdrcThresholdDb_ = -24.0;
     double wdrcRatio_ = 2.0;
     double wdrcMakeupGainDb_ = 0.0;
+    double wdrcAttackMs_ = 5.0;
+    double wdrcReleaseMs_ = 80.0;
 
     EnvelopeFollower detector_;
     GainComputer gainComputer_;

@@ -35,13 +35,29 @@ public:
     void prepare(double sampleRate) {
         filterbankL_.prepare(sampleRate);
         filterbankR_.prepare(sampleRate);
-        for (auto& ef : bandDetectors_) ef.prepare(sampleRate, kAttackMs, kReleaseMs);
+        for (auto& ef : bandDetectors_) ef.prepare(sampleRate, attackMs_, releaseMs_);
         gainComputer_.prepare(params_);
         bypassBlend_.prepare(sampleRate, kBypassRampMs);
         bypassBlend_.reset(0.0); // starts bypassed
     }
 
     void setBypassed(bool bypassed) { bypassBlend_.setTarget(bypassed ? 0.0 : 1.0); }
+
+    // Clamped to the range this project treats as "common" in hearing-aid
+    // WDRC time-constant literature (Dillon's Hearing Aids textbook, Kates'
+    // Digital Hearing Aids): fast/syllabic designs use attack ~5ms, release
+    // ~50-200ms; slow-acting/AGC-o designs push release out to several
+    // seconds. 1-50ms attack and 30-3000ms release covers both philosophies
+    // without being unbounded.
+    void setAttackMs(double attackMs) {
+        attackMs_ = std::clamp(attackMs, 1.0, 50.0);
+        for (auto& ef : bandDetectors_) ef.setTimes(attackMs_, releaseMs_);
+    }
+
+    void setReleaseMs(double releaseMs) {
+        releaseMs_ = std::clamp(releaseMs, 30.0, 3000.0);
+        for (auto& ef : bandDetectors_) ef.setTimes(attackMs_, releaseMs_);
+    }
 
     void setThresholdDb(double thresholdDb) {
         params_.thresholdDb = thresholdDb;
@@ -106,12 +122,6 @@ public:
     double lastGainReductionDb() const { return lastGainReductionDb_; }
 
 private:
-    // Fixed WDRC-typical timing, not exposed as a control - the point of
-    // this stage is experimenting with threshold/ratio/makeup gain shape,
-    // not re-deriving attack/release (the sidechain compressor elsewhere
-    // already covers that experimentation).
-    static constexpr double kAttackMs = 5.0;
-    static constexpr double kReleaseMs = 80.0;
     static constexpr double kBypassRampMs = 25.0;
     static constexpr double kLevelCompensationDb = 10.0; // see tick()
 
@@ -122,6 +132,9 @@ private:
     double makeupGainLinear_ = 1.0;
     Smoother bypassBlend_;
     double lastGainReductionDb_ = 0.0;
+    // Defaults land in the "fast/syllabic" end of the literature range.
+    double attackMs_ = 5.0;
+    double releaseMs_ = 80.0;
 };
 
 } // namespace demo

@@ -83,6 +83,10 @@ class EngineProcessor extends AudioWorkletProcessor {
         m._engine_set_wdrc_ratio(e, msg.ratio); break;
       case 'setWdrcMakeupGainDb':
         m._engine_set_wdrc_makeup_gain_db(e, msg.makeupGainDb); break;
+      case 'setWdrcAttackMs':
+        m._engine_set_wdrc_attack_ms(e, msg.attackMs); break;
+      case 'setWdrcReleaseMs':
+        m._engine_set_wdrc_release_ms(e, msg.releaseMs); break;
       case 'seek':
         m._engine_reset_playhead(e); break;
       default:
