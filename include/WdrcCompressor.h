@@ -77,7 +77,16 @@ public:
         double minGainDb = 0.0; // deepest cut among the 4 bands, for the meter
         for (int b = 0; b < kNumBands; ++b) {
             double mono = 0.5 * (bandsL[b] + bandsR[b]);
-            double levelDb = bandDetectors_[b].tick(mono);
+            // Any one band only carries a fraction of the full mix's energy
+            // (measured on the real Construction Scene stems: 2.5-19dB
+            // quieter than the full-mix level, depending on the band and
+            // how much content actually lives there), so a threshold
+            // calibrated against full-mix loudness would rarely be crossed
+            // by any individual band - the same issue Resonance mode's
+            // per-band detector had (see Engine.h's
+            // kResonanceLevelCompensationDb). +10dB is an empirical match
+            // for comparable sensitivity, not a physically exact correction.
+            double levelDb = bandDetectors_[b].tick(mono) + kLevelCompensationDb;
             double g = gainComputer_.computeLinearGain(levelDb);
             minGainDb = std::min(minGainDb, 20.0 * std::log10(std::max(g, 1e-6)));
             compressedL += bandsL[b] * g;
@@ -104,6 +113,7 @@ private:
     static constexpr double kAttackMs = 5.0;
     static constexpr double kReleaseMs = 80.0;
     static constexpr double kBypassRampMs = 25.0;
+    static constexpr double kLevelCompensationDb = 10.0; // see tick()
 
     CrossoverFilterbank filterbankL_, filterbankR_;
     std::array<EnvelopeFollower, kNumBands> bandDetectors_;
