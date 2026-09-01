@@ -79,8 +79,8 @@ demo_engine/
 │   ├── WdrcCompressor.h      Output-bus 4-band WDRC-style compressor
 │   └── Engine.h              Top-level signal flow, ties everything together
 ├── src/
-│   └── main.cpp              CLI test harness: loads/synthesizes stems, runs a
-│                              scripted event timeline, writes WAV, self-checks
+│   └── main.cpp              CLI: scripted-timeline demo mode (default) and
+│                              --static single-fixed-condition export mode
 ├── third_party/
 │   └── dr_wav.h               Single-header WAV read/write (mackron/dr_libs, MIT)
 ├── wasm/
@@ -92,6 +92,12 @@ demo_engine/
 │   ├── engine-worklet.js       AudioWorkletProcessor driving the WASM engine
 │   └── engine.mjs              Built WASM module (checked in, regenerate via
 │                                wasm/build.sh after any include/ or wasm/ change)
+├── analysis/
+│   ├── render_exports.sh       Renders the full --static export sweep -> exports/
+│   ├── compute_metrics.py      Masking-margin + STOI metrics from those exports
+│   └── results.csv             Saved results table from the last full sweep run
+├── exports/                     --static mode's rendered WAVs (gitignored, ~930MB -
+│                                regenerate via analysis/render_exports.sh)
 ├── Construction Scene/          Real stems + reference blend (~135MB, tracked in git)
 └── PublicTransit Scene/         Real stems + reference blend (~146MB, tracked in git)
 ```
@@ -259,6 +265,22 @@ Per-sample signal flow inside `Engine::process()`:
     pre-existing WDRC transient-overshoot event (slow attack + high ratio +
     positive makeup gain letting a real percussive moment through at
     t≈74.86s) — not an engine bug.
+- **`--static` mode** — a separate code path (not the scripted timeline
+  above) for objective-measurement work: renders one full clip under a
+  single fixed configuration with no mid-clip changes at all.
+  ```
+  ./demo_engine_cli --static --scene "Construction Scene" --key Dialogue \
+    --mode advanced --threshold -30 --ratio 4 --knee 6 --attack 5 \
+    --release 120 --max-reduction 6 --out exports/construction_dialogue_advanced.wav
+  ```
+  `--mode` is `unprocessed` (reuses the scene's mastered reference blend
+  file directly — confirmed it's *not* a bit-identical sum of the 5 raw
+  stems, so this avoids computing a second, slightly different baseline),
+  `basic`, or `advanced` (Advanced-mode ducking, forced to
+  `AdvancedDuckingMode::SummedBus` — Per-channel and Resonance are out of
+  scope for this path). Only loads real scene stems, never the synthetic
+  generators, so it's fully deterministic. See `analysis/` below for what
+  consumes its output.
 
 ### `wasm/wasm_bridge.cpp` + `wasm/build.sh`
 Thin `extern "C"` wrapper exposing `Engine` to WebAssembly — one function per
@@ -291,6 +313,45 @@ auto-regenerated. Requires Emscripten (pinned path in the script:
   throttles state-reporting postMessages back to the main thread to ~47 Hz
   (every 8th quantum) to avoid flooding it.
 
+### `analysis/` (objective intelligibility metrics)
+Consumes `--static` mode's exports to produce comparable, exportable data
+proving (or not) that sidechain ducking improves priority-class audibility.
+Scope: Basic and Advanced (Summed-bus) duck modes only — Resonance's
+ducking doesn't occupy a fixed frequency band, so a fixed-band
+masking-margin measurement doesn't represent what it does.
+- `render_exports.sh` — renders the full 2-scene × 5-priority-class ×
+  3-condition sweep (30 WAVs) into `exports/` (gitignored — regenerate
+  locally, ~930MB, rather than pulling it from git). Written without bash
+  associative arrays (`declare -A`) because macOS ships bash 3.2 as
+  `/bin/bash`, which doesn't support them.
+- `compute_metrics.py` (needs `numpy`, `scipy`, `soundfile`, `pystoi`) —
+  two metrics per (scene, priority class, condition):
+  1. **In-band masking margin** — both the dry priority stem and the mix
+     export are zero-phase band-passed to the priority class's
+     `kUnmaskFrequencyRanges` band, framed (20ms/50% overlap), and the
+     masker level is estimated via power subtraction
+     (`mix_power − gSafety² × priority_power`, incoherent-signal
+     assumption). Gated to frames where the priority stem is actually
+     active; reports mean and worst-case margin.
+  2. **STOI/ESTOI** (Dialogue only) — via `pystoi`, with a small
+     cross-correlation lag search (±20ms) to correct for Advanced mode's
+     crossover group delay before scoring.
+  Results print to stdout and save to `analysis/results.csv`.
+- **Finding from the first full sweep (both scenes, shared -30dB/4:1/6dB
+  compressor settings):** Dialogue-as-priority clearly showed the
+  hypothesized direction on both metrics and both scenes (unprocessed
+  worst, basic/advanced both improved — e.g. Construction: mean margin
+  -3.32dB → -0.69dB/-1.03dB, STOI 0.393 → 0.434/0.426). Other priority
+  classes showed weak or mixed movement. Root-caused, not a script bug: a
+  threshold-crossing diagnostic showed Music/Safety/Background/Other's own
+  levels rarely reach anywhere near -30dBFS in either scene's real stems
+  (Dialogue peaks around -9dB; the others mostly sit -18dB to -32dB), so a
+  single shared threshold barely engages ducking when those classes are
+  the key. This is itself a real finding — it's the concrete data-backed
+  case for using Advanced Per-channel mode's independent per-class
+  threshold/ratio (§1) rather than one shared threshold across all five
+  classes.
+
 ## 4. Deployment
 
 Static GitHub Pages site (`.nojekyll` present so the `web/` and scene
@@ -318,9 +379,12 @@ for `"status":"built"` to confirm a deploy landed.
   work but hasn't actually been run in this environment.
 - **No automated per-channel "recommended value" study yet.** Advanced
   Per-channel mode's independent threshold/ratio knobs exist so this can be
-  explored, but establishing actual recommended per-class values (mentioned
-  as a paper goal — Summed-bus as the primary methodology, Per-channel to
-  help derive per-category starting points) hasn't been done yet.
+  explored, and the first `analysis/` sweep (§3) now gives a concrete,
+  data-backed reason why it matters: a single shared -30dB threshold works
+  well for Dialogue but barely engages for classes whose real-world levels
+  sit well below it. Actually deriving recommended per-class values
+  (Summed-bus as the primary methodology, Per-channel to help derive
+  per-category starting points, per the paper goal) still hasn't been done.
 - **Browser/device testing has been Chromium-via-Playwright only** in this
   environment — no manual cross-browser (Safari/Firefox) or real-device
   audio-hardware listening pass has been done as part of this work.
@@ -360,7 +424,12 @@ synthesized test scene and the real Construction/Public Transit stems).
    (§5) — update `Types.h`'s defaults accordingly.
 2. Use Advanced Per-channel mode to derive and document recommended
    per-class threshold/ratio starting points, then decide whether those
-   become new defaults or stay as user-adjustable knobs.
+   become new defaults or stay as user-adjustable knobs. The §3 `analysis/`
+   finding (shared -30dB threshold barely engages for anything but
+   Dialogue) is the concrete starting point for this — rerun
+   `render_exports.sh`/`compute_metrics.py` with per-class thresholds tuned
+   closer to each class's own real levels and compare against the
+   shared-threshold baseline in `results.csv`.
 3. A critical listen across both scenes with real headphones/speakers,
    specifically around the Max Reduction default (6dB) and the WDRC
    transient-overshoot event documented in §3 (`main.cpp`), to confirm both
