@@ -160,3 +160,86 @@ in this ~80s clip is dominated by a moment where Dialogue itself is
 near its own gating floor, so it is barely affected by ducking
 strength regardless of compressor settings -- these settings mainly
 improve typical/average masking margin, not the single worst instant.
+
+======================================================================
+PSYCHOACOUSTIC PARTIAL-LOUDNESS / MASKED-THRESHOLD ESTIMATE
+======================================================================
+Method: ISO 532-1 (Zwicker) loudness via MOSQITO, stationary per-segment
+(nperseg=8192, noverlap=4096 @ 48kHz, ~85ms hop) - not the full
+time-varying model (computational-cost tradeoff).
+Calibration: full-scale digital peak assumed = 100 dB SPL. Absolute %
+values are calibration-dependent; the relative comparison across
+conditions (same calibration throughout) is far more robust.
+"Masked" = Dialogue specific loudness in a critical band/frame <=
+the reconstructed masker specific loudness in that band/frame (masker
+excitation used as an approximate masking-threshold proxy - NOT the
+full Moore & Glasberg partial-loudness/masking-index model).
+Masker reconstructed by exact time-domain subtraction (mix - dry
+Dialogue), valid because Dialogue always takes the dry/unducked path
+regardless of duck mode. Averaged over frames where Dialogue's own
+loudness exceeds 10% of its peak (770/955 frames, 80.6%, for this clip).
+Row order matches the mean-margin-gain ranking above, for direct
+cross-reference.
+
+RUN 1: -36Thesh20dBKnee_AttackFast_ReleaseSlow_4Ratio_2026-09-01_1105
+  Percent of Dialogue's loudness masked:
+    Unprocessed  53.5%
+    Basic        36.3%
+    Advanced     42.3%
+  Reduction (Advanced vs unprocessed): +11.2 percentage points
+
+RUN 2: -48Thesh12dBKnee_AttackFast_ReleaseSlow_LowRatio_2026-09-01_1048
+  Percent of Dialogue's loudness masked:
+    Unprocessed  53.5%
+    Basic        34.1%
+    Advanced     41.3%
+  Reduction (Advanced vs unprocessed): +12.2 percentage points
+
+RUN 3: -48Thesh12dBKnee_AttackFast_Releasemedium_LowRatio_2026-09-01_1052
+  Percent of Dialogue's loudness masked:
+    Unprocessed  53.5%
+    Basic        39.1%
+    Advanced     44.3%
+  Reduction (Advanced vs unprocessed): +9.2 percentage points
+
+RUN 4: -36Thesh12dBKnee_AttackXFast_Releasemedium_LowRatio_2026-09-01_1057
+  Percent of Dialogue's loudness masked:
+    Unprocessed  53.5%
+    Basic        46.2%
+    Advanced     48.7%
+  Reduction (Advanced vs unprocessed): +4.8 percentage points
+
+RUN 5: -36Thesh12dBKnee_AttackFast_ReleaseSlow_LowRatio_2026-09-01_1101
+  Percent of Dialogue's loudness masked:
+    Unprocessed  53.5%
+    Basic        45.2%
+    Advanced     48.1%
+  Reduction (Advanced vs unprocessed): +5.4 percentage points
+
+RUN 6: -48Thesh12dBKnee_Attackslow_Releasemedium_LowRatio_2026-09-01_1055
+  Percent of Dialogue's loudness masked:
+    Unprocessed  53.5%
+    Basic        45.6%
+    Advanced     48.4%
+  Reduction (Advanced vs unprocessed): +5.1 percentage points
+
+RUN 7: -24Thesh20dBKnee_AttackFast_ReleaseSlow_4Ratio_2026-09-01_1217
+  Percent of Dialogue's loudness masked:
+    Unprocessed  53.5%
+    Basic        50.1%
+    Advanced     51.3%
+  Reduction (Advanced vs unprocessed): +2.1 percentage points
+
+RUN 8: -36Thesh12dBKnee_AttackMedium_Releasemedium_LowRatio_2026-09-01_1100
+  Percent of Dialogue's loudness masked:
+    Unprocessed  53.5%
+    Basic        50.3%
+    Advanced     51.5%
+  Reduction (Advanced vs unprocessed): +2.0 percentage points
+
+RUN 9: -24Thesh6dBKnee_AttackFast_ReleaseSlow_4Ratio_2026-09-01_1104
+  Percent of Dialogue's loudness masked:
+    Unprocessed  53.5%
+    Basic        52.2%
+    Advanced     52.5%
+  Reduction (Advanced vs unprocessed): +0.9 percentage points
