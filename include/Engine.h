@@ -384,6 +384,7 @@ public:
                         gForChannel = perChannelGainComputer_[c].computeLinearGain(sidechainLevelDb);
                         if (c != keyChannel_) minChannelGain = std::min(minChannelGain, gForChannel);
                     }
+                    lastChannelGainLinear_[c] = gForChannel; // for the per-channel gain-reduction meter UI
                     duckedL = belowL + aboveL + gForChannel * inRangeL;
                     duckedR = belowR + aboveR + gForChannel * inRangeR;
                 } else { // Resonance
@@ -423,6 +424,14 @@ public:
     // it's the deepest of the per-peak cuts (see the resonance*() getters
     // below for the full per-peak state).
     double lastGainLinear() const { return lastGainLinear_; }
+
+    // Per-channel gain from the most recently processed sample (1.0 = no
+    // reduction) - only meaningful in Advanced mode (updated every sample
+    // Advanced mode runs, in both AdvancedDuckingMode sub-modes; stale
+    // otherwise). For the per-channel gain-reduction meter UI, which only
+    // reads this while AdvancedDuckingMode::PerChannel is active - see
+    // Engine::process()'s Advanced-mode branch.
+    double channelGainLinear(int channel) const { return lastChannelGainLinear_[channel]; }
 
     // Resonance mode's dynamic peak centers (Hz) and depths (linear gain,
     // 1.0 = no cut) from the most recently processed hop - only meaningful
@@ -526,6 +535,7 @@ private:
     std::array<GainComputer, kNumClasses> perChannelGainComputer_;
     std::array<double, kNumClasses> channelThresholdDb_{};
     std::array<double, kNumClasses> channelRatio_{};
+    std::array<double, kNumClasses> lastChannelGainLinear_{1.0, 1.0, 1.0, 1.0, 1.0};
 
     // Resonance-mode-only settings. Defaults match the values this project
     // shipped with before these became live-adjustable.

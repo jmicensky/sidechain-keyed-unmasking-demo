@@ -39,8 +39,11 @@
   #thresholdDb, #kneeDb, #resonanceBandwidth, #resonanceMaxReduction, #wdrcThresholdDb, #wdrcRatio, #wdrcMakeupGainDb, #wdrcAttackMs, #wdrcReleaseMs { vertical-align: middle; width: 160px; }
   #status { color: #666; font-size: 13px; }
   .gain-viz-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; font-size: 13px; color: #444; }
-  .gain-viz-container { width: 100%; height: 150px; background: #fbfbfb; border: 1px solid #e0e0e0; border-radius: 4px; margin-bottom: 16px; }
+  .gain-viz-container { width: 100%; height: 150px; background: #fbfbfb; border: 1px solid #e0e0e0; border-radius: 4px; }
   canvas.gain-viz { display: block; width: 100%; height: 100%; }
+  .compressor-row { display: flex; gap: 20px; align-items: flex-start; }
+  .compressor-column { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
+  .gain-viz-column { flex: 1 1 0; min-width: 0; }
 </style>
 </head>
 <body>
@@ -75,14 +78,6 @@
     <span id="time" class="time">0:00 / 0:00</span>
   </div>
 
-  <div class="gain-viz-header">
-    <span>Gain Reduction</span>
-    <span id="gainDbReadout" class="time">0.0 dB</span>
-  </div>
-  <div class="gain-viz-container">
-    <canvas id="gainViz" class="gain-viz"></canvas>
-  </div>
-
   <div id="channels"></div>
 
   <div class="controls">
@@ -107,59 +102,73 @@
       <span class="hint">only affects Advanced mode's ducking - see the Threshold/Ratio knobs on each channel row below</span>
     </label>
 
-    <div class="compressor-controls">
-      <div class="compressor-header">Sidechain Compressor <span class="hint">(applies to all modes, including Resonance)</span></div>
-      <label>Threshold:
-        <input type="range" id="thresholdDb" min="-60" max="0" step="1" value="-30">
-        <span id="thresholdReadout" class="time">-30 dB</span>
-      </label>
-      <label>Knee:
-        <input type="range" id="kneeDb" min="0" max="24" step="1" value="6">
-        <span id="kneeReadout" class="time">6 dB soft</span>
-      </label>
-      <label>Ratio:
-        <select id="ratio">
-          <option value="1.5">Low (1.5:1)</option>
-          <option value="4" selected>Default (4:1)</option>
-          <option value="8">High (8:1)</option>
-        </select>
-      </label>
-      <label>Attack:
-        <select id="attackMs">
-          <option value="1">Extremely Fast (1ms)</option>
-          <option value="5" selected>Fast (5ms)</option>
-          <option value="15">Medium (15ms)</option>
-          <option value="50">Slow (50ms)</option>
-        </select>
-      </label>
-      <label>Release:
-        <select id="releaseMs">
-          <option value="20">Extremely Fast (20ms)</option>
-          <option value="60">Fast (60ms)</option>
-          <option value="120" selected>Medium (120ms)</option>
-          <option value="400">Slow (400ms)</option>
-        </select>
-      </label>
-    </div>
+    <div class="compressor-row">
+      <div class="compressor-column">
+        <div class="compressor-controls">
+          <div class="compressor-header">Sidechain Compressor <span class="hint">(applies to all modes, including Resonance)</span></div>
+          <label>Threshold:
+            <input type="range" id="thresholdDb" min="-60" max="0" step="1" value="-30">
+            <span id="thresholdReadout" class="time">-30 dB</span>
+          </label>
+          <label>Knee:
+            <input type="range" id="kneeDb" min="0" max="24" step="1" value="6">
+            <span id="kneeReadout" class="time">6 dB soft</span>
+          </label>
+          <label>Ratio:
+            <select id="ratio">
+              <option value="1.5">Low (1.5:1)</option>
+              <option value="4" selected>Default (4:1)</option>
+              <option value="8">High (8:1)</option>
+            </select>
+          </label>
+          <label>Attack:
+            <select id="attackMs">
+              <option value="1">Extremely Fast (1ms)</option>
+              <option value="5" selected>Fast (5ms)</option>
+              <option value="15">Medium (15ms)</option>
+              <option value="50">Slow (50ms)</option>
+            </select>
+          </label>
+          <label>Release:
+            <select id="releaseMs">
+              <option value="20">Extremely Fast (20ms)</option>
+              <option value="60">Fast (60ms)</option>
+              <option value="120" selected>Medium (120ms)</option>
+              <option value="400">Slow (400ms)</option>
+            </select>
+          </label>
+        </div>
 
-    <div class="compressor-controls">
-      <div class="compressor-header">Resonance Mode <span class="hint">(only affects the Resonance duck mode)</span></div>
-      <label>Bands:
-        <select id="resonanceNumPeaks">
-          <option value="1">1 (single band)</option>
-          <option value="4" selected>4</option>
-          <option value="8">8</option>
-          <option value="12">12</option>
-        </select>
-      </label>
-      <label>Bandwidth:
-        <input type="range" id="resonanceBandwidth" min="0.1" max="3" step="0.05" value="1.16">
-        <span id="resonanceBandwidthReadout" class="time">1.16 oct</span>
-      </label>
-      <label>Max Reduction:
-        <input type="range" id="resonanceMaxReduction" min="0" max="40" step="1" value="24">
-        <span id="resonanceMaxReductionReadout" class="time">24 dB</span>
-      </label>
+        <div class="compressor-controls">
+          <div class="compressor-header">Resonance Mode <span class="hint">(only affects the Resonance duck mode)</span></div>
+          <label>Bands:
+            <select id="resonanceNumPeaks">
+              <option value="1">1 (single band)</option>
+              <option value="4" selected>4</option>
+              <option value="8">8</option>
+              <option value="12">12</option>
+            </select>
+          </label>
+          <label>Bandwidth:
+            <input type="range" id="resonanceBandwidth" min="0.1" max="3" step="0.05" value="1.16">
+            <span id="resonanceBandwidthReadout" class="time">1.16 oct</span>
+          </label>
+          <label>Max Reduction:
+            <input type="range" id="resonanceMaxReduction" min="0" max="40" step="1" value="24">
+            <span id="resonanceMaxReductionReadout" class="time">24 dB</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="gain-viz-column">
+        <div class="gain-viz-header">
+          <span>Gain Reduction</span>
+          <span id="gainDbReadout" class="time">0.0 dB</span>
+        </div>
+        <div class="gain-viz-container">
+          <canvas id="gainViz" class="gain-viz"></canvas>
+        </div>
+      </div>
     </div>
 
     <div class="compressor-controls">

@@ -215,6 +215,13 @@ double engine_last_gain_linear(Engine* e) {
     return e->lastGainLinear();
 }
 
+// Per-channel gain-reduction meter (only meaningful in Advanced +
+// PerChannel ducking mode - see Engine::channelGainLinear() doc comment).
+EMSCRIPTEN_KEEPALIVE
+double engine_channel_gain_linear(Engine* e, int channel) {
+    return e->channelGainLinear(channel);
+}
+
 // How many dynamic notches Resonance mode is currently using (live, set via
 // engine_set_resonance_num_peaks) - lets JS size its display arrays without
 // hardcoding the count.

@@ -320,6 +320,7 @@ function ensureAudioGraph() {
           currentResonance = msg.resonance || currentResonance;
           updateGainVisualization();
           updateWdrcMeter(msg.wdrcGainReductionDb || 0);
+          if (msg.channelGains) updateChannelGainMeters(msg.channelGains);
         }
       };
     });
@@ -424,17 +425,46 @@ function updateUnmaskRangeBadge() {
 //    obvious they're one shared compressor until Per-channel is engaged
 function updateChannelKnobsState() {
   const mode = parseInt($('advancedDuckingMode').value, 10);
+  const duckMode = parseInt($('duckMode').value, 10);
   const keyIdx = parseInt($('keyChannel').value, 10);
   const sharedThreshold = parseFloat($('thresholdDb').value);
   const sharedRatio = parseFloat($('ratio').value);
+  // Per-channel knobs (and their gain-reduction meters) are only live when
+  // Per-channel mode is selected *and* Advanced duck mode is actually
+  // active - selecting Per-channel while in Basic/Resonance mode has no
+  // audible effect yet, so leave the row inert until Advanced is chosen too.
+  const perChannelActive = mode === 1 && duckMode === 1;
   for (let c = 0; c < 5; c++) {
-    $(`channelKnobs${c}`).disabled = (mode !== 1) || (c === keyIdx);
+    const disabled = !perChannelActive || (c === keyIdx);
+    $(`channelKnobs${c}`).disabled = disabled;
     if (mode === 0) {
       $(`chThresholdDb${c}`).value = sharedThreshold;
       $(`chThresholdReadout${c}`).textContent = `${sharedThreshold} dB`;
       $(`chRatio${c}`).value = sharedRatio;
       $(`chRatioReadout${c}`).textContent = `${sharedRatio.toFixed(1)}:1`;
     }
+    if (disabled) {
+      $(`chGrFill${c}`).style.width = '0%';
+      $(`chGrReadout${c}`).textContent = '0.0 dB';
+    }
+  }
+}
+
+// Updates the 5 per-channel gain-reduction meters from the engine's live
+// per-channel gain report - only meaningful while Per-channel Advanced
+// ducking is actually active (see updateChannelKnobsState()), so inert rows
+// are skipped and just keep showing the 0.0 dB reset from there.
+function updateChannelGainMeters(channelGains) {
+  const mode = parseInt($('advancedDuckingMode').value, 10);
+  const duckMode = parseInt($('duckMode').value, 10);
+  const keyIdx = parseInt($('keyChannel').value, 10);
+  if (mode !== 1 || duckMode !== 1) return;
+  for (let c = 0; c < 5; c++) {
+    if (c === keyIdx) continue;
+    const db = gainLinearToDb(channelGains[c]);
+    const pct = Math.min(100, (Math.abs(db) / WDRC_METER_MAX_DB) * 100);
+    $(`chGrFill${c}`).style.width = `${pct}%`;
+    $(`chGrReadout${c}`).textContent = `${db.toFixed(1)} dB`;
   }
 }
 
@@ -503,6 +533,10 @@ function buildChannelRows() {
           <input type="range" id="chRatio${c}" min="1" max="10" step="0.1" value="4">
           <span id="chRatioReadout${c}" class="readout">4.0:1</span>
         </label>
+        <span class="gr-meter">
+          <span class="gr-meter-track"><span id="chGrFill${c}" class="gr-meter-fill"></span></span>
+          <span id="chGrReadout${c}" class="gr-meter-label">0.0 dB</span>
+        </span>
       </fieldset>
       <div class="waveform-container">
         <canvas id="wave${c}" class="waveform"></canvas>
@@ -568,6 +602,7 @@ function wireControls() {
   $('duckMode').addEventListener('change', () => {
     engineNode?.port.postMessage({ type: 'setMode', mode: parseInt($('duckMode').value, 10) });
     updateGainVisualization();
+    updateChannelKnobsState(); // per-channel knobs only go live in Advanced mode
   });
   $('thresholdDb').addEventListener('input', () => {
     const db = parseFloat($('thresholdDb').value);
