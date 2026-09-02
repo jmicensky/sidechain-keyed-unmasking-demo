@@ -1,0 +1,50 @@
+% Listening-examples table: BASIC mode. Hyperlinks to MP3s hosted on
+% GitHub Pages (paper-audio/ in the repo). Companion to
+% listening_examples_advanced_table.tex - same 4 settings, same
+% unprocessed reference, Basic (full-band) ducking instead of Advanced.
+% Requires packages already in main.tex's preamble: booktabs, siunitx,
+% hyperref (colorlinks already configured there).
+%
+% All 5 files have +3dB gain applied UNIFORMLY (including unprocessed) so
+% differences a listener hears reflect the actual processing, not a level
+% difference between clips - see paper-audio/'s commit messages for the
+% clipping-headroom checks (no file exceeds -1.41dBFS after the boost).
+%
+% Row labels (Weakest/Best/2nd best) intentionally match Table~\ref{tab:param-sweep}'s
+% rank numbers, which were derived from ADVANCED-mode margin gain - kept
+% consistent across both listening tables so a reader can cross-reference
+% one settings combination across all three tables. Confirmed these 4
+% settings rank in the same relative order under Basic's own margin gain
+% too (Run 1 > Run 2 > Run 3 > Run 9 for both modes), so the labels aren't
+% misleading applied here.
+%
+% Base URL: https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/
+
+\noindent Table~\ref{tab:listening-examples-basic} links to audio examples
+for Basic (full-band) ducking: the unprocessed reference, and Basic mode
+under the same four representative settings used in
+Table~\ref{tab:listening-examples-advanced}'s Advanced-mode examples,
+letting the two be compared directly setting-for-setting.
+
+\begin{table}[h]
+\centering
+\footnotesize
+\caption{Listening examples, Basic (full-band) ducking: the same
+$\sim$\SI{82}{\second} Construction Scene / Dialogue-priority clip,
+unprocessed and under four settings from the parameter sweep. All five
+files have \SI{3}{\decibel} of gain applied uniformly for comfortable
+playback level; audible differences between clips reflect the processing,
+not a level mismatch.}
+\label{tab:listening-examples-basic}
+\begin{tabular}{@{}l S[table-format=-2.0] S[table-format=1.1] S[table-format=2.0] S[table-format=2.0] S[table-format=3.0] l@{}}
+\toprule
+\textbf{Condition} & {\textbf{Thr.} (\si{\decibel})} & {\textbf{Ratio}} & {\textbf{Knee} (\si{\decibel})} & {\textbf{Atk.} (\si{\milli\second})} & {\textbf{Rel.} (\si{\milli\second})} & \textbf{Listen} \\
+\midrule
+Unprocessed & \multicolumn{5}{c}{(dry reference, no ducking)} & \href{https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/unprocessed.mp3}{Listen} \\
+Weakest (Table~\ref{tab:param-sweep} \#9) & -24 & 4.0 & 6 & 5 & 400 & \href{https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/basic_th-24_r4_k6_a5_rel400.mp3}{Listen} \\
+Best (Table~\ref{tab:param-sweep} \#1) & -36 & 4.0 & 20 & 5 & 400 & \href{https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/basic_th-36_r4_k20_a5_rel400.mp3}{Listen} \\
+2nd best (Table~\ref{tab:param-sweep} \#2) & -48 & 1.5 & 12 & 5 & 400 & \href{https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/basic_th-48_r1.5_k12_a5_rel400.mp3}{Listen} \\
+\#2, faster release & -48 & 1.5 & 12 & 5 & 120 & \href{https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/basic_th-48_r1.5_k12_a5_rel120.mp3}{Listen} \\
+\bottomrule
+\end{tabular}
+\end{table}
