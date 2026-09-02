@@ -1,0 +1,66 @@
+FIXED-THRESHOLD (-35dB) PARAMETER SWEEP -- FINDINGS
+Construction Scene, Dialogue priority class, Advanced (Summed-bus) only
+100 points, threshold held constant at -35dB, ratio/knee/attack/release
+sampled via Latin Hypercube across the same ranges as the full 5D sweep
+(ratio 1.5-10:1, knee 0-24dB, attack 1-50ms, release 20-400ms).
+Data: analysis/lhs_sweep_fixed_thr35.csv
+Script: analysis/run_lhs_sweep.py --fixed-threshold -35 --modes advanced
+======================================================================
+
+CONTEXT: the earlier 150-point 5D sweep (analysis/lhs_sweep_findings.txt)
+found threshold dominates so strongly (r=-0.929 with margin gain) that it
+washes out ratio/knee/attack/release's individual global correlations (all
+|r|<0.19 there). That doesn't mean those four parameters don't matter -
+it means their effect is only clearly visible once threshold is held
+still. This sweep does exactly that, at -35dB (the "conservative-balance"
+point asked about).
+
+FINDING 1 -- At a fixed threshold, attack and release become the dominant
+parameters; ratio and knee are secondary but still real.
+  Correlation with margin gain, threshold held at -35dB:
+    attack   r = -0.777   (fast attack = better, and by far the strongest)
+    release  r = +0.528   (slow release = better, second strongest)
+    knee     r = +0.356
+    ratio    r = +0.243
+  Multiple linear regression on all 4 simultaneously (standardized
+  coefficients, R^2=0.914 - these 4 parameters linearly explain 91% of the
+  variance in margin gain at this threshold):
+    attack    -0.945
+    release   +0.666
+    knee      +0.335
+    ratio     +0.327
+  Range at this threshold: margin gain +0.42 to +5.74dB (a >13x spread
+  from worst to best combination of the other 4 parameters alone, with
+  threshold held fixed) - confirms these parameters are far from
+  irrelevant once threshold stops dominating the picture.
+
+FINDING 2 -- The same near-perfect metric correlation holds here too.
+  stoi_gain vs margin_gain: r=0.996; masked_reduction_pp vs margin_gain:
+  r=0.990. Same conclusion as the full 5D sweep (Finding 1 there): no
+  combination of ratio/knee/attack/release decouples STOI/loudness
+  improvement from margin gain at this threshold either.
+
+FINDING 3 -- Top and bottom performers cleanly separate on attack/release.
+  Top 8 by margin gain: attack 1.1-9.3ms, release mostly >240ms (two
+  exceptions at ~115-126ms, both still with very low attack <3.2ms).
+  Ratio (2.45-9.68) and knee (4.9-21.9) both span nearly their full
+  tested range among these top performers - consistent with them
+  mattering less than attack/release.
+  Bottom 5: attack 32.2-45.8ms, release 23.9-62.0ms in every case - the
+  opposite corner of the attack/release plane.
+
+RECOMMENDED SETTINGS AT THRESHOLD = -35dB (best point found):
+  Threshold -35.0dB | Ratio 2.4:1 | Knee 20.9dB | Attack 1.6ms | Release 344ms
+  Mean margin gain +5.74dB | STOI gain +0.097 | Loudness reduction +8.6pp
+
+  Given ratio and knee matter comparatively little (Finding 1), any
+  moderate-to-high ratio (roughly 3-9:1) paired with a moderate-to-wide
+  knee (roughly 14-22dB) should perform similarly as long as attack stays
+  low (under ~10ms) and release stays high (over ~240ms) - this specific
+  point is the best one actually tested, not the only viable combination.
+
+CAVEAT: this is specific to threshold=-35dB. The dominant-parameter
+identity likely shifts at other thresholds (e.g. attack/release may
+matter less at a much lower threshold where the compressor is engaged
+most of the time regardless, per the full sweep's Finding 4) - not
+verified here.

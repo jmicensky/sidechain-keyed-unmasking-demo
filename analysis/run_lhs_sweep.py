@@ -135,16 +135,36 @@ def main():
     parser.add_argument('--out', default='analysis/lhs_sweep_results.csv')
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--modes', nargs='+', default=['basic', 'advanced'], choices=['basic', 'advanced'])
+    parser.add_argument('--fixed-threshold', type=float, default=None,
+                         help='Hold threshold_db constant at this value and sample only the '
+                              'other 4 parameters (dimension drops from 5 to 4). Global '
+                              'per-parameter correlations from a full 5D sweep can understate '
+                              'ratio/knee/attack/release\'s influence at any one threshold, '
+                              'since threshold dominates the overall correlation - this gives a '
+                              'much denser, more precise answer for "at this threshold, which '
+                              'of the other 4 settings performs best" than sparse nearby points '
+                              'from a full 5D sweep would.')
     args = parser.parse_args()
 
     if not HAVE_PYSTOI:
         print("WARNING: pystoi not installed - STOI gain will be NaN for every row.", file=sys.stderr)
 
-    sampler = qmc.LatinHypercube(d=5, seed=args.seed)
+    free_params = [p for p in PARAM_ORDER if p != 'threshold_db'] if args.fixed_threshold is not None else PARAM_ORDER
+    d = len(free_params)
+    sampler = qmc.LatinHypercube(d=d, seed=args.seed)
     unit_samples = sampler.random(n=args.n)
-    bounds_lo = np.array([PARAM_RANGES[k][0] for k in PARAM_ORDER])
-    bounds_hi = np.array([PARAM_RANGES[k][1] for k in PARAM_ORDER])
-    scaled = qmc.scale(unit_samples, bounds_lo, bounds_hi)
+    bounds_lo = np.array([PARAM_RANGES[k][0] for k in free_params])
+    bounds_hi = np.array([PARAM_RANGES[k][1] for k in free_params])
+    scaled_free = qmc.scale(unit_samples, bounds_lo, bounds_hi)
+
+    if args.fixed_threshold is not None:
+        # Reinsert threshold_db as a constant column so downstream code
+        # (which always indexes PARAM_ORDER) is unchanged.
+        thr_col = np.full((args.n, 1), args.fixed_threshold)
+        scaled = np.concatenate([thr_col, scaled_free], axis=1)  # PARAM_ORDER = [threshold_db, ratio, knee_db, attack_ms, release_ms]
+        print(f"Fixed threshold = {args.fixed_threshold}dB; sampling only {free_params}\n")
+    else:
+        scaled = scaled_free
 
     tmp_dir = Path('/tmp/lhs_sweep')
     tmp_dir.mkdir(exist_ok=True)
