@@ -8,6 +8,23 @@
 % attack/release sampled with threshold pinned at -35dB).
 %
 % Requires packages already in main.tex's preamble: booktabs, siunitx.
+% Also requires colortbl for \cellcolor - see parameter_sweep_table.tex's
+% header comment (add \usepackage{colortbl} or change to
+% \usepackage[table]{xcolor}).
+%
+% COLOR CODING matches the other tables: grey headers on the swept-input
+% columns (Ratio, Knee, Atk., Rel., and the row-label column), green/
+% yellow/orange cells on Margin Gain/STOI Gain/Loud. Red. respectively.
+% With only one real data row here (a single best point, not a ranked
+% list), there's no per-table min/max to scale a heatmap against like the
+% other tables do - all three metric cells use a fixed, consistent
+% intensity, matching how a strong result would read on those other
+% tables' scales, rather than implying a false relative ranking between
+% the three cells. The "Standardized coeff." row is a different kind of
+% information (regression output, not a settings/outcome row) and is left
+% uncolored.
+
+\definecolor{paramgrey}{gray}{0.85}
 
 \begin{table}[h]
 \centering
@@ -22,9 +39,9 @@ knee are secondary but not negligible.}
 \label{tab:fixed-threshold}
 \begin{tabular}{@{}l S[table-format=1.1] S[table-format=2.1] S[table-format=2.1] S[table-format=3.0] S[table-format=+1.2] S[table-format=+1.3] S[table-format=+1.1]@{}}
 \toprule
-& {\textbf{Ratio}} & {\textbf{Knee} (\si{\decibel})} & {\textbf{Atk.} (\si{\milli\second})} & {\textbf{Rel.} (\si{\milli\second})} & {\textbf{Margin Gain} (\si{\decibel})} & {\textbf{STOI Gain}} & {\textbf{Loud.\ Red.\ (pp)}} \\
+\cellcolor{paramgrey} & \cellcolor{paramgrey}{\textbf{Ratio}} & \cellcolor{paramgrey}{\textbf{Knee} (\si{\decibel})} & \cellcolor{paramgrey}{\textbf{Atk.} (\si{\milli\second})} & \cellcolor{paramgrey}{\textbf{Rel.} (\si{\milli\second})} & \textbf{Margin Gain} (\si{\decibel}) & \textbf{STOI Gain} & \textbf{Loud.\ Red.\ (pp)} \\
 \midrule
-Best point found & 2.4 & 20.9 & 1.6 & 344 & +5.74 & +0.097 & +8.6 \\
+Best point found & 2.4 & 20.9 & 1.6 & 344 & \cellcolor{green!65}+5.74 & \cellcolor{yellow!65}+0.097 & \cellcolor{orange!65}+8.6 \\
 \midrule
 Standardized coeff. & +0.33 & +0.34 & -0.95 & +0.67 & \multicolumn{3}{c}{(regression on margin gain, $R^2=0.914$)} \\
 \bottomrule
