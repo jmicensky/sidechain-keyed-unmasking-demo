@@ -1,0 +1,162 @@
+% Full-data master table: all 100 points from the fixed-threshold
+% (-35dB) parameter sweep (analysis/lhs_sweep_fixed_thr35.csv), Advanced
+% (Summed-bus) mode, sorted ascending by attack time. Companion to
+% fixed_threshold_table.tex, which curates this same data down to a single
+% best point plus a regression row - this table exists instead to show the
+% raw impact of ratio, knee, and (especially) release across the full
+% attack-time range, since Finding 1 in lhs_sweep_fixed_thr35_findings.txt
+% (attack dominates, r=-0.777) is easier to see by scanning real rows,
+% sorted by the parameter that matters most, than by taking the correlation
+% coefficient on faith. Threshold is not a column here since it is held
+% constant at -35dB for every row.
+%
+% Uses longtable (NOT in main.tex's preamble yet - add \usepackage{longtable})
+% for the same reason as lhs_sweep_master_table.tex: 100 rows do not fit on
+% one physical page at any reasonable font size, so this breaks across as
+% many pages as needed with the header row repeated automatically.
+%
+% Requires \usepackage{longtable} and \usepackage{colortbl} in main.tex's
+% preamble - NEITHER was present as of this table's creation, and either
+% one missing is a hard compile failure ("Environment longtable undefined"
+% / "Undefined control sequence \cellcolor"). booktabs and siunitx are
+% already there.
+%
+% All columns are plain right-aligned (r), not siunitx S columns, even
+% though every value here is numeric - matches parameter_sweep_table.tex's
+% established fix: combining \cellcolor with an S column's number-parsing
+% is a fragile, easy-to-break combination, so every value is written with
+% consistent decimal precision by hand instead and aligned via plain r.
+%
+% COLOR CODING matches the other tables: grey headers on the swept-input
+% columns, green/yellow/orange cells on Margin Gain/STOI Gain/Loud. Red.
+% respectively, intensity scaled to this table's OWN min/max across all 100
+% rows (not fixed_threshold_table.tex's single-row fixed intensity).
+
+\definecolor{paramgrey}{gray}{0.85}
+
+\begin{longtable}{@{}r r r r r r r r@{}}
+\caption{All 100 points from the fixed-threshold (\SI{-35}{\decibel})
+parameter sweep, Advanced (Summed-bus) ducking, Construction Scene,
+Dialogue priority, sorted ascending by attack time. Gains are relative to
+the unprocessed baseline. See analysis/lhs_sweep_fixed_thr35_findings.txt
+for the summary findings this table backs up.}
+\label{tab:fixed-threshold-master} \\
+\toprule
+\cellcolor{paramgrey}\textbf{\#} & \cellcolor{paramgrey}{\textbf{Ratio}} & \cellcolor{paramgrey}{\textbf{Knee} (\si{\decibel})} & \cellcolor{paramgrey}{\textbf{Atk.} (\si{\milli\second})} & \cellcolor{paramgrey}{\textbf{Rel.} (\si{\milli\second})} & \textbf{Margin Gain} (\si{\decibel}) & \textbf{STOI Gain} & \textbf{Loud.\ Red.\ (pp)} \\
+\midrule
+\endfirsthead
+
+\multicolumn{8}{c}{{\itshape Table \thetable{} continued from previous page}} \\
+\toprule
+\cellcolor{paramgrey}\textbf{\#} & \cellcolor{paramgrey}{\textbf{Ratio}} & \cellcolor{paramgrey}{\textbf{Knee} (\si{\decibel})} & \cellcolor{paramgrey}{\textbf{Atk.} (\si{\milli\second})} & \cellcolor{paramgrey}{\textbf{Rel.} (\si{\milli\second})} & \textbf{Margin Gain} (\si{\decibel}) & \textbf{STOI Gain} & \textbf{Loud.\ Red.\ (pp)} \\
+\midrule
+\endhead
+
+\midrule
+\multicolumn{8}{r}{{\itshape continued on next page}} \\
+\endfoot
+
+\bottomrule
+\endlastfoot
+
+1 & 9.5 & 4.9 & 1.1 & 126 & \cellcolor{green!65}+5.27 & \cellcolor{yellow!70}+0.100 & \cellcolor{orange!59}+6.9 \\
+2 & 2.4 & 20.9 & 1.6 & 344 & \cellcolor{green!70}+5.74 & \cellcolor{yellow!68}+0.097 & \cellcolor{orange!70}+8.6 \\
+3 & 7.3 & 14.0 & 2.3 & 247 & \cellcolor{green!70}+5.70 & \cellcolor{yellow!70}+0.101 & \cellcolor{orange!68}+8.2 \\
+4 & 8.9 & 7.9 & 2.5 & 22 & \cellcolor{green!45}+3.31 & \cellcolor{yellow!41}+0.051 & \cellcolor{orange!35}+3.4 \\
+5 & 9.5 & 20.2 & 3.2 & 116 & \cellcolor{green!64}+5.14 & \cellcolor{yellow!68}+0.097 & \cellcolor{orange!59}+6.9 \\
+6 & 4.2 & 1.7 & 3.5 & 232 & \cellcolor{green!63}+5.05 & \cellcolor{yellow!64}+0.090 & \cellcolor{orange!59}+6.9 \\
+7 & 2.0 & 17.2 & 4.2 & 188 & \cellcolor{green!52}+4.01 & \cellcolor{yellow!53}+0.071 & \cellcolor{orange!47}+5.2 \\
+8 & 3.2 & 20.1 & 4.7 & 375 & \cellcolor{green!68}+5.56 & \cellcolor{yellow!66}+0.093 & \cellcolor{orange!68}+8.3 \\
+9 & 7.2 & 23.6 & 5.0 & 136 & \cellcolor{green!63}+5.10 & \cellcolor{yellow!66}+0.094 & \cellcolor{orange!60}+7.0 \\
+10 & 9.1 & 16.4 & 5.7 & 331 & \cellcolor{green!69}+5.63 & \cellcolor{yellow!67}+0.095 & \cellcolor{orange!68}+8.3 \\
+11 & 5.8 & 0.2 & 5.9 & 79 & \cellcolor{green!47}+3.52 & \cellcolor{yellow!46}+0.060 & \cellcolor{orange!38}+3.8 \\
+12 & 6.4 & 10.3 & 6.7 & 87 & \cellcolor{green!49}+3.70 & \cellcolor{yellow!49}+0.065 & \cellcolor{orange!41}+4.3 \\
+13 & 9.7 & 19.9 & 7.1 & 320 & \cellcolor{green!68}+5.59 & \cellcolor{yellow!66}+0.095 & \cellcolor{orange!68}+8.3 \\
+14 & 2.4 & 6.3 & 7.7 & 287 & \cellcolor{green!53}+4.13 & \cellcolor{yellow!53}+0.071 & \cellcolor{orange!49}+5.5 \\
+15 & 6.3 & 15.2 & 8.1 & 271 & \cellcolor{green!62}+5.00 & \cellcolor{yellow!62}+0.086 & \cellcolor{orange!60}+7.1 \\
+16 & 6.2 & 11.5 & 8.5 & 76 & \cellcolor{green!45}+3.33 & \cellcolor{yellow!45}+0.058 & \cellcolor{orange!37}+3.7 \\
+17 & 8.7 & 21.9 & 9.3 & 323 & \cellcolor{green!67}+5.49 & \cellcolor{yellow!65}+0.092 & \cellcolor{orange!67}+8.1 \\
+18 & 5.1 & 23.0 & 9.5 & 125 & \cellcolor{green!55}+4.31 & \cellcolor{yellow!57}+0.078 & \cellcolor{orange!50}+5.6 \\
+19 & 5.9 & 8.5 & 9.9 & 311 & \cellcolor{green!59}+4.69 & \cellcolor{yellow!58}+0.080 & \cellcolor{orange!55}+6.4 \\
+20 & 8.6 & 11.9 & 10.6 & 30 & \cellcolor{green!33}+2.15 & \cellcolor{yellow!31}+0.035 & \cellcolor{orange!27}+2.2 \\
+21 & 5.4 & 8.7 & 11.0 & 326 & \cellcolor{green!58}+4.60 & \cellcolor{yellow!57}+0.078 & \cellcolor{orange!55}+6.3 \\
+22 & 2.5 & 7.3 & 11.7 & 389 & \cellcolor{green!53}+4.07 & \cellcolor{yellow!51}+0.069 & \cellcolor{orange!50}+5.6 \\
+23 & 8.2 & 4.4 & 12.0 & 95 & \cellcolor{green!42}+2.99 & \cellcolor{yellow!40}+0.050 & \cellcolor{orange!33}+3.1 \\
+24 & 7.6 & 10.8 & 12.5 & 252 & \cellcolor{green!55}+4.29 & \cellcolor{yellow!55}+0.075 & \cellcolor{orange!51}+5.8 \\
+25 & 7.6 & 23.5 & 13.2 & 159 & \cellcolor{green!56}+4.42 & \cellcolor{yellow!57}+0.079 & \cellcolor{orange!52}+5.9 \\
+26 & 4.1 & 18.6 & 13.3 & 90 & \cellcolor{green!42}+3.05 & \cellcolor{yellow!44}+0.057 & \cellcolor{orange!37}+3.7 \\
+27 & 7.7 & 10.3 & 13.8 & 175 & \cellcolor{green!48}+3.66 & \cellcolor{yellow!49}+0.065 & \cellcolor{orange!42}+4.5 \\
+28 & 6.0 & 12.9 & 14.7 & 187 & \cellcolor{green!49}+3.66 & \cellcolor{yellow!49}+0.066 & \cellcolor{orange!44}+4.7 \\
+29 & 3.5 & 21.2 & 14.9 & 354 & \cellcolor{green!58}+4.54 & \cellcolor{yellow!56}+0.077 & \cellcolor{orange!57}+6.6 \\
+30 & 6.3 & 4.7 & 15.5 & 373 & \cellcolor{green!55}+4.31 & \cellcolor{yellow!54}+0.073 & \cellcolor{orange!52}+5.9 \\
+31 & 8.4 & 1.1 & 16.1 & 221 & \cellcolor{green!47}+3.53 & \cellcolor{yellow!47}+0.061 & \cellcolor{orange!41}+4.2 \\
+32 & 9.3 & 2.5 & 16.6 & 198 & \cellcolor{green!45}+3.36 & \cellcolor{yellow!45}+0.059 & \cellcolor{orange!39}+4.0 \\
+33 & 8.0 & 17.0 & 17.1 & 41 & \cellcolor{green!32}+2.07 & \cellcolor{yellow!33}+0.038 & \cellcolor{orange!28}+2.3 \\
+34 & 6.5 & 2.4 & 17.3 & 355 & \cellcolor{green!52}+4.04 & \cellcolor{yellow!51}+0.069 & \cellcolor{orange!48}+5.3 \\
+35 & 1.7 & 19.0 & 17.8 & 34 & \cellcolor{green!21}+0.97 & \cellcolor{yellow!22}+0.020 & \cellcolor{orange!20}+1.2 \\
+36 & 4.4 & 16.0 & 18.6 & 207 & \cellcolor{green!46}+3.40 & \cellcolor{yellow!47}+0.062 & \cellcolor{orange!42}+4.5 \\
+37 & 6.9 & 7.1 & 18.9 & 233 & \cellcolor{green!45}+3.35 & \cellcolor{yellow!46}+0.059 & \cellcolor{orange!40}+4.2 \\
+38 & 7.0 & 15.8 & 19.6 & 46 & \cellcolor{green!30}+1.90 & \cellcolor{yellow!31}+0.035 & \cellcolor{orange!26}+2.1 \\
+39 & 1.5 & 5.4 & 20.0 & 226 & \cellcolor{green!26}+1.46 & \cellcolor{yellow!28}+0.029 & \cellcolor{orange!24}+1.8 \\
+40 & 8.2 & 19.3 & 20.5 & 382 & \cellcolor{green!59}+4.66 & \cellcolor{yellow!57}+0.078 & \cellcolor{orange!58}+6.8 \\
+41 & 7.0 & 17.7 & 20.9 & 334 & \cellcolor{green!55}+4.27 & \cellcolor{yellow!54}+0.073 & \cellcolor{orange!53}+6.0 \\
+42 & 9.4 & 9.4 & 21.3 & 224 & \cellcolor{green!44}+3.25 & \cellcolor{yellow!45}+0.058 & \cellcolor{orange!40}+4.1 \\
+43 & 2.1 & 13.7 & 22.1 & 286 & \cellcolor{green!37}+2.54 & \cellcolor{yellow!38}+0.046 & \cellcolor{orange!35}+3.5 \\
+44 & 4.5 & 3.6 & 22.6 & 70 & \cellcolor{green!26}+1.51 & \cellcolor{yellow!26}+0.025 & \cellcolor{orange!22}+1.5 \\
+45 & 6.8 & 18.4 & 22.6 & 297 & \cellcolor{green!52}+3.98 & \cellcolor{yellow!52}+0.070 & \cellcolor{orange!50}+5.6 \\
+46 & 5.7 & 23.0 & 23.1 & 347 & \cellcolor{green!57}+4.45 & \cellcolor{yellow!55}+0.076 & \cellcolor{orange!56}+6.5 \\
+47 & 4.7 & 14.2 & 24.0 & 256 & \cellcolor{green!44}+3.23 & \cellcolor{yellow!45}+0.058 & \cellcolor{orange!41}+4.3 \\
+48 & 9.8 & 12.2 & 24.1 & 243 & \cellcolor{green!45}+3.30 & \cellcolor{yellow!46}+0.059 & \cellcolor{orange!41}+4.3 \\
+49 & 9.2 & 6.5 & 24.7 & 365 & \cellcolor{green!48}+3.62 & \cellcolor{yellow!47}+0.062 & \cellcolor{orange!44}+4.7 \\
+50 & 2.8 & 9.1 & 25.5 & 360 & \cellcolor{green!41}+2.93 & \cellcolor{yellow!41}+0.052 & \cellcolor{orange!39}+3.9 \\
+51 & 3.9 & 13.4 & 25.7 & 291 & \cellcolor{green!43}+3.14 & \cellcolor{yellow!43}+0.056 & \cellcolor{orange!40}+4.1 \\
+52 & 9.9 & 1.7 & 26.3 & 265 & \cellcolor{green!41}+2.93 & \cellcolor{yellow!41}+0.051 & \cellcolor{orange!37}+3.7 \\
+53 & 2.2 & 3.2 & 26.6 & 156 & \cellcolor{green!27}+1.54 & \cellcolor{yellow!27}+0.028 & \cellcolor{orange!23}+1.7 \\
+54 & 3.7 & 16.7 & 27.4 & 48 & \cellcolor{green!25}+1.37 & \cellcolor{yellow!26}+0.026 & \cellcolor{orange!22}+1.5 \\
+55 & 10.0 & 22.6 & 27.8 & 166 & \cellcolor{green!45}+3.35 & \cellcolor{yellow!47}+0.062 & \cellcolor{orange!42}+4.5 \\
+56 & 3.4 & 14.4 & 28.0 & 299 & \cellcolor{green!41}+2.96 & \cellcolor{yellow!42}+0.053 & \cellcolor{orange!39}+4.0 \\
+57 & 3.0 & 3.0 & 28.6 & 394 & \cellcolor{green!40}+2.81 & \cellcolor{yellow!40}+0.049 & \cellcolor{orange!37}+3.7 \\
+58 & 7.9 & 14.9 & 29.0 & 199 & \cellcolor{green!40}+2.83 & \cellcolor{yellow!41}+0.052 & \cellcolor{orange!37}+3.7 \\
+59 & 1.9 & 8.1 & 29.8 & 399 & \cellcolor{green!33}+2.13 & \cellcolor{yellow!33}+0.038 & \cellcolor{orange!32}+3.0 \\
+60 & 7.2 & 6.8 & 30.3 & 114 & \cellcolor{green!29}+1.73 & \cellcolor{yellow!29}+0.031 & \cellcolor{orange!25}+1.9 \\
+61 & 4.9 & 12.4 & 30.4 & 386 & \cellcolor{green!45}+3.34 & \cellcolor{yellow!45}+0.058 & \cellcolor{orange!43}+4.5 \\
+62 & 4.0 & 21.8 & 31.1 & 206 & \cellcolor{green!41}+2.97 & \cellcolor{yellow!43}+0.055 & \cellcolor{orange!39}+4.0 \\
+63 & 1.7 & 0.8 & 31.7 & 379 & \cellcolor{green!27}+1.61 & \cellcolor{yellow!28}+0.030 & \cellcolor{orange!26}+2.1 \\
+64 & 5.4 & 11.1 & 32.2 & 24 & \cellcolor{green!17}+0.57 & \cellcolor{yellow!16}+0.010 & \cellcolor{orange!16}+0.6 \\
+65 & 3.8 & 9.8 & 32.6 & 177 & \cellcolor{green!31}+1.96 & \cellcolor{yellow!32}+0.036 & \cellcolor{orange!27}+2.3 \\
+66 & 4.9 & 18.2 & 33.1 & 97 & \cellcolor{green!30}+1.92 & \cellcolor{yellow!32}+0.037 & \cellcolor{orange!27}+2.3 \\
+67 & 8.4 & 1.3 & 33.5 & 55 & \cellcolor{green!20}+0.86 & \cellcolor{yellow!19}+0.014 & \cellcolor{orange!17}+0.7 \\
+68 & 2.7 & 5.2 & 33.9 & 192 & \cellcolor{green!27}+1.60 & \cellcolor{yellow!28}+0.029 & \cellcolor{orange!24}+1.8 \\
+69 & 7.5 & 10.0 & 34.3 & 216 & \cellcolor{green!35}+2.35 & \cellcolor{yellow!36}+0.043 & \cellcolor{orange!32}+3.0 \\
+70 & 5.6 & 23.8 & 34.9 & 308 & \cellcolor{green!49}+3.66 & \cellcolor{yellow!48}+0.064 & \cellcolor{orange!48}+5.3 \\
+71 & 2.7 & 15.0 & 35.6 & 280 & \cellcolor{green!34}+2.27 & \cellcolor{yellow!35}+0.042 & \cellcolor{orange!33}+3.1 \\
+72 & 4.5 & 12.5 & 36.0 & 339 & \cellcolor{green!40}+2.81 & \cellcolor{yellow!40}+0.049 & \cellcolor{orange!38}+3.8 \\
+73 & 5.2 & 2.7 & 36.4 & 36 & \cellcolor{green!16}+0.48 & \cellcolor{yellow!15}+0.008 & \cellcolor{orange!15}+0.5 \\
+74 & 3.3 & 21.5 & 37.0 & 260 & \cellcolor{green!39}+2.77 & \cellcolor{yellow!40}+0.050 & \cellcolor{orange!38}+3.8 \\
+75 & 3.6 & 7.5 & 37.7 & 105 & \cellcolor{green!23}+1.18 & \cellcolor{yellow!23}+0.021 & \cellcolor{orange!20}+1.2 \\
+76 & 8.5 & 4.1 & 38.1 & 108 & \cellcolor{green!24}+1.29 & \cellcolor{yellow!23}+0.022 & \cellcolor{orange!21}+1.3 \\
+77 & 6.6 & 6.2 & 38.7 & 237 & \cellcolor{green!32}+2.06 & \cellcolor{yellow!32}+0.036 & \cellcolor{orange!29}+2.5 \\
+78 & 7.9 & 10.6 & 38.8 & 69 & \cellcolor{green!22}+1.11 & \cellcolor{yellow!22}+0.020 & \cellcolor{orange!19}+1.1 \\
+79 & 4.6 & 11.6 & 39.5 & 249 & \cellcolor{green!33}+2.18 & \cellcolor{yellow!34}+0.040 & \cellcolor{orange!31}+2.8 \\
+80 & 5.0 & 20.8 & 40.1 & 278 & \cellcolor{green!42}+3.00 & \cellcolor{yellow!42}+0.053 & \cellcolor{orange!40}+4.1 \\
+81 & 7.4 & 16.1 & 40.6 & 120 & \cellcolor{green!30}+1.82 & \cellcolor{yellow!31}+0.034 & \cellcolor{orange!26}+2.1 \\
+82 & 4.8 & 3.4 & 41.1 & 53 & \cellcolor{green!17}+0.59 & \cellcolor{yellow!16}+0.009 & \cellcolor{orange!15}+0.5 \\
+83 & 8.0 & 5.7 & 41.3 & 163 & \cellcolor{green!27}+1.60 & \cellcolor{yellow!27}+0.028 & \cellcolor{orange!24}+1.7 \\
+84 & 3.0 & 22.2 & 41.9 & 302 & \cellcolor{green!39}+2.71 & \cellcolor{yellow!39}+0.048 & \cellcolor{orange!38}+3.8 \\
+85 & 3.3 & 15.5 & 42.3 & 366 & \cellcolor{green!37}+2.56 & \cellcolor{yellow!37}+0.045 & \cellcolor{orange!36}+3.6 \\
+86 & 1.8 & 22.3 & 43.1 & 141 & \cellcolor{green!24}+1.26 & \cellcolor{yellow!26}+0.025 & \cellcolor{orange!23}+1.6 \\
+87 & 3.8 & 0.4 & 43.5 & 60 & \cellcolor{green!16}+0.53 & \cellcolor{yellow!16}+0.009 & \cellcolor{orange!15}+0.5 \\
+88 & 6.4 & 19.5 & 43.8 & 270 & \cellcolor{green!40}+2.82 & \cellcolor{yellow!40}+0.050 & \cellcolor{orange!38}+3.8 \\
+89 & 8.7 & 17.8 & 44.3 & 171 & \cellcolor{green!33}+2.19 & \cellcolor{yellow!35}+0.041 & \cellcolor{orange!31}+2.8 \\
+90 & 8.9 & 13.9 & 44.8 & 149 & \cellcolor{green!29}+1.78 & \cellcolor{yellow!30}+0.033 & \cellcolor{orange!26}+2.1 \\
+91 & 9.0 & 8.4 & 45.2 & 142 & \cellcolor{green!26}+1.45 & \cellcolor{yellow!25}+0.025 & \cellcolor{orange!22}+1.6 \\
+92 & 2.0 & 9.3 & 45.8 & 62 & \cellcolor{green!15}+0.42 & \cellcolor{yellow!16}+0.009 & \cellcolor{orange!15}+0.5 \\
+93 & 6.7 & 18.9 & 46.4 & 151 & \cellcolor{green!31}+2.01 & \cellcolor{yellow!33}+0.038 & \cellcolor{orange!29}+2.6 \\
+94 & 4.3 & 13.0 & 46.9 & 336 & \cellcolor{green!34}+2.31 & \cellcolor{yellow!35}+0.041 & \cellcolor{orange!33}+3.1 \\
+95 & 2.9 & 20.6 & 47.3 & 82 & \cellcolor{green!23}+1.22 & \cellcolor{yellow!25}+0.024 & \cellcolor{orange!22}+1.4 \\
+96 & 5.3 & 2.0 & 47.9 & 181 & \cellcolor{green!24}+1.30 & \cellcolor{yellow!23}+0.022 & \cellcolor{orange!21}+1.3 \\
+97 & 5.5 & 3.9 & 48.5 & 132 & \cellcolor{green!21}+1.04 & \cellcolor{yellow!21}+0.018 & \cellcolor{orange!19}+1.0 \\
+98 & 2.3 & 0.7 & 48.7 & 211 & \cellcolor{green!21}+0.98 & \cellcolor{yellow!21}+0.018 & \cellcolor{orange!19}+1.1 \\
+99 & 9.7 & 5.9 & 49.4 & 101 & \cellcolor{green!20}+0.94 & \cellcolor{yellow!20}+0.016 & \cellcolor{orange!18}+0.9 \\
+100 & 5.9 & 17.4 & 49.9 & 315 & \cellcolor{green!37}+2.58 & \cellcolor{yellow!38}+0.046 & \cellcolor{orange!36}+3.5 \\
+\end{longtable}
