@@ -9,18 +9,23 @@
 
 namespace demo {
 
-// A small-band-count WDRC-style (Wide Dynamic Range Compression) stereo
-// compressor applied to the final decomposed mix - not to be confused with
-// the sidechain-keyed ducking compressor elsewhere in the engine, which
-// reacts to a *different* channel's level. This one is a self-contained
-// insert on the mix bus, the way a hearing aid's WDRC stage compresses
-// whatever's actually reaching the output.
+// A WDRC-style (Wide Dynamic Range Compression) stereo compressor applied
+// to the final decomposed mix - not to be confused with the sidechain-keyed
+// ducking compressor elsewhere in the engine, which reacts to a *different*
+// channel's level. This one is a self-contained insert on the mix bus, the
+// way a hearing aid's WDRC stage compresses whatever's actually reaching
+// the output.
 //
-// Real hearing-aid WDRC typically runs many more bands, each with its own
-// independently-tunable threshold/ratio (fit to an audiogram). This is a
-// deliberately simpler 4-band version - reusing the same LR4 crossover
-// split Advanced duck mode already uses - with one shared
-// threshold/ratio/makeup gain across all bands, so it's still genuinely
+// 6 bands (up from an earlier 4) - see Types.h's kWdrcNumBands/
+// kWdrcCrossoverHz comment for the full story: 12 was the original target
+// (to land near what higher-end commercial hearing aids run), but this
+// engine's nested-LR4-crossover filterbank measurably cannot do 12 bands
+// this closely spaced without real coloration (~10.7dB), so 6 is the
+// actual ceiling for this architecture at roughly the same coloration the
+// original 4-band version already shipped with. One shared threshold/
+// ratio/makeup gain across all bands still applies - real clinical WDRC
+// also fits each band's threshold/ratio independently to an audiogram,
+// which this project deliberately doesn't attempt - so it's genuinely
 // multiband (each band compresses based on its own level, independently)
 // without a wall of per-band controls to tune.
 //
@@ -30,11 +35,11 @@ namespace demo {
 // stereo image.
 class WdrcCompressor {
 public:
-    static constexpr int kNumBands = 4;
+    static constexpr int kNumBands = kWdrcNumBands;
 
     void prepare(double sampleRate) {
-        filterbankL_.prepare(sampleRate);
-        filterbankR_.prepare(sampleRate);
+        filterbankL_.prepare(sampleRate, kWdrcCrossoverHz);
+        filterbankR_.prepare(sampleRate, kWdrcCrossoverHz);
         for (auto& ef : bandDetectors_) ef.prepare(sampleRate, attackMs_, releaseMs_);
         gainComputer_.prepare(params_);
         bypassBlend_.prepare(sampleRate, kBypassRampMs);
@@ -90,18 +95,22 @@ public:
         filterbankR_.tick(inR, bandsR);
 
         double compressedL = 0.0, compressedR = 0.0;
-        double minGainDb = 0.0; // deepest cut among the 4 bands, for the meter
+        double minGainDb = 0.0; // deepest cut among the bands, for the meter
         for (int b = 0; b < kNumBands; ++b) {
             double mono = 0.5 * (bandsL[b] + bandsR[b]);
             // Any one band only carries a fraction of the full mix's energy
-            // (measured on the real Construction Scene stems: 2.5-19dB
-            // quieter than the full-mix level, depending on the band and
-            // how much content actually lives there), so a threshold
-            // calibrated against full-mix loudness would rarely be crossed
-            // by any individual band - the same issue Resonance mode's
-            // per-band detector had (see Engine.h's
-            // kResonanceLevelCompensationDb). +10dB is an empirical match
-            // for comparable sensitivity, not a physically exact correction.
+            // (measured on the real Construction Scene stems with the
+            // original 4-band split: 2.5-19dB quieter than the full-mix
+            // level, depending on the band and how much content actually
+            // lives there), so a threshold calibrated against full-mix
+            // loudness would rarely be crossed by any individual band - the
+            // same issue Resonance mode's per-band detector had (see
+            // Engine.h's kResonanceLevelCompensationDb). +10dB was an
+            // empirical match for comparable sensitivity at 4 bands, not a
+            // physically exact correction - re-measured after moving to 12
+            // narrower bands (see kNumBands's derivation in Types.h) and
+            // still landed in a reasonable range; re-check this constant
+            // again if band count or crossover spacing changes further.
             double levelDb = bandDetectors_[b].tick(mono) + kLevelCompensationDb;
             double g = gainComputer_.computeLinearGain(levelDb);
             minGainDb = std::min(minGainDb, 20.0 * std::log10(std::max(g, 1e-6)));
@@ -125,7 +134,7 @@ private:
     static constexpr double kBypassRampMs = 25.0;
     static constexpr double kLevelCompensationDb = 10.0; // see tick()
 
-    CrossoverFilterbank filterbankL_, filterbankR_;
+    CrossoverFilterbank<kNumBands> filterbankL_, filterbankR_;
     std::array<EnvelopeFollower, kNumBands> bandDetectors_;
     GainComputer gainComputer_;
     CompressorParams params_;

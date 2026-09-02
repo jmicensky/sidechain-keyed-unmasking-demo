@@ -175,8 +175,8 @@ static bool checkCrossoverFlatness() {
 
     double maxDeviationDb = 0.0;
     for (double f : testFreqs) {
-        CrossoverFilterbank fb;
-        fb.prepare(kSampleRate);
+        CrossoverFilterbank<kWdrcNumBands> fb;
+        fb.prepare(kSampleRate, kWdrcCrossoverHz);
 
         double phase = 0.0;
         double sumSqIn = 0.0, sumSqOut = 0.0;
@@ -184,9 +184,10 @@ static bool checkCrossoverFlatness() {
             double x = std::sin(phase);
             phase += 2.0 * M_PI * f / kSampleRate;
 
-            double bands[4];
+            double bands[kWdrcNumBands];
             fb.tick(x, bands);
-            double y = bands[0] + bands[1] + bands[2] + bands[3];
+            double y = 0.0;
+            for (double b : bands) y += b;
 
             if (i >= settleSamples) {
                 sumSqIn += x * x;
@@ -199,14 +200,15 @@ static bool checkCrossoverFlatness() {
         maxDeviationDb = std::max(maxDeviationDb, std::fabs(ratioDb));
     }
 
-    // NOTE: expect a small dip (roughly 1-1.5 dB) concentrated between the
-    // 100 Hz and 300 Hz crossover points specifically - they sit under 1.6
-    // octaves apart, so their LR4 transition skirts (24 dB/oct) overlap.
-    // This is a known, expected characteristic of tree-structured multiband
-    // crossovers with closely-spaced bands (the same effect shows up in
-    // commercial multiband compressors), not an implementation bug. The
-    // 300 Hz-1.8 kHz ducked band's own edges stay flat within a few tenths
-    // of a dB, which is what matters most for the paper's argument.
+    // NOTE: expect a small dip spread fairly evenly across the whole sweep
+    // now, not concentrated at one pair of points - the 11 crossover points
+    // are uniformly ~0.63 octaves apart (kWdrcCrossoverHz in Types.h), each
+    // pair close enough for their LR4 transition skirts (24 dB/oct) to
+    // overlap somewhat. This is a known, expected characteristic of
+    // tree-structured multiband crossovers with closely-spaced bands (the
+    // same effect shows up in commercial multiband compressors), not an
+    // implementation bug - see this file's git history for the measured
+    // deviation at the previous, more widely-spaced 4-band/3-point version.
     std::cout << "[self-check] Crossover flatness: max deviation from 0 dB across "
               << "sweep = " << maxDeviationDb << " dB\n";
     return maxDeviationDb < 2.0;

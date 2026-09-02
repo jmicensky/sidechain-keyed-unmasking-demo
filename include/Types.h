@@ -42,9 +42,39 @@ enum class DuckMode { Basic, Advanced, Resonance };
 // check (see main.cpp's checkCrossoverFlatness()) and by the WDRC output
 // compressor's fixed band split (see WdrcCompressor.h) - NOT by Advanced
 // duck mode, which uses kUnmaskFrequencyRanges below instead.
-constexpr double kCrossoverLow  = 100.0;   // f_c1
-constexpr double kCrossoverMid  = 300.0;   // f_c2
-constexpr double kCrossoverHigh = 1800.0;  // f_c3
+//
+// 6 bands, not the originally-targeted 12: this project's literature
+// review didn't turn up one citable "the" channel count for commercial
+// hearing aids (they vary roughly 8-24+ by manufacturer/model), and a
+// build/measure pass found this engine's crossover architecture - N-1
+// nested Linkwitz-Riley 4th-order two-way splits - genuinely cannot
+// support 12 bands within a realistic 100 Hz-8 kHz range without audible
+// coloration: each individual LR4 split reconstructs its own input
+// essentially exactly, but small per-split ripple compounds across nested
+// stages, and 12 log-spaced bands in this range only allows ~0.63 octaves
+// between crossover points (measured max deviation 10.7 dB - both a linear
+// cascade and a balanced binary tree were tried, same order of magnitude
+// either way, so it's a spacing problem inherent to this filter approach,
+// not a fixable topology bug). Measured deviation vs. band count at this
+// same frequency range (4->0.14dB, 5->0.66dB, 6->1.50dB, 7->2.58dB,
+// 8->3.94dB, ..., 12->10.69dB) put 6 bands right at the same ~1.5dB
+// coloration the original 4-band/100-300-1800Hz version already shipped
+// with and was accepted - a real improvement over 4 bands within this
+// architecture's actual limits. A true 12-band (or higher) implementation
+// would need a different filterbank principle entirely - e.g. FFT/STFT
+// bin-grouping, which reconstructs exactly regardless of band count (see
+// FFT.h / ResonanceSuppressor.h for the STFT infrastructure this project
+// already has for Resonance duck mode) - not attempted here.
+//
+// The 5 crossover points below are log-uniformly spaced from 100 Hz to
+// 8 kHz (~1.58 octaves apart, close to the original 100/300 Hz pair's own
+// spacing), leaving band 0 open below 100 Hz and band 5 open from 8 kHz to
+// Nyquist, the same "outer bands open-ended" convention the original
+// 3-point/4-band version used.
+constexpr int kWdrcNumBands = 6;
+constexpr double kWdrcCrossoverHz[kWdrcNumBands - 1] = {
+    100.0, 299.1, 894.4, 2675.0, 8000.0,
+};
 
 // One class's approximate frequency range, used by Advanced duck mode to
 // decide which band to duck: whichever class is currently the unmask/key

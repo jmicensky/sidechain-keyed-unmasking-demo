@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include <cmath>
 #include "Types.h"
 
@@ -71,41 +72,44 @@ private:
     Biquad lowA_, lowB_, highA_, highB_;
 };
 
-// Splits a signal into 4 bands via a tree of LR4 two-way splits:
-//   stage1: split at 1800 Hz -> loA, band4 (1800 - Nyquist)
-//   stage2: split loA at 300 Hz -> loB, band3 (300 - 1800)
-//   stage3: split loB at 100 Hz -> band1 (0 - 100), band2 (100 - 300)
+// Splits a signal into NumBands bands via a tree of LR4 two-way splits,
+// built from NumBands-1 crossover points (ascending, low to high): each
+// stage peels the top band off the current low remainder, working from the
+// highest crossover point down to the lowest, e.g. for 4 bands with points
+// [fc0, fc1, fc2]:
+//   stage[2]: split at fc2 -> lo, band[3] (fc2 - Nyquist)
+//   stage[1]: split lo at fc1 -> lo, band[2] (fc1 - fc2)
+//   stage[0]: split lo at fc0 -> band[0] (0 - fc0), band[1] (fc0 - fc1)
 // Each instance owns its own filter state, so give each audio channel that
 // needs banding (i.e. each non-key channel in Advanced mode) its own
 // CrossoverFilterbank instance rather than sharing one across channels.
+template <int NumBands>
 class CrossoverFilterbank {
 public:
-    void prepare(double sampleRate) {
-        stage1_.prepare(sampleRate, kCrossoverHigh);
-        stage2_.prepare(sampleRate, kCrossoverMid);
-        stage3_.prepare(sampleRate, kCrossoverLow);
+    static_assert(NumBands >= 2, "CrossoverFilterbank needs at least 2 bands");
+    static constexpr int kNumCrossovers = NumBands - 1;
+
+    // crossoverHz[0..kNumCrossovers-1], ascending low to high.
+    void prepare(double sampleRate, const double (&crossoverHz)[kNumCrossovers]) {
+        for (int i = 0; i < kNumCrossovers; ++i) {
+            stages_[i].prepare(sampleRate, crossoverHz[i]);
+        }
     }
 
-    // band[0..3] = band1 (low), band2 (low-mid), band3 (upper-mid, the
-    // ducked band), band4 (high).
-    inline void tick(double x, double band[4]) {
-        double loA, band4;
-        stage1_.tick(x, loA, band4);
-
-        double loB, band3;
-        stage2_.tick(loA, loB, band3);
-
-        double band1, band2;
-        stage3_.tick(loB, band1, band2);
-
-        band[0] = band1;
-        band[1] = band2;
-        band[2] = band3;
-        band[3] = band4;
+    // band[0] = lowest band, band[NumBands-1] = highest band.
+    inline void tick(double x, double band[NumBands]) {
+        double current = x;
+        for (int i = kNumCrossovers - 1; i >= 1; --i) {
+            double lo, hi;
+            stages_[i].tick(current, lo, hi);
+            band[i + 1] = hi;
+            current = lo;
+        }
+        stages_[0].tick(current, band[0], band[1]);
     }
 
 private:
-    LR4Split stage1_, stage2_, stage3_;
+    std::array<LR4Split, kNumCrossovers> stages_;
 };
 
 } // namespace demo

@@ -45,10 +45,14 @@ you interactively:
   arbitrarily deep) that drives Basic and both Advanced sub-modes.
 - Tune **Resonance Mode**'s own settings (peak count, bandwidth in octaves,
   and its own separate Max Reduction ceiling).
-- Apply an **Output Compressor (WDRC)** — a 4-band, fixed-crossover
-  (100/300/1800 Hz) compressor on the final summed mix, independent of duck
-  mode, with its own threshold/ratio/makeup-gain/attack/release and a
-  bypass switch (bypassed by default).
+- Apply an **Output Compressor (WDRC)** — a 6-band, fixed-crossover
+  (100/299/894/2675/8000 Hz) compressor on the final summed mix, independent
+  of duck mode, with its own threshold/ratio/makeup-gain/attack/release and
+  a bypass switch (bypassed by default). Was originally targeted at 12
+  bands (to approximate a higher-end commercial hearing aid) but this
+  engine's nested-crossover filterbank measurably can't do 12 bands this
+  closely spaced without real coloration — see `WdrcCompressor.h`'s and
+  `Types.h`'s comments for the full band-count story.
 - **Mute** or **Solo** any of the five channels independently, mixer-style
   (solo is exclusive — engaging one clears any other).
 - Switch between two full **scenes** (Construction, Public Transit), each
@@ -73,10 +77,10 @@ demo_engine/
 │   │                        AdvancedDuckingMode, CompressorParams
 │   ├── Smoother.h            Generic click-free parameter ramp
 │   ├── GainComputer.h        Envelope follower + soft-knee gain computer (Eqs. 1–2)
-│   ├── Crossover.h           Biquad + LR4 crossover split + fixed 4-band filterbank
+│   ├── Crossover.h           Biquad + LR4 crossover split + N-band filterbank (template)
 │   ├── FFT.h                 Minimal radix-2 Cooley-Tukey FFT (power-of-two sizes)
 │   ├── ResonanceSuppressor.h STFT-based dynamic-notch suppressor (Resonance mode)
-│   ├── WdrcCompressor.h      Output-bus 4-band WDRC-style compressor
+│   ├── WdrcCompressor.h      Output-bus 6-band WDRC-style compressor
 │   └── Engine.h              Top-level signal flow, ties everything together
 ├── src/
 │   └── main.cpp              CLI: scripted-timeline demo mode (default) and
@@ -115,10 +119,12 @@ demo_engine/
   ducks other channels within when each class is the key — Dialogue
   400Hz–7kHz, Music 75Hz–12kHz, Background Noise 60Hz–2kHz, Safety Alerts
   300Hz–2kHz, Other 700Hz–12kHz.
-- `kCrossoverLow/Mid/High` (100/300/1800 Hz) — **only** used by the
-  standalone crossover-flatness self-check in `main.cpp` and by
-  `WdrcCompressor`'s fixed 4-band split. **Not** used by Advanced duck mode
-  (which uses `kUnmaskFrequencyRanges` and a dynamic 2-point split instead).
+- `kWdrcNumBands` (6) / `kWdrcCrossoverHz` (100/299/894/2675/8000 Hz) —
+  **only** used by the standalone crossover-flatness self-check in
+  `main.cpp` and by `WdrcCompressor`'s fixed band split. **Not** used by
+  Advanced duck mode (which uses `kUnmaskFrequencyRanges` and a dynamic
+  2-point split instead). See the comment above these constants in
+  `Types.h` for why 6 bands, not the originally-targeted 12.
 - `CompressorParams` (threshold, ratio, knee, attack/release, safety gain) —
   the Sidechain Compressor's defaults; still adjustable live via the UI/CLI
   rather than hardcoded to a single literature-locked value.
@@ -150,15 +156,25 @@ Two classes implementing the paper's math directly:
   its per-key-channel band by cascading two of these per channel (high-edge
   split, then low-edge split on the low branch) to isolate below/within/above
   the active range.
-- `CrossoverFilterbank` — a fixed 4-band split (100/300/1800 Hz), used now
-  only by `WdrcCompressor` and by `main.cpp`'s `checkCrossoverFlatness()`
+- `CrossoverFilterbank<NumBands>` — a templated N-band split built from
+  NumBands-1 nested `LR4Split`s, used now only by `WdrcCompressor` (N=6,
+  `kWdrcCrossoverHz`) and by `main.cpp`'s `checkCrossoverFlatness()`
   self-test (**not** by Advanced duck mode, which moved to the dynamic
   `LR4Split`-based approach above).
-  **Known characteristic, not a bug:** summing all 4 bands is flat within a
-  few tenths of a dB almost everywhere, but dips up to ~1.4 dB between
-  100–300 Hz, because those two crossover points sit under 1.6 octaves
-  apart and their LR4 transition skirts overlap — a standard property of
-  tree-structured multiband crossovers with closely-spaced bands.
+  **Known characteristic, not a bug:** summing all bands is flat within a
+  few tenths of a dB almost everywhere, but dips up to ~1.5 dB - a standard
+  property of tree-structured multiband crossovers with closely-spaced
+  bands (each individual LR4 split reconstructs its own input essentially
+  exactly, but small per-split ripple compounds across nested stages the
+  closer neighboring crossover points sit). **This is also a hard ceiling,
+  not just a cosmetic characteristic:** measured directly by band count at
+  this same 100 Hz-8 kHz range, deviation grows from 0.14 dB at 4 bands to
+  10.7 dB at 12 bands - a true 12-band (or higher) WDRC was the original
+  target but is not achievable with this nested-crossover approach without
+  a different filterbank principle (e.g. FFT/STFT bin-grouping, which
+  reconstructs exactly regardless of band count - see `FFT.h`/
+  `ResonanceSuppressor.h` for the STFT infrastructure already in this
+  project for Resonance mode; not attempted for WDRC).
 
 ### `FFT.h`
 Minimal iterative radix-2 Cooley-Tukey FFT, in place, power-of-two sizes
@@ -182,12 +198,14 @@ via a matched dry-path delay line so the key/dry crossfade stays
 time-aligned.
 
 ### `WdrcCompressor.h`
-A self-contained 4-band (fixed 100/300/1800 Hz split, reusing
-`CrossoverFilterbank`) stereo compressor applied once to the final mix, after
-ducking — not to be confused with the sidechain-keyed ducking compressor
-above, which reacts to a *different* channel's level. One shared
-threshold/ratio/makeup-gain across all 4 bands (still genuinely multiband:
+A self-contained 6-band (fixed 100/299/894/2675/8000 Hz split, reusing
+`CrossoverFilterbank<6>`) stereo compressor applied once to the final mix,
+after ducking — not to be confused with the sidechain-keyed ducking
+compressor above, which reacts to a *different* channel's level. One shared
+threshold/ratio/makeup-gain across all 6 bands (still genuinely multiband:
 each band's own detector reacts independently). Starts bypassed by default.
+Originally targeted at 12 bands; see `Crossover.h`'s entry above for why 6
+is this architecture's actual ceiling.
 
 ### `Engine.h`
 The integration point (~600 lines). Key design decisions, worth
@@ -255,14 +273,15 @@ Per-sample signal flow inside `Engine::process()`:
   parameter changes including out-of-range clamping checks) at fixed
   timestamps, so a single run exercises essentially every interaction path.
 - **Two automated self-checks**, both run every time:
-  - `checkCrossoverFlatness()` — swept-sine RMS-ratio test of the fixed
-    4-band `CrossoverFilterbank` (the one `WdrcCompressor` and the self-check
+  - `checkCrossoverFlatness()` — swept-sine RMS-ratio test of the 6-band
+    `CrossoverFilterbank<6>` (the one `WdrcCompressor` and the self-check
     itself use; **not** Advanced duck mode's per-key-channel splits, which
     aren't exercised by this particular check).
   - `countClicks()` — scans the rendered output for sample-to-sample jumps
     above a threshold (0.35). When run against the real Construction Scene
-    stems, the one detected jump is a known, already-investigated
-    pre-existing WDRC transient-overshoot event (slow attack + high ratio +
+    stems, the detected jumps (2, both within 19 samples of each other) are
+    a known, already-investigated pre-existing WDRC transient-overshoot
+    event (slow attack + high ratio +
     positive makeup gain letting a real percussive moment through at
     t≈74.86s) — not an engine bug.
 - **`--static` mode** — a separate code path (not the scripted timeline
@@ -387,11 +406,15 @@ for `"status":"built"` to confirm a deploy landed.
   reads, but worth double-checking against the literature discussion
   (Kowalewski et al. 2018 / Chen et al. 2021) before treating any specific
   default as "the" recommended value.
-- **The 100–300 Hz crossover interaction** (§3, `Crossover.h`) is documented
-  and understood but not addressed — it only affects `WdrcCompressor`'s
-  fixed 4-band split now (Advanced duck mode moved off this filterbank
-  entirely), so its practical relevance shrank; revisit only if it turns out
-  audible with the WDRC stage engaged on real material.
+- **The crossover-summing dip** (§3, `Crossover.h`) is documented and
+  understood but not addressed — it only affects `WdrcCompressor`'s 6-band
+  split now (Advanced duck mode moved off this filterbank entirely), so its
+  practical relevance shrank; revisit only if it turns out audible with the
+  WDRC stage engaged on real material. Also worth remembering: a true
+  12-band WDRC (the original target) is NOT achievable within this
+  nested-crossover architecture at all (measured 10.7dB coloration) - only
+  a different filterbank principle (FFT/STFT bin-grouping) would get there,
+  not a further tweak to this one.
 - **CMake build path unverified** — everything here has been built/tested
   via `g++`/`em++` directly (see §6); `CMakeLists.txt` exists and should
   work but hasn't actually been run in this environment.
