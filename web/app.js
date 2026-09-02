@@ -1,8 +1,9 @@
-// Main-thread glue: decode the whole-blend reference + 5 stem WAVs, draw
-// waveform overviews for all six, ship the stems to the AudioWorklet, and
-// wire up the control UI (unmask, key select, mode, mute/solo per channel,
-// play/pause for both the reference and the decomposed mix — mutually
-// exclusive so only one is ever audible at a time).
+// Main-thread glue: decode the 5 stem WAVs, draw waveform overviews for
+// each, ship the stems to the AudioWorklet, and wire up the control UI
+// (unmask, key select, mode, mute/solo per channel, play/pause for the
+// decomposed mix). There is no separate "unprocessed" reference player -
+// leaving Unmask disabled on the Decomposed Mix already plays the raw
+// stem sum, so a second dedicated player would just duplicate that.
 
 const CLASS_NAMES = ['Dialogue', 'Music', 'Background Noise', 'Safety Alerts', 'Other'];
 
@@ -27,7 +28,6 @@ const SCENES = {
     label: 'Construction',
     dir: '../Construction Scene/',
     stems: ['Dialogue.wav', 'MUSIC.wav', 'BKG.wav', 'SAFETY.wav', 'OTHER.wav'],
-    blend: 'WHOLE BLEND.wav',
   },
   publicTransit: {
     label: 'Public Transit',
@@ -39,7 +39,11 @@ const SCENES = {
       'SAFETY_publictransit_01.wav',
       'OTHER_publictransit_01.wav',
     ],
-    blend: 'WholeBlend_publictransit.wav',
+  },
+  restaurant: {
+    label: 'Restaurant',
+    dir: '../Restaurant Scene/',
+    stems: ['Dialogue.wav', 'MUSIC.wav', 'BGV.wav', 'Safety.wav', 'OTHER.wav'],
   },
 };
 
@@ -59,13 +63,10 @@ let sampleRate = 48000;
 let retainedStemsL = null, retainedStemsR = null;
 let retainedNumFrames = 0;
 let decomposedRunning = false;
-let blendBlobUrl = null; // revoked and replaced on every scene load
 
 const $ = (id) => document.getElementById(id);
 const statusEl = $('status');
 const timeEl = $('time');
-const refTimeEl = $('refTime');
-const refAudio = $('refAudio');
 
 function fmtTime(seconds) {
   const m = Math.floor(seconds / 60);
@@ -315,12 +316,9 @@ function ensureAudioGraph() {
           const durSec = numFrames / sampleRate;
           setStatus(`Ready — ${fmtTime(durSec)} loaded`);
           timeEl.textContent = `0:00.0 / ${fmtTime(durSec)}`;
-          refTimeEl.textContent = `0:00.0 / ${fmtTime(durSec)}`;
-          setPlayheadFraction('playhead-blend', 0);
           for (let c = 0; c < 5; c++) setPlayheadFraction(`playhead${c}`, 0);
           $('playBtn').disabled = false;
           $('restartBtn').disabled = false;
-          $('refPlayBtn').disabled = false;
         } else if (msg.type === 'playhead') {
           const sec = msg.frame / sampleRate;
           timeEl.textContent = `${fmtTime(sec)} / ${fmtTime(numFrames / sampleRate)}`;
@@ -340,9 +338,9 @@ function ensureAudioGraph() {
   return workletReady;
 }
 
-// Fetches one scene's stems + reference blend, draws their waveforms, and
-// hands the stems to the (already-running) engine. Safe to call repeatedly
-// to switch scenes - pauses whatever's currently playing first.
+// Fetches one scene's stems, draws their waveforms, and hands them to the
+// (already-running) engine. Safe to call repeatedly to switch scenes -
+// pauses playback first.
 async function loadScene(sceneKey) {
   const scene = SCENES[sceneKey];
   if (!scene) throw new Error(`Unknown scene: ${sceneKey}`);
@@ -352,26 +350,14 @@ async function loadScene(sceneKey) {
     $('playBtn').textContent = 'Play';
     decomposedRunning = false;
   }
-  if (!refAudio.paused) {
-    refAudio.pause();
-    $('refPlayBtn').textContent = 'Play';
-  }
   $('playBtn').disabled = true;
   $('restartBtn').disabled = true;
-  $('refPlayBtn').disabled = true;
 
   setStatus(`Loading ${scene.label} scene...`);
   await ensureAudioGraph();
 
-  const blendResp = await fetch(scene.dir + encodeURIComponent(scene.blend));
-  if (!blendResp.ok) throw new Error(`Failed to fetch ${scene.blend}: ${blendResp.status}`);
-  const blendArrayBuf = await blendResp.arrayBuffer();
-  const newBlendBlobUrl = URL.createObjectURL(new Blob([blendArrayBuf], { type: 'audio/wav' }));
-  const blendAudioBuf = await audioCtx.decodeAudioData(blendArrayBuf.slice(0));
-  const blendMono = downmixToMono(blendAudioBuf);
-
   const stems = await Promise.all(scene.stems.map((f) => decodeStem(audioCtx, scene.dir, f)));
-  numFrames = Math.min(...stems.map((s) => s.mono.length), blendMono.length);
+  numFrames = Math.min(...stems.map((s) => s.mono.length));
   const monoForWaveform = stems.map((s) => s.mono.subarray(0, numFrames));
   const channelsL = stems.map((s) => s.left.subarray(0, numFrames));
   const channelsR = stems.map((s) => s.right.subarray(0, numFrames));
@@ -382,14 +368,9 @@ async function loadScene(sceneKey) {
   retainedStemsR = channelsR.map((c) => c.slice());
   retainedNumFrames = numFrames;
 
-  drawWaveform($('wave-blend'), blendMono.subarray(0, numFrames), '#555');
   for (let c = 0; c < 5; c++) {
     drawWaveform($(`wave${c}`), monoForWaveform[c], '#4a7fd6');
   }
-
-  if (blendBlobUrl) URL.revokeObjectURL(blendBlobUrl);
-  blendBlobUrl = newBlendBlobUrl;
-  refAudio.src = blendBlobUrl;
 
   engineNode.port.postMessage(
     { type: 'loadStems', channelsL, channelsR, numFrames },
@@ -1022,8 +1003,7 @@ function wireControls() {
     }
   });
 
-  // Decomposed mix Play/Pause — starting it pauses the reference so only
-  // one of the two is ever audible.
+  // Decomposed mix Play/Pause.
   $('playBtn').addEventListener('click', async () => {
     if (!audioCtx) return;
     if (decomposedRunning) {
@@ -1031,10 +1011,6 @@ function wireControls() {
       $('playBtn').textContent = 'Play';
       decomposedRunning = false;
     } else {
-      if (!refAudio.paused) {
-        refAudio.pause();
-        $('refPlayBtn').textContent = 'Play';
-      }
       await audioCtx.resume();
       $('playBtn').textContent = 'Pause';
       decomposedRunning = true;
@@ -1044,32 +1020,7 @@ function wireControls() {
   $('restartBtn').addEventListener('click', () => {
     engineNode?.port.postMessage({ type: 'seek' });
   });
-
-  // Reference "Whole Blend" Play/Pause — untouched A/B reference, mutually
-  // exclusive with the decomposed mix.
-  $('refPlayBtn').addEventListener('click', async () => {
-    if (refAudio.paused) {
-      if (decomposedRunning && audioCtx) {
-        await audioCtx.suspend();
-        $('playBtn').textContent = 'Play';
-        decomposedRunning = false;
-      }
-      refAudio.play();
-      $('refPlayBtn').textContent = 'Pause';
-    } else {
-      refAudio.pause();
-      $('refPlayBtn').textContent = 'Play';
-    }
-  });
 }
-
-refAudio.addEventListener('timeupdate', () => {
-  refTimeEl.textContent = `${fmtTime(refAudio.currentTime)} / ${fmtTime(refAudio.duration || numFrames / sampleRate)}`;
-  setPlayheadFraction('playhead-blend', refAudio.currentTime / (refAudio.duration || 1));
-});
-refAudio.addEventListener('ended', () => {
-  $('refPlayBtn').textContent = 'Play';
-});
 
 try {
   const savedProjectName = localStorage.getItem('exportProjectName');

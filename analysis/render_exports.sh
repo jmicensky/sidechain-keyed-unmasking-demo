@@ -1,6 +1,6 @@
 #!/bin/bash
-# Renders the full static-condition export sweep (2 scenes x 5 priority
-# classes x 3 conditions = 30 WAVs) that analysis/compute_metrics.py
+# Renders the full static-condition export sweep (3 scenes x 5 priority
+# classes x 3 conditions = 45 WAVs) that analysis/compute_metrics.py
 # expects, using src/main.cpp's --static mode (see HANDOFF.md / the
 # task spec this was built from). Run from the repo root after building
 # demo_engine_cli.
@@ -28,6 +28,7 @@ scene_slug() {
     case "$1" in
         "Construction Scene") echo "construction" ;;
         "PublicTransit Scene") echo "publictransit" ;;
+        "Restaurant Scene") echo "restaurant" ;;
         *) echo "unknown_scene_$1" ;;
     esac
 }
@@ -43,7 +44,7 @@ key_slug() {
     esac
 }
 
-SCENES=("Construction Scene" "PublicTransit Scene")
+SCENES=("Construction Scene" "PublicTransit Scene" "Restaurant Scene")
 KEYS=("Dialogue" "Music" "Background Noise" "Safety Alerts" "Other")
 
 for scene in "${SCENES[@]}"; do

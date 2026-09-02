@@ -55,9 +55,12 @@ you interactively:
   `Types.h`'s comments for the full band-count story.
 - **Mute** or **Solo** any of the five channels independently, mixer-style
   (solo is exclusive — engaging one clears any other).
-- Switch between two full **scenes** (Construction, Public Transit), each
-  with its own five real stems plus an unprocessed "whole blend" reference
-  track for A/B comparison.
+- Switch between three full **scenes** (Construction, Public Transit,
+  Restaurant), each with its own five real stems. There is no separate
+  "unprocessed" reference player - leaving Unmask disabled on the
+  Decomposed Mix already plays the raw stem sum, so a second dedicated
+  player would just duplicate that (an earlier version had one; removed as
+  redundant).
 
 All control changes (key selection, mode, mute, solo, every slider) are
 designed to be click/pop-free even when changed mid-playback, which is the
@@ -103,7 +106,8 @@ demo_engine/
 ├── exports/                     --static mode's rendered WAVs (gitignored, ~930MB -
 │                                regenerate via analysis/render_exports.sh)
 ├── Construction Scene/          Real stems + reference blend (~135MB, tracked in git)
-└── PublicTransit Scene/         Real stems + reference blend (~146MB, tracked in git)
+├── PublicTransit Scene/         Real stems + reference blend (~146MB, tracked in git)
+└── Restaurant Scene/            Real stems, no reference blend (~111MB, tracked in git)
 ```
 
 ## 3. Module-by-module
@@ -314,13 +318,17 @@ auto-regenerated. Requires Emscripten (pinned path in the script:
 `/opt/homebrew/Cellar/emscripten/6.0.8/bin`, adjust if your machine differs).
 
 ### `web/` (browser UI)
-- `index.html` — all markup + CSS. Layout: a load bar, an "Unprocessed"
-  reference panel (whole-blend waveform + A/B play button), and a
+- `index.html` — all markup + CSS. Layout: a load bar, then a single
   "Decomposed Mix" panel (per-channel waveforms/mute/solo/per-channel
   threshold-ratio-meter knobs, then the control stack: Unmask/Key/Mode/
   Advanced-ducking-mode, a two-column row with Sidechain Compressor +
   Resonance Mode controls on the left and the Gain Reduction graph on the
-  right (sized to match their combined height), then the WDRC section).
+  right (sized to match their combined height), then the WDRC section). No
+  separate "Unprocessed" reference panel - it played the scene's whole-mix
+  blend file for A/B comparison, which was redundant with just leaving
+  Unmask disabled on this same panel; removed rather than kept as a
+  second, weaker control for the same thing. (Also required for Restaurant
+  Scene, which has no whole-mix blend file to begin with.)
 - `app.js` — decodes all WAVs, draws waveform overviews, owns all control
   wiring (postMessage to the worklet), and draws the Gain Reduction EQ-style
   graph (mirrors `kUnmaskFrequencyRanges` in a JS-side `UNMASK_CHANNEL_RANGES`
@@ -338,8 +346,8 @@ proving (or not) that sidechain ducking improves priority-class audibility.
 Scope: Basic and Advanced (Summed-bus) duck modes only — Resonance's
 ducking doesn't occupy a fixed frequency band, so a fixed-band
 masking-margin measurement doesn't represent what it does.
-- `render_exports.sh` — renders the full 2-scene × 5-priority-class ×
-  3-condition sweep (30 WAVs) into `exports/` (gitignored — regenerate
+- `render_exports.sh` — renders the full 3-scene × 5-priority-class ×
+  3-condition sweep (45 WAVs) into `exports/` (gitignored — regenerate
   locally, ~930MB, rather than pulling it from git). Written without bash
   associative arrays (`declare -A`) because macOS ships bash 3.2 as
   `/bin/bash`, which doesn't support them.
@@ -392,8 +400,8 @@ masking-margin measurement doesn't represent what it does.
 ## 4. Deployment
 
 Static GitHub Pages site (`.nojekyll` present so the `web/` and scene
-folders serve as-is) — no server-side component. The two scene folders'
-real stems (~280MB total) are checked into git and fetched directly by the
+folders serve as-is) — no server-side component. The three scene folders'
+real stems (~390MB total) are checked into git and fetched directly by the
 browser. `git push` to `main` triggers a Pages rebuild automatically; poll
 `gh api repos/jmicensky/sidechain-keyed-unmasking-demo/pages/builds/latest`
 for `"status":"built"` to confirm a deploy landed.
@@ -455,8 +463,8 @@ python3 -m http.server 8765   # from the repo root
 ```
 
 Native CLI output is a stereo WAV (mono engine output duplicated to both
-channels) at whatever sample rate the input stems used (48 kHz for both the
-synthesized test scene and the real Construction/Public Transit stems).
+channels) at whatever sample rate the input stems used (48 kHz for the
+synthesized test scene and all three real scenes' stems).
 
 ## 7. Suggested next steps
 
@@ -471,7 +479,7 @@ synthesized test scene and the real Construction/Public Transit stems).
    `render_exports.sh`/`compute_metrics.py` with per-class thresholds tuned
    closer to each class's own real levels and compare against the
    shared-threshold baseline in `results.csv`.
-3. A critical listen across both scenes with real headphones/speakers,
+3. A critical listen across all three scenes with real headphones/speakers,
    specifically around the Max Reduction default (6dB) and the WDRC
    transient-overshoot event documented in §3 (`main.cpp`), to confirm both
    read as intended rather than just measuring correctly.

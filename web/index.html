@@ -57,6 +57,7 @@
   <select id="sceneSelect">
     <option value="construction" selected>Construction</option>
     <option value="publicTransit">Public Transit</option>
+    <option value="restaurant">Restaurant</option>
   </select>
   <button id="loadBtn">Load Scene</button>
   <span id="status">Not loaded</span>
@@ -68,18 +69,6 @@
   <span id="exportStatus" class="hint"></span>
   <span class="hint export-bar-note">renders unprocessed / basic / whatever mode is currently selected, using today's settings, into one downloaded zip</span>
 </div>
-
-<section class="panel">
-  <h2>Unprocessed</h2>
-  <div class="waveform-container">
-    <canvas id="wave-blend" class="waveform"></canvas>
-    <div id="playhead-blend" class="playhead"></div>
-  </div>
-  <div class="transport" style="margin-top: 10px;">
-    <button id="refPlayBtn" disabled>Play</button>
-    <span id="refTime" class="time">0:00 / 0:00</span>
-  </div>
-</section>
 
 <section class="panel">
   <h2>Decomposed Mix</h2>
@@ -218,8 +207,6 @@
     </div>
   </div>
 </section>
-
-<audio id="refAudio"></audio>
 
 <script type="module" src="app.js"></script>
 </body>

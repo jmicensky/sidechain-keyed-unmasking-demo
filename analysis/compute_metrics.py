@@ -63,6 +63,16 @@ SCENES = {
             "other": "OTHER_publictransit_01.wav",
         },
     },
+    "restaurant": {
+        "dir": "Restaurant Scene",
+        "stems": {
+            "dialogue": "Dialogue.wav",
+            "music": "MUSIC.wav",
+            "background": "BGV.wav",
+            "safety": "Safety.wav",
+            "other": "OTHER.wav",
+        },
+    },
 }
 
 # Mirrors Types.h's kUnmaskFrequencyRanges (low_hz, high_hz), keyed by the

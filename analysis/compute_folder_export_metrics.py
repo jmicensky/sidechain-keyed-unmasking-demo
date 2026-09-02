@@ -33,6 +33,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 SCENE_DIR_BY_LABEL = {
     'Construction': 'Construction Scene',
     'Public Transit': 'PublicTransit Scene',
+    'Restaurant': 'Restaurant Scene',
 }
 SCENE_STEMS = {
     'Construction Scene': {
@@ -43,6 +44,10 @@ SCENE_STEMS = {
         'Dialogue': 'Dialogue_PublicTransit_01.wav', 'Music': 'MUSIC_publictransit_01.wav',
         'Background Noise': 'BKG_PublicTransit_01.wav', 'Safety Alerts': 'SAFETY_publictransit_01.wav',
         'Other': 'OTHER_publictransit_01.wav',
+    },
+    'Restaurant Scene': {
+        'Dialogue': 'Dialogue.wav', 'Music': 'MUSIC.wav', 'Background Noise': 'BGV.wav',
+        'Safety Alerts': 'Safety.wav', 'Other': 'OTHER.wav',
     },
 }
 KEY_SLUG = {'Dialogue': 'dialogue', 'Music': 'music', 'Background Noise': 'background',

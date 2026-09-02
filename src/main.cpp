@@ -246,16 +246,17 @@ struct SceneSpec {
     std::vector<std::string> aliases; // acceptable --scene values
     std::string dir;                  // includes trailing slash
     std::string stemFiles[5];         // indexed like ClassIndex: Dialogue, Music, BG, Safety, Other
-    std::string blendFile;            // mastered reference "whole blend" track
 };
 
 static const std::vector<SceneSpec>& sceneTable() {
     static const std::vector<SceneSpec> table = {
         {{"Construction Scene", "Construction", "construction"}, "Construction Scene/",
-         {"Dialogue.wav", "MUSIC.wav", "BKG.wav", "SAFETY.wav", "OTHER.wav"}, "WHOLE BLEND.wav"},
+         {"Dialogue.wav", "MUSIC.wav", "BKG.wav", "SAFETY.wav", "OTHER.wav"}},
         {{"PublicTransit Scene", "PublicTransit", "publicTransit"}, "PublicTransit Scene/",
          {"Dialogue_PublicTransit_01.wav", "MUSIC_publictransit_01.wav", "BKG_PublicTransit_01.wav",
-          "SAFETY_publictransit_01.wav", "OTHER_publictransit_01.wav"}, "WholeBlend_publictransit.wav"},
+          "SAFETY_publictransit_01.wav", "OTHER_publictransit_01.wav"}},
+        {{"Restaurant Scene", "Restaurant", "restaurant"}, "Restaurant Scene/",
+         {"Dialogue.wav", "MUSIC.wav", "BGV.wav", "Safety.wav", "OTHER.wav"}},
     };
     return table;
 }
@@ -306,8 +307,8 @@ static void printStaticUsage() {
         "--mode <unprocessed|basic|advanced> --out <path.wav>\n"
         "         [--threshold dB] [--ratio r] [--knee dB] [--attack ms] "
         "[--release ms] [--max-reduction dB]\n"
-        "  --scene: \"Construction Scene\" or \"PublicTransit Scene\" "
-        "(aliases: Construction, PublicTransit)\n"
+        "  --scene: \"Construction Scene\", \"PublicTransit Scene\", or "
+        "\"Restaurant Scene\" (aliases: Construction, PublicTransit, Restaurant)\n"
         "  --key:   Dialogue | Music | \"Background Noise\" | \"Safety Alerts\" | Other\n"
         "  --mode:  unprocessed (true sum of the 5 raw stems, Unmask off) | "
         "basic | advanced (Summed-bus)\n"
