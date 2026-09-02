@@ -327,21 +327,39 @@ masking-margin measurement doesn't represent what it does.
 - `compute_metrics.py` (needs `numpy`, `scipy`, `soundfile`, `pystoi`) —
   two metrics per (scene, priority class, condition):
   1. **In-band masking margin** — both the dry priority stem and the mix
-     export are zero-phase band-passed to the priority class's
-     `kUnmaskFrequencyRanges` band, framed (20ms/50% overlap), and the
-     masker level is estimated via power subtraction
+     export are zero-phase band-passed and framed (20ms/50% overlap), and
+     the masker level is estimated via power subtraction
      (`mix_power − gSafety² × priority_power`, incoherent-signal
      assumption). Gated to frames where the priority stem is actually
-     active; reports mean and worst-case margin.
+     active; reports mean and worst-case margin. **Not** measured on the
+     priority class's full nominal `kUnmaskFrequencyRanges` band —
+     `MARGIN_MEASUREMENT_PAD_OCTAVES` (0.85) pads inward from both edges
+     first (Dialogue's nominal 400Hz–7kHz becomes ~721Hz–3.9kHz measured).
+     Reason: this script's own analysis bandpass filter, applied to the
+     rendered output, interacts with Advanced mode's internal LR4
+     crossover (a different filter shape) right at the shared nominal
+     edges — confirmed via the engine's own reported gain that Basic and
+     Advanced apply bit-identical gain within the class's core band when
+     settings match, so the ~0.9–1.0dB gap the unpadded measurement showed
+     between them was a filter-interaction artifact, not real. 0.85
+     octaves of padding closes it to within 0.13dB across a 9-run
+     parameter sweep — a real, deliberate reduction in measured bandwidth,
+     not a free fix.
   2. **STOI/ESTOI** (Dialogue only) — via `pystoi`, with a small
      cross-correlation lag search (±20ms) to correct for Advanced mode's
-     crossover group delay before scoring.
-  Results print to stdout and save to `analysis/results.csv`.
-- **Finding from the first full sweep (both scenes, shared -30dB/4:1/6dB
+     crossover group delay before scoring. Operates on the full-band
+     signal directly, so unaffected by the margin-padding note above.
+  Results print to stdout and save to `analysis/results.csv`. The
+  `unprocessed` condition inside each export is the true sum of the 5 raw
+  stems (Basic mode, Unmask off) — not each scene's separately-bounced
+  reference blend, which was found to disagree with the raw stem sum by
+  ~8% RMS overall (likely a DAW export inconsistency) and didn't localize
+  to any one stem.
+- **Finding from the full sweep (both scenes, shared -30dB/4:1/6dB
   compressor settings):** Dialogue-as-priority clearly showed the
   hypothesized direction on both metrics and both scenes (unprocessed
   worst, basic/advanced both improved — e.g. Construction: mean margin
-  -3.32dB → -0.69dB/-1.03dB, STOI 0.393 → 0.434/0.426). Other priority
+  -9.51dB → -7.51dB/-7.48dB, STOI 0.393 → 0.434/0.426). Other priority
   classes showed weak or mixed movement. Root-caused, not a script bug: a
   threshold-crossing diagnostic showed Music/Safety/Background/Other's own
   levels rarely reach anywhere near -30dBFS in either scene's real stems

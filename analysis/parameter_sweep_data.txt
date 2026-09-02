@@ -1,164 +1,183 @@
 SIDECHAIN COMPRESSOR PARAMETER SWEEP -- FULL DATA
 Construction Scene, Dialogue priority class, Advanced (Summed-bus) duck mode
-Masking margin = Dialogue level minus estimated masker level, band-limited to 400Hz-7kHz
-STOI = Extended STOI (ESTOI) against the dry Dialogue stem
+Masking margin measured on 721-3883Hz (0.85 octaves padded inward from
+Dialogue's nominal 400-7000Hz range - see note at bottom).
+STOI = Extended STOI (ESTOI) against the dry Dialogue stem (full band, unaffected
+by the padding note below).
 Unprocessed baseline = true sum of the 5 raw stems (Basic mode, Unmask off),
-NOT the scene reference blend - see note at bottom.
+NOT the scene reference blend.
 ======================================================================
 
 RUN 1
   Source folder: -36Thesh20dBKnee_AttackFast_ReleaseSlow_4Ratio_2026-09-01_1105
   Settings: Threshold -36 dB | Ratio 4:1 | Knee 20 dB | Attack 5 ms | Release 400 ms | Max Reduction 24 dB
   Masking margin, mean / worst-case (dB):
-    Unprocessed        -3.19 /    -35.85
-    Basic               6.41 /    -35.83
-    Advanced            5.49 /    -35.91
+    Unprocessed        -9.51 /    -40.79
+    Basic              -0.95 /    -40.77
+    Advanced           -1.00 /    -40.79
   STOI:
     Unprocessed  0.393
     Basic        0.588
     Advanced     0.514
-  Advanced gain over unprocessed:
-    Mean margin gain:       +8.68 dB
-    STOI gain:              +0.121
+  Gain over unprocessed:
+    Basic mean margin gain:    +8.56 dB
+    Advanced mean margin gain: +8.51 dB
+    (Basic vs Advanced measurement gap: +0.05 dB)
+    Advanced STOI gain:        +0.121
 
 RUN 2
   Source folder: -48Thesh12dBKnee_AttackFast_ReleaseSlow_LowRatio_2026-09-01_1048
   Settings: Threshold -48 dB | Ratio 1.5:1 | Knee 12 dB | Attack 5 ms | Release 400 ms | Max Reduction 24 dB
   Masking margin, mean / worst-case (dB):
-    Unprocessed        -3.19 /    -35.85
-    Basic               6.29 /    -35.13
-    Advanced            5.34 /    -35.23
+    Unprocessed        -9.51 /    -40.79
+    Basic              -1.26 /    -40.06
+    Advanced           -1.32 /    -40.09
   STOI:
     Unprocessed  0.393
     Basic        0.604
     Advanced     0.517
-  Advanced gain over unprocessed:
-    Mean margin gain:       +8.53 dB
-    STOI gain:              +0.124
+  Gain over unprocessed:
+    Basic mean margin gain:    +8.25 dB
+    Advanced mean margin gain: +8.19 dB
+    (Basic vs Advanced measurement gap: +0.06 dB)
+    Advanced STOI gain:        +0.124
 
 RUN 3
   Source folder: -48Thesh12dBKnee_AttackFast_Releasemedium_LowRatio_2026-09-01_1052
   Settings: Threshold -48 dB | Ratio 1.5:1 | Knee 12 dB | Attack 5 ms | Release 120 ms | Max Reduction 24 dB
   Masking margin, mean / worst-case (dB):
-    Unprocessed        -3.19 /    -35.85
-    Basic               4.52 /    -35.49
-    Advanced            3.87 /    -35.57
+    Unprocessed        -9.51 /    -40.79
+    Basic              -2.81 /    -40.42
+    Advanced           -2.73 /    -40.44
   STOI:
     Unprocessed  0.393
     Basic        0.562
     Advanced     0.506
-  Advanced gain over unprocessed:
-    Mean margin gain:       +7.07 dB
-    STOI gain:              +0.113
+  Gain over unprocessed:
+    Basic mean margin gain:    +6.70 dB
+    Advanced mean margin gain: +6.78 dB
+    (Basic vs Advanced measurement gap: -0.08 dB)
+    Advanced STOI gain:        +0.113
 
 RUN 4
   Source folder: -36Thesh12dBKnee_AttackXFast_Releasemedium_LowRatio_2026-09-01_1057
   Settings: Threshold -36 dB | Ratio 1.5:1 | Knee 12 dB | Attack 1 ms | Release 120 ms | Max Reduction 24 dB
   Masking margin, mean / worst-case (dB):
-    Unprocessed        -3.19 /    -35.85
-    Basic               0.95 /    -35.83
-    Advanced            0.70 /    -35.90
+    Unprocessed        -9.51 /    -40.79
+    Basic              -5.90 /    -40.77
+    Advanced           -5.77 /    -40.79
   STOI:
     Unprocessed  0.393
     Basic        0.484
     Advanced     0.462
-  Advanced gain over unprocessed:
-    Mean margin gain:       +3.89 dB
-    STOI gain:              +0.068
+  Gain over unprocessed:
+    Basic mean margin gain:    +3.61 dB
+    Advanced mean margin gain: +3.74 dB
+    (Basic vs Advanced measurement gap: -0.13 dB)
+    Advanced STOI gain:        +0.068
 
 RUN 5
   Source folder: -36Thesh12dBKnee_AttackFast_ReleaseSlow_LowRatio_2026-09-01_1101
   Settings: Threshold -36 dB | Ratio 1.5:1 | Knee 12 dB | Attack 5 ms | Release 400 ms | Max Reduction 24 dB
   Masking margin, mean / worst-case (dB):
-    Unprocessed        -3.19 /    -35.85
-    Basic               0.90 /    -35.85
-    Advanced            0.63 /    -35.92
+    Unprocessed        -9.51 /    -40.79
+    Basic              -5.96 /    -40.79
+    Advanced           -5.93 /    -40.81
   STOI:
     Unprocessed  0.393
     Basic        0.488
     Advanced     0.455
-  Advanced gain over unprocessed:
-    Mean margin gain:       +3.83 dB
-    STOI gain:              +0.062
+  Gain over unprocessed:
+    Basic mean margin gain:    +3.55 dB
+    Advanced mean margin gain: +3.58 dB
+    (Basic vs Advanced measurement gap: -0.03 dB)
+    Advanced STOI gain:        +0.062
 
 RUN 6
   Source folder: -48Thesh12dBKnee_Attackslow_Releasemedium_LowRatio_2026-09-01_1055
   Settings: Threshold -48 dB | Ratio 1.5:1 | Knee 12 dB | Attack 50 ms | Release 120 ms | Max Reduction 24 dB
   Masking margin, mean / worst-case (dB):
-    Unprocessed        -3.19 /    -35.85
-    Basic               0.88 /    -35.85
-    Advanced            0.60 /    -35.92
+    Unprocessed        -9.51 /    -40.79
+    Basic              -5.94 /    -40.79
+    Advanced           -5.99 /    -40.81
   STOI:
     Unprocessed  0.393
     Basic        0.490
     Advanced     0.459
-  Advanced gain over unprocessed:
-    Mean margin gain:       +3.79 dB
-    STOI gain:              +0.066
+  Gain over unprocessed:
+    Basic mean margin gain:    +3.57 dB
+    Advanced mean margin gain: +3.52 dB
+    (Basic vs Advanced measurement gap: +0.06 dB)
+    Advanced STOI gain:        +0.066
 
 RUN 7
   Source folder: -24Thesh20dBKnee_AttackFast_ReleaseSlow_4Ratio_2026-09-01_1217
   Settings: Threshold -24 dB | Ratio 4:1 | Knee 20 dB | Attack 5 ms | Release 400 ms | Max Reduction 24 dB
   Masking margin, mean / worst-case (dB):
-    Unprocessed        -3.19 /    -35.85
-    Basic              -1.27 /    -35.85
-    Advanced           -1.51 /    -35.92
+    Unprocessed        -9.51 /    -40.79
+    Basic              -7.97 /    -40.79
+    Advanced           -7.86 /    -40.81
   STOI:
     Unprocessed  0.393
     Basic        0.434
     Advanced     0.423
-  Advanced gain over unprocessed:
-    Mean margin gain:       +1.68 dB
-    STOI gain:              +0.029
+  Gain over unprocessed:
+    Basic mean margin gain:    +1.54 dB
+    Advanced mean margin gain: +1.65 dB
+    (Basic vs Advanced measurement gap: -0.11 dB)
+    Advanced STOI gain:        +0.029
 
 RUN 8
   Source folder: -36Thesh12dBKnee_AttackMedium_Releasemedium_LowRatio_2026-09-01_1100
   Settings: Threshold -36 dB | Ratio 1.5:1 | Knee 12 dB | Attack 15 ms | Release 120 ms | Max Reduction 24 dB
   Masking margin, mean / worst-case (dB):
-    Unprocessed        -3.19 /    -35.85
-    Basic              -1.26 /    -35.85
-    Advanced           -1.54 /    -35.92
+    Unprocessed        -9.51 /    -40.79
+    Basic              -8.04 /    -40.79
+    Advanced           -7.91 /    -40.81
   STOI:
     Unprocessed  0.393
     Basic        0.434
     Advanced     0.426
-  Advanced gain over unprocessed:
-    Mean margin gain:       +1.65 dB
-    STOI gain:              +0.033
+  Gain over unprocessed:
+    Basic mean margin gain:    +1.47 dB
+    Advanced mean margin gain: +1.60 dB
+    (Basic vs Advanced measurement gap: -0.13 dB)
+    Advanced STOI gain:        +0.033
 
 RUN 9
   Source folder: -24Thesh6dBKnee_AttackFast_ReleaseSlow_4Ratio_2026-09-01_1104
   Settings: Threshold -24 dB | Ratio 4:1 | Knee 6 dB | Attack 5 ms | Release 400 ms | Max Reduction 24 dB
   Masking margin, mean / worst-case (dB):
-    Unprocessed        -3.19 /    -35.85
-    Basic              -2.23 /    -35.85
-    Advanced           -2.44 /    -35.92
+    Unprocessed        -9.51 /    -40.79
+    Basic              -8.79 /    -40.79
+    Advanced           -8.68 /    -40.81
   STOI:
     Unprocessed  0.393
     Basic        0.409
     Advanced     0.406
-  Advanced gain over unprocessed:
-    Mean margin gain:       +0.75 dB
-    STOI gain:              +0.013
+  Gain over unprocessed:
+    Basic mean margin gain:    +0.72 dB
+    Advanced mean margin gain: +0.83 dB
+    (Basic vs Advanced measurement gap: -0.11 dB)
+    Advanced STOI gain:        +0.013
 
 ----------------------------------------------------------------------
-All nine runs are distinct configurations.
-
-NOTE ON THE UNPROCESSED BASELINE: this is the TRUE SUM of the 5 raw
-stem files (Dialogue + Music + Background + Safety + Other), rendered
-via the engine in Basic mode with Unmask off - NOT the scene's
-separately-bounced "WHOLE BLEND.wav" reference file used earlier.
-That reference blend was found to differ from the raw stem sum by
-~8% RMS overall, most likely a DAW export inconsistency, and did not
-clearly localize to any single stem (best-fit per-stem level check:
-Dialogue +0.01dB, Music -0.23dB, Background -0.14dB, Safety -0.07dB,
-Other -0.02dB). Using the raw stem sum instead removes any risk of
-that mixing-stage inconsistency contaminating the margin/STOI
-metrics, since basic/advanced ducking is computed from those exact
-stem files. Effect on the numbers was small, as expected: unprocessed
-mean margin moved from -3.32dB to -3.19dB; basic/advanced values are
-unchanged (already computed from the real stems); STOI moved by
-<0.001 in every run; rankings are unaffected.
+NOTE ON THE MEASUREMENT BAND: masking margin is measured on 721-3883Hz,
+not Dialogue's full nominal 400-7000Hz range. Reason: this script's own
+analysis bandpass filter, applied to the rendered output audio,
+interacts with Advanced mode's own internal crossover filter (a
+different filter shape) near the shared nominal edges. This inflated
+Basic mode's measured margin gain relative to Advanced's by a spurious
+~0.9-1.0dB at the unpadded edges, even though the engine applies
+bit-identical gain within the class's core band in both modes (verified
+directly via the engine's own reported gain). Padding by 0.85 octaves
+per side closes this gap to within 0.13dB on every one of these 9 runs
+(see the "measurement gap" line per run above). This is a real
+reduction in measured bandwidth (Dialogue's 4.1 nominal octaves becomes
+~2.4 measured octaves), accepted as a deliberate tradeoff rather than a
+smaller pad that would leave the gap only partially closed. STOI is
+unaffected (it operates on the full-band signal directly, no bandpass
+filtering involved).
 
 ======================================================================
 PSYCHOACOUSTIC PARTIAL-LOUDNESS / MASKED-THRESHOLD ESTIMATE
@@ -178,8 +197,16 @@ Dialogue), valid because Dialogue always takes the dry/unducked path
 regardless of duck mode. Averaged over frames where Dialogue's own
 loudness exceeds 10% of its peak (770/955 frames, 80.6%, for this clip).
 Row order matches the mean-margin-gain ranking above, for direct
-cross-reference. "Unprocessed" here is also the true stem sum (see
-note in the section above), not the reference blend.
+cross-reference. "Unprocessed" here is also the true stem sum, not the
+reference blend.
+
+NOT affected by the margin-measurement padding fix above (this metric
+uses MOSQITO's own Bark-band filterbank, not this project's bandpass
+filter, so the same crossover-edge artifact does not directly apply).
+HOWEVER: Basic and Advanced show a comparable-looking gap here too
+(e.g. Run 1: Basic 36.3% masked vs Advanced 42.3% masked, a 6pp
+difference) that has NOT been investigated for the same root cause -
+flagging this as an open question rather than assuming it is fine.
 
 RUN 1: -36Thesh20dBKnee_AttackFast_ReleaseSlow_4Ratio_2026-09-01_1105
   Percent of Dialogue's loudness masked:
