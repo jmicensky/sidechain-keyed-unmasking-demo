@@ -1,0 +1,112 @@
+LATIN HYPERCUBE PARAMETER SWEEP -- FINDINGS
+Construction Scene, Dialogue priority class, 150 points x {Basic, Advanced}
+Search ranges: threshold -60 to -18dB, ratio 1.5-10:1, knee 0-24dB,
+attack 1-50ms, release 20-400ms (Latin Hypercube design, seed=42)
+Data: analysis/lhs_sweep_results.csv
+Script: analysis/run_lhs_sweep.py
+======================================================================
+
+GOAL: find settings maximizing mean margin gain, STOI gain, and
+psychoacoustic partial-loudness reduction, and specifically look for a
+"sweet spot" where STOI/loudness gains are high while margin gain moves
+comparatively little (more intelligibility improvement than the raw
+level-based margin metric alone would suggest).
+
+FINDING 1 -- No such sweet spot exists among these three metrics; they
+are almost perfectly correlated with each other.
+  Across all 150 Advanced-mode points: STOI gain vs. margin gain r=0.994;
+  partial-loudness reduction vs. margin gain r=0.994. Fitting a straight
+  line through each relationship and looking at the residuals (how far a
+  point sits from that typical trend) finds only tiny deviations - at
+  most about +0.015 STOI-gain and a few percentage points of loudness
+  reduction above what margin gain alone would predict, against ranges of
+  0.002-0.114 and 0-11.4pp respectively. In practical terms: settings that
+  improve mean margin gain improve STOI and partial-loudness reduction
+  right along with it, in essentially fixed proportion. There is no
+  parameter combination in this search that gets you meaningfully more
+  perceived intelligibility improvement without a proportional increase
+  in the raw margin change too - all three metrics are measuring
+  consequences of the same underlying "how much was the masker actually
+  ducked within Dialogue's band," just through different lenses, which is
+  itself a reassuring cross-validation of the three metrics rather than a
+  disappointing result.
+
+FINDING 2 -- Threshold dominates; the other four parameters barely
+matter on their own.
+  Correlation with Advanced-mode margin gain, each parameter alone:
+    threshold   r = -0.929  (by far the strongest predictor)
+    release     r = +0.186
+    attack      r = -0.170
+    ratio       r = +0.132
+    knee        r = +0.066
+  Binned by threshold (Advanced mode):
+    thr [-60,-54): margin gain mean +6.77dB (max +6.96dB)  n=21
+    thr [-54,-48): margin gain mean +6.50dB (max +6.94dB)  n=22
+    thr [-48,-42): margin gain mean +5.73dB (max +6.88dB)  n=21
+    thr [-42,-36): margin gain mean +4.06dB (max +6.21dB)  n=22
+    thr [-36,-30): margin gain mean +2.30dB (max +5.96dB)  n=21
+    thr [-30,-24): margin gain mean +0.52dB (max +2.40dB)  n=22
+    thr [-24,-18): margin gain mean +0.11dB (max +1.02dB)  n=21
+  Ratio/knee/attack/release still matter - the spread within each
+  threshold bin (e.g. +5.94 to +6.96dB in the lowest bin) shows they add
+  real variation - just much less than threshold does.
+
+FINDING 3 -- The performance curve is STILL RISING at the edge of the
+tested range (-60dB); this search did not find where it saturates.
+  This search only covered -60 to -18dB. Extending below -60dB would
+  very likely continue to improve all three metrics further, based on the
+  trend - this was not tested and should be if a truly maximal setting is
+  wanted.
+
+FINDING 4 -- The real tradeoff worth navigating is threshold vs. how much
+of the clip the sidechain actually engages on, which directly conflicts
+with the earlier "transparent when Dialogue is silent" goal.
+  Measured directly (50ms-smoothed envelope of the dry Dialogue stem
+  crossing each threshold):
+    threshold -60dB: sidechain engaged 70.4% of the clip
+    threshold -54dB: sidechain engaged 62.1% of the clip
+    threshold -48dB: sidechain engaged 51.0% of the clip
+    threshold -42dB: sidechain engaged 34.8% of the clip
+    threshold -36dB: sidechain engaged 16.6% of the clip
+    threshold -30dB: sidechain engaged  3.4% of the clip
+    threshold -24dB: sidechain engaged  0.0% of the clip
+  The settings that maximize the three metrics do so specifically by
+  having the compressor engaged for the MAJORITY of the clip (51-70%),
+  not just during clearly loud/present dialogue - directly at odds with
+  wanting the mix untouched when the priority sound isn't making noise.
+  This is a genuine tradeoff to make deliberately, not a free optimum.
+
+RECOMMENDED OPERATING POINTS (Advanced/Summed-bus, Construction Scene,
+Dialogue priority - real points from the sweep, not interpolated):
+
+  AGGRESSIVE (maximize the three metrics; compressor active most of the time)
+    Threshold -58.6dB | Ratio 7.4:1 | Knee 5.9dB | Attack 3.2ms | Release 215ms
+    Mean margin gain +6.96dB | STOI gain +0.104 | Loudness reduction +11.4pp
+    Sidechain engaged 68.8% of the clip
+
+  BALANCED (majority of the available gain, much less constantly engaged)
+    Threshold -40.3dB | Ratio 5.7:1 | Knee 22.9dB | Attack 16.9ms | Release 347ms
+    Mean margin gain +6.21dB | STOI gain +0.100 | Loudness reduction +9.8pp
+    Sidechain engaged 29.9% of the clip
+
+  CONSERVATIVE (maximize time spent fully transparent; modest but real gain)
+    Threshold -28.8dB | Ratio 7.7:1 | Knee 9.4dB | Attack 8.5ms | Release 384ms
+    Mean margin gain +2.40dB | STOI gain +0.042 | Loudness reduction +3.0pp
+    Sidechain engaged 1.9% of the clip
+
+Given Finding 2, ratio/knee/attack/release at any of these three tiers
+could reasonably be swapped for other values within the tested ranges
+without changing the outcome much - these are real tested points, not a
+claim that these exact decimal values are individually load-bearing.
+
+NEXT STEPS NOT YET DONE:
+  - Extend the threshold search below -60dB to find where the curve
+    actually saturates (Finding 3).
+  - Re-run this same sweep on other priority classes and/or the
+    PublicTransit scene to check whether the BALANCED tier's threshold
+    generalizes, or whether it's specific to this scene's Dialogue level
+    distribution.
+  - The tradeoff in Finding 4 is currently only checked against margin/
+    STOI/loudness; a direct measure of "how much of the clip is actually
+    ducked" (not just "sidechain engaged," which doesn't account for the
+    Max Reduction ceiling or gain magnitude) would sharpen this further.

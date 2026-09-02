@@ -1,0 +1,54 @@
+% Recommended Sidechain Compressor settings, derived from a 150-point
+% Latin Hypercube parameter sweep (analysis/run_lhs_sweep.py). See
+% analysis/lhs_sweep_findings.txt for full methodology and the 4 findings
+% this table summarizes.
+%
+% Requires packages already in main.tex's preamble: booktabs, siunitx.
+% Also requires colortbl for \cellcolor - see parameter_sweep_table.tex's
+% header comment (add \usepackage{colortbl} or change to
+% \usepackage[table]{xcolor}).
+%
+% KEY FINDING this table is built on: mean margin gain, STOI gain, and
+% psychoacoustic partial-loudness reduction are almost perfectly
+% correlated with each other across the swept space (r=0.994 for both
+% STOI and loudness reduction against margin gain) - there is no
+% parameter combination that decouples them. The real tradeoff is
+% threshold vs. how much of the clip the sidechain actually engages on
+% (measured via the dry Dialogue stem's own envelope crossing each
+% threshold), which directly opposes wanting the mix untouched when
+% Dialogue isn't present. These three rows are real tested points from
+% the sweep spanning that tradeoff, not a single "optimal" answer -
+% ratio/knee/attack/release matter far less than threshold (all
+% |r|<0.19 individually) so are not the load-bearing part of any row.
+
+\definecolor{paramgrey}{gray}{0.85}
+
+\begin{table}[h]
+\centering
+\footnotesize
+\caption{Recommended Sidechain Compressor operating points, Advanced
+(Summed-bus) ducking, spanning the threshold/engagement tradeoff
+identified in the 150-point parameter sweep. ``Engaged'' is the fraction
+of the clip where the dry Dialogue stem's own smoothed envelope exceeds
+the threshold (i.e. where ducking of the other channels can occur at
+all). Gains are relative to the unprocessed baseline.}
+\label{tab:recommended-settings}
+\begin{tabular}{@{}l S[table-format=-2.1] S[table-format=1.1] S[table-format=2.1] S[table-format=2.1] S[table-format=3.0] S[table-format=2.1] S[table-format=+1.2] S[table-format=+1.3] S[table-format=+2.1]@{}}
+\toprule
+\cellcolor{paramgrey}\textbf{Tier} & \cellcolor{paramgrey}{\textbf{Thr.} (\si{\decibel})} & \cellcolor{paramgrey}{\textbf{Ratio}} & \cellcolor{paramgrey}{\textbf{Knee} (\si{\decibel})} & \cellcolor{paramgrey}{\textbf{Atk.} (\si{\milli\second})} & \cellcolor{paramgrey}{\textbf{Rel.} (\si{\milli\second})} & \cellcolor{paramgrey}{\textbf{Engaged} (\si{\percent})} & \textbf{Margin Gain} (\si{\decibel}) & \textbf{STOI Gain} & \textbf{Loud.\ Red.\ (pp)} \\
+\midrule
+Aggressive   & -58.6 & 7.4 & 5.9  & 3.2  & 215 & 68.8 & \cellcolor{green!70}+6.96 & \cellcolor{yellow!70}+0.104 & \cellcolor{orange!70}+11.4 \\
+Balanced     & -40.3 & 5.7 & 22.9 & 16.9 & 347 & 29.9 & \cellcolor{green!60}+6.21 & \cellcolor{yellow!67}+0.100 & \cellcolor{orange!60}+9.8  \\
+Conservative & -28.8 & 7.7 & 9.4  & 8.5  & 384 &  1.9 & \cellcolor{green!23}+2.40 & \cellcolor{yellow!27}+0.042 & \cellcolor{orange!25}+3.0  \\
+\bottomrule
+\end{tabular}
+\par\vspace{4pt}
+\raggedright\footnotesize Threshold is the dominant parameter
+($r=-0.929$ with margin gain across the sweep); ratio, knee, attack, and
+release each correlate weakly on their own ($|r|<0.19$), so the exact
+decimal values in those four columns are not individually load-bearing --
+what matters is the threshold tier. The sweep's search range
+(\SI{-60}{\decibel} to \SI{-18}{\decibel}) was still improving at its
+lower edge, so an even more aggressive tier below \SI{-60}{\decibel}
+was not ruled out, only untested.
+\end{table}
