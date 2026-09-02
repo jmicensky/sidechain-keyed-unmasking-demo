@@ -1,0 +1,81 @@
+LATIN HYPERCUBE PARAMETER SWEEP -- PUBLIC TRANSIT SCENE -- FINDINGS
+PublicTransit Scene, Dialogue priority class, 50 points x {Basic, Advanced}
+Search ranges: threshold -60 to -18dB, ratio 1.5-10:1, knee 0-24dB,
+attack 1-50ms, release 20-400ms (Latin Hypercube design, seed=42)
+Data: analysis/lhs_sweep_results_publictransit_dialogue.csv
+Script: analysis/run_lhs_sweep.py --scene publictransit --key dialogue --n 50
+======================================================================
+
+PURPOSE: check whether the Construction Scene sweep's findings
+(analysis/lhs_sweep_findings.txt) generalize to a different scene, or were
+specific to Construction's Dialogue level distribution. Deliberately
+smaller than the Construction sweep (50 points vs 150) as a first look
+before committing to a full-size run - see CAVEAT below.
+
+BASELINE DIFFERS SUBSTANTIALLY FROM CONSTRUCTION: Public Transit's
+unprocessed baseline measures mean_margin=-13.28dB, STOI=0.275, with the
+masker covering 66.7% of Dialogue's specific loudness even before any
+ducking - meaning Public Transit's Dialogue stem starts out far more
+heavily masked than Construction's. This makes it a meaningfully different
+test case, not just a repeat of the same scenario with different noise.
+
+FINDING 1 -- Threshold dominance replicates almost exactly.
+  Correlation with Advanced-mode margin gain, each parameter alone:
+    threshold   r = -0.930  (Construction: r = -0.929 - essentially identical)
+    release     r = -0.262
+    attack      r = -0.240
+    knee        r = +0.090
+    ratio       r = +0.005
+  Binned by threshold (Advanced mode):
+    thr [-60,-54): margin gain mean +6.17dB (max +6.35dB)  n=7
+    thr [-54,-48): margin gain mean +5.66dB (max +6.29dB)  n=7
+    thr [-48,-42): margin gain mean +5.56dB (max +6.05dB)  n=8
+    thr [-42,-36): margin gain mean +2.94dB (max +4.53dB)  n=6
+    thr [-36,-30): margin gain mean +1.66dB (max +4.08dB)  n=7
+    thr [-30,-24): margin gain mean +0.53dB (max +1.58dB)  n=8
+    thr [-24,-18): margin gain mean +0.06dB (max +0.16dB)  n=7
+  Same shape as Construction's binned curve (compare
+  lhs_sweep_findings.txt's Finding 2): a plateau of high, roughly-flat
+  gain below about -42dB, then a steep falloff toward 0 as threshold
+  approaches -18dB.
+
+FINDING 2 -- The near-perfect cross-metric correlation replicates too, and
+is even tighter for loudness reduction here.
+  STOI gain vs. margin gain: r=0.981 (Construction: r=0.994)
+  Partial-loudness reduction vs. margin gain: r=0.9996 (Construction: r=0.994)
+  Same conclusion as Construction Finding 1: no combination in this search
+  decouples "measurably transparent" from "measurably intelligible" - all
+  three metrics still move together.
+
+FINDING 3 -- Basic and Advanced margin gain are nearly identical here
+(r=0.99998), more so than would be expected from Construction alone.
+  Best margin gain: Advanced +6.35dB, Basic +6.68dB, same settings
+  (threshold -56.0dB, ratio 5.7:1, knee 23.5dB, attack 8.0ms, release
+  312ms). Not directly compared against Construction's Basic-vs-Advanced
+  gap in this pass - flagged as worth checking if Basic/Advanced
+  divergence (attributed to full-spectrum vs band-limited STOI scoring in
+  parameter_sweep_table_basic.tex) is itself scene-dependent.
+
+RECOMMENDED OPERATING POINT AT THIS SAMPLE SIZE (Advanced, Public Transit,
+Dialogue priority - a real tested point, not interpolated):
+  Threshold -56.0dB | Ratio 5.7:1 | Knee 23.5dB | Attack 8.0ms | Release 312ms
+  Mean margin gain +6.35dB | STOI gain +0.094 | Loudness reduction +12.9pp
+
+CAVEAT: this is a 50-point sweep, not the 150-point size used for
+Construction - individual best-point values here are noisier and the
+low-threshold edge is less densely sampled, so treat the specific
+per-tier numbers as provisional. The dominant-pattern findings (threshold
+dominance, cross-metric correlation) are unlikely to change with more
+points since they already replicate Construction's 150-point result this
+closely, but a full 150-point run would be needed before citing specific
+tier settings (Aggressive/Balanced/Conservative equivalents) in the paper
+the way lhs_sweep_findings.txt's tiers are cited.
+
+NEXT STEPS NOT YET DONE:
+  - Run the full 150-point sweep on Public Transit if these settings are
+    going to be cited directly (this 50-point run was a first look).
+  - Re-run on other priority classes and/or scenes as they're added, to
+    build out the "different sound events" comparison mentioned when this
+    sweep was requested.
+  - Check whether the Basic/Advanced gap (Finding 3) is genuinely
+    scene-dependent or an artifact of this smaller sample.

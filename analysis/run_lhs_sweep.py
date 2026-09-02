@@ -9,12 +9,13 @@ would suggest - a proxy for "more intelligible while remaining
 transparent").
 
 Renders both Basic and Advanced (Summed-bus) for every sampled point via
-the native CLI's --static mode (Construction Scene, Dialogue priority),
-computing all 3 metrics for each render against a single shared
-unprocessed baseline (computed once, since it doesn't depend on any swept
-parameter). Uses ONE reusable temp WAV file per condition, overwritten
-each iteration, rather than keeping N x 2 renders on disk (~9GB+ otherwise
-for N=150).
+the native CLI's --static mode, for a given --scene/--key (defaults to
+Construction Scene, Dialogue priority - the combo every other table in
+this project uses), computing all 3 metrics for each render against a
+single shared unprocessed baseline (computed once, since it doesn't
+depend on any swept parameter). Uses ONE reusable temp WAV file per
+condition, overwritten each iteration, rather than keeping N x 2 renders
+on disk (~9GB+ otherwise for N=150).
 
 Margin uses the same 0.85-octave-padded band as
 compute_metrics.py's MARGIN_MEASUREMENT_PAD_OCTAVES. Partial-loudness uses
@@ -42,16 +43,29 @@ from scipy.stats import qmc
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 warnings.filterwarnings("ignore")  # mosqito/matplotlib import-time deprecation noise
 from compute_metrics import (  # noqa: E402
-    load_mono, CLASS_RANGES, DEFAULT_SAFETY_GAIN_DB,
+    load_mono, CLASS_RANGES, SCENES, DEFAULT_SAFETY_GAIN_DB,
     compute_masking_margin, compute_stoi, HAVE_PYSTOI,
 )
 from mosqito.sq_metrics import loudness_zwst_perseg  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CLI = REPO_ROOT / "demo_engine_cli"
-SCENE = "Construction Scene"
-KEY = "Dialogue"
-KEY_SLUG = "dialogue"
+
+# CLI --key expects classIndexToName's display strings (see
+# src/main.cpp's printStaticUsage), not the slugs CLASS_RANGES/SCENES use -
+# map between them here, same pattern as compute_folder_export_metrics.py's
+# KEY_SLUG dict (that one maps label->slug; this is the inverse).
+KEY_LABEL_BY_SLUG = {
+    'dialogue': 'Dialogue', 'music': 'Music', 'background': 'Background Noise',
+    'safety': 'Safety Alerts', 'other': 'Other',
+}
+
+# Set by main() from --scene/--key before render()/evaluate_condition() are
+# ever called - module-level so render() doesn't need scene/key threaded
+# through every call site.
+SCENE = None
+KEY = None
+KEY_SLUG = None
 
 # Search ranges - matches each control's UI slider/select range where one
 # exists (knee 0-24, attack 1-50, release 20-400); threshold and ratio
@@ -132,7 +146,14 @@ def evaluate_condition(dry, dry_sr, spec_dialogue, active, low_hz, high_hz,
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--n', type=int, default=150)
-    parser.add_argument('--out', default='analysis/lhs_sweep_results.csv')
+    parser.add_argument('--out', default=None,
+                         help='Defaults to analysis/lhs_sweep_results.csv for the original '
+                              'construction/dialogue combo (unchanged, for backward '
+                              'compatibility with existing tables/captions that name that file '
+                              'directly), or analysis/lhs_sweep_results_<scene>_<key>.csv '
+                              'otherwise.')
+    parser.add_argument('--scene', default='construction', choices=sorted(SCENES.keys()))
+    parser.add_argument('--key', default='dialogue', choices=sorted(CLASS_RANGES.keys()))
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--modes', nargs='+', default=['basic', 'advanced'], choices=['basic', 'advanced'])
     parser.add_argument('--fixed-threshold', type=float, default=None,
@@ -145,6 +166,17 @@ def main():
                               'of the other 4 settings performs best" than sparse nearby points '
                               'from a full 5D sweep would.')
     args = parser.parse_args()
+
+    global SCENE, KEY, KEY_SLUG
+    SCENE = SCENES[args.scene]['dir']
+    KEY = KEY_LABEL_BY_SLUG[args.key]
+    KEY_SLUG = args.key
+
+    if args.out is None:
+        if args.scene == 'construction' and args.key == 'dialogue':
+            args.out = 'analysis/lhs_sweep_results.csv'
+        else:
+            args.out = f'analysis/lhs_sweep_results_{args.scene}_{args.key}.csv'
 
     if not HAVE_PYSTOI:
         print("WARNING: pystoi not installed - STOI gain will be NaN for every row.", file=sys.stderr)
@@ -169,12 +201,13 @@ def main():
     tmp_dir = Path('/tmp/lhs_sweep')
     tmp_dir.mkdir(exist_ok=True)
 
+    print(f"Scene={SCENE!r} Key={KEY!r} (slug={KEY_SLUG})")
     print(f"Rendering shared unprocessed baseline...")
     unprocessed_path = tmp_dir / 'unprocessed.wav'
     dummy_params = {'threshold_db': -30.0, 'ratio': 4.0, 'knee_db': 6.0, 'attack_ms': 5.0, 'release_ms': 120.0}
     render('unprocessed', dummy_params, unprocessed_path)
 
-    dry_path = REPO_ROOT / SCENE / 'Dialogue.wav'
+    dry_path = REPO_ROOT / SCENE / SCENES[args.scene]['stems'][args.key]
     dry, dry_sr = load_mono(dry_path)
     unproc, unproc_sr = load_mono(unprocessed_path)
     low_hz, high_hz = CLASS_RANGES[KEY_SLUG]
@@ -185,7 +218,7 @@ def main():
     if HAVE_PYSTOI:
         unproc_stoi, _lag = compute_stoi(dry, unproc, unproc_sr, extended=True)
 
-    print("Computing dry Dialogue specific loudness (shared across all points)...")
+    print(f"Computing dry {KEY} specific loudness (shared across all points)...")
     N_dialogue, spec_dialogue, _t = specific_loudness(dry, dry_sr)
     peak_N = np.max(N_dialogue)
     active = N_dialogue > (ACTIVE_FRACTION_OF_PEAK * peak_N)
