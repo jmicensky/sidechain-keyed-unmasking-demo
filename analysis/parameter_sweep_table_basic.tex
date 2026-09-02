@@ -1,0 +1,73 @@
+% Sidechain Compressor parameter sweep results table - BASIC (full-band)
+% duck mode. Companion to parameter_sweep_table.tex (Advanced/Summed-bus) -
+% same 9 settings, same row order/numbering (ranked by ADVANCED's mean
+% margin gain, kept consistent across both tables for direct row-by-row
+% cross-reference rather than re-sorted by Basic's own ranking, which is
+% nearly but not exactly identical).
+%
+% Requires packages already in main.tex's preamble: booktabs, siunitx.
+% ALSO requires colortbl for \cellcolor - see parameter_sweep_table.tex's
+% header comment (main.tex currently loads plain \usepackage{xcolor} with
+% no [table] option; either add \usepackage{colortbl} or change to
+% \usepackage[table]{xcolor}).
+%
+% Data source: analysis/compute_folder_export_metrics.py, run against
+% "UnMasking Exports/" (9 runs, Construction Scene, Dialogue priority
+% class). Margin/STOI gain = basic - unprocessed. Unprocessed baseline is
+% the true sum of the 5 raw stems (Basic mode, Unmask off), not the
+% scene's separately-bounced reference blend - see
+% parameter_sweep_table.tex's header comment for why.
+%
+% Margin is measured on the same 0.85-octave-padded band as the Advanced
+% table (~721-3883Hz for Dialogue, not the full nominal 400Hz-7kHz) - see
+% compute_metrics.py's MARGIN_MEASUREMENT_PAD_OCTAVES. That padding exists
+% specifically to remove a crossover-filter measurement artifact between
+% Basic and Advanced; using the same band here keeps the two tables
+% directly comparable.
+%
+% NOTE ON STOI: Basic's STOI gain (+0.72 to +0.210 here) is noticeably
+% larger than Advanced's (+0.013 to +0.124, see parameter_sweep_table.tex)
+% for the same settings. This is real, not a measurement artifact - STOI
+% scores intelligibility across the full spectrum via its own internal
+% 1/3-octave decomposition, and Basic mode ducks the whole spectrum while
+% Advanced deliberately ducks only within Dialogue's own band, leaving
+% content outside it untouched. This is precisely the tradeoff the paper
+% is about: Advanced trades some overall intelligibility gain for leaving
+% other classes' out-of-band content unaffected.
+%
+% COLOR CODING: matches parameter_sweep_table.tex's scheme - grey headers
+% on the manually-chosen settings columns, green/yellow per-cell heatmap
+% on Mean Margin Gain / STOI Gain, intensity scaled to THIS table's own
+% min/max (i.e. Basic's own range, not shared with the Advanced table's
+% scale) across these 9 rows.
+
+\definecolor{paramgrey}{gray}{0.85}
+
+\begin{table}[h]
+\centering
+\footnotesize
+\caption{Sidechain Compressor parameter sweep: in-band masking-margin and STOI
+gain of Basic (full-band) ducking over the unprocessed baseline
+(Construction Scene, Dialogue priority class, measured on
+\SI{721}{\hertz}--\SI{3883}{\hertz} - see Table~\ref{tab:param-sweep}'s
+note). Same settings and row numbering as Table~\ref{tab:param-sweep}'s
+Advanced-mode results, for direct comparison. Grey headers mark the
+manually-chosen sweep settings; the two result columns are shaded per
+cell, more intense = higher gain.}
+\label{tab:param-sweep-basic}
+\begin{tabular}{@{}c r r r r r r r@{}}
+\toprule
+\cellcolor{paramgrey}\textbf{\#} & \cellcolor{paramgrey}\textbf{Thr.} (\si{\decibel}) & \cellcolor{paramgrey}\textbf{Ratio} & \cellcolor{paramgrey}\textbf{Knee} (\si{\decibel}) & \cellcolor{paramgrey}\textbf{Atk.} (\si{\milli\second}) & \cellcolor{paramgrey}\textbf{Rel.} (\si{\milli\second}) & \textbf{Mean Margin Gain} (\si{\decibel}) & \textbf{STOI Gain} \\
+\midrule
+1 & -36 & 4.0 & 20 & 5  & 400 & \cellcolor{green!70}+8.56 & \cellcolor{yellow!66}+0.195 \\
+2 & -48 & 1.5 & 12 & 5  & 400 & \cellcolor{green!68}+8.25 & \cellcolor{yellow!70}+0.210 \\
+3 & -48 & 1.5 & 12 & 5  & 120 & \cellcolor{green!57}+6.70 & \cellcolor{yellow!58}+0.169 \\
+4 & -36 & 1.5 & 12 & 1  & 120 & \cellcolor{green!35}+3.61 & \cellcolor{yellow!36}+0.091 \\
+5 & -36 & 1.5 & 12 & 5  & 400 & \cellcolor{green!35}+3.55 & \cellcolor{yellow!37}+0.095 \\
+6 & -48 & 1.5 & 12 & 50 & 120 & \cellcolor{green!35}+3.57 & \cellcolor{yellow!38}+0.097 \\
+7 & -24 & 4.0 & 20 & 5  & 400 & \cellcolor{green!21}+1.54 & \cellcolor{yellow!22}+0.040 \\
+8 & -36 & 1.5 & 12 & 15 & 120 & \cellcolor{green!20}+1.47 & \cellcolor{yellow!22}+0.041 \\
+9 & -24 & 4.0 & 6  & 5  & 400 & \cellcolor{green!15}+0.72 & \cellcolor{yellow!15}+0.016 \\
+\bottomrule
+\end{tabular}
+\end{table}
