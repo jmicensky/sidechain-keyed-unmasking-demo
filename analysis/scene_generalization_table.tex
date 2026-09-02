@@ -1,0 +1,72 @@
+% Generalization-check table: do the Construction Scene sweep's headline
+% findings (analysis/lhs_sweep_findings.txt) hold on a different scene?
+% Compares Construction's 150-point sweep against a smaller 50-point first
+% look at PublicTransit Scene - see
+% analysis/lhs_sweep_publictransit_findings.txt for the full writeup this
+% table summarizes. Both Dialogue priority, Advanced (Summed-bus) ducking.
+%
+% Requires packages already in main.tex's preamble: booktabs (siunitx not
+% needed here - see below). No \cellcolor/colortbl or longtable needed;
+% this is a small, non-ranked comparison table, not a per-row data dump.
+%
+% Plain right-aligned (r) columns, not siunitx S columns: the two data
+% columns mix very different value shapes (signed dB levels, unsigned
+% probabilities, signed correlation coefficients) that don't share one
+% table-format spec cleanly, and this table is small enough that manual
+% alignment costs nothing - same reasoning as parameter_sweep_table.tex's
+% choice to avoid S columns where they'd add fragility without real
+% benefit.
+%
+% All figures recomputed directly from analysis/lhs_sweep_results.csv and
+% analysis/lhs_sweep_results_publictransit_dialogue.csv for this table (not
+% hand-copied from the two findings.txt files) to guarantee both columns
+% were computed identically. The two "range across tested threshold" rows
+% use each sweep's actual most-aggressive (~-60dB) and least-aggressive
+% (~-18dB) tested point - not the single best-margin-gain point - so the
+% range reflects threshold's real effect, not a cherry-picked outcome.
+% Baseline margin/STOI: Construction from analysis/folder_export_results.csv
+% (Construction/Dialogue row, already using the true-stem-sum baseline fix
+% and the 0.85-octave margin padding); Public Transit from
+% run_lhs_sweep.py's own baseline computation (same methodology, same
+% script).
+
+\begin{table}[h]
+\centering
+\footnotesize
+\caption{Generalization check: key parameter-sweep results, Construction
+Scene (150-point sweep) vs. Public Transit Scene (50-point sweep), both
+Dialogue priority, Advanced (Summed-bus) ducking. Public Transit's sweep
+is smaller -- a first look, not yet sized to cite per-tier settings the
+way Construction's Aggressive/Balanced/Conservative tiers are -- but the
+results already land in the same range.}
+\label{tab:scene-generalization}
+\begin{tabular}{@{}l r r@{}}
+\toprule
+ & \textbf{Construction} & \textbf{Public Transit} \\
+\midrule
+Sweep size (points) & 150 & 50 \\
+Unprocessed baseline margin (dB) & -9.51 & -13.28 \\
+Unprocessed baseline STOI & 0.393 & 0.275 \\
+Margin gain, most aggressive threshold tested\textsuperscript{a} (dB) & +6.79 & +6.28 \\
+Margin gain, least aggressive threshold tested\textsuperscript{a} (dB) & +0.05 & +0.03 \\
+STOI gain, most aggressive threshold tested\textsuperscript{a} & +0.106 & +0.094 \\
+STOI gain, least aggressive threshold tested\textsuperscript{a} & +0.003 & +0.002 \\
+Loudness reduction, most aggressive threshold\textsuperscript{a} (pp) & +11.1 & +12.7 \\
+Loudness reduction, least aggressive threshold\textsuperscript{a} (pp) & +0.1 & +0.0 \\
+\bottomrule
+\end{tabular}
+\par\vspace{4pt}
+\raggedright\footnotesize\textsuperscript{a} Most aggressive $\approx$
+\SI{-60}{\decibel}, least aggressive $\approx$ \SI{-18}{\decibel} -- the
+two ends of the search range, same in both sweeps. Both scenes show the
+same pattern concretely: pushing threshold from the weak end to the
+aggressive end moves margin gain from essentially \SI{0}{\decibel} to
+roughly \SI{+6.5}{\decibel}, and STOI gain and loudness reduction move by
+a comparable proportion right along with it in both scenes -- not just a
+similar correlation statistic, but the same real improvement available at
+the aggressive end, and the same near-total loss of effect at the weak
+end. Public Transit's unprocessed baseline is noticeably worse (more
+heavily masked before any processing) than Construction's, making this a
+meaningfully different, not merely repeated, test case for the same
+pattern to hold on.
+\end{table}
