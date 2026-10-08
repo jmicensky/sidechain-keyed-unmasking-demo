@@ -38,6 +38,34 @@ inline const char* classIndexToName(int c) {
 //                Soothe2. See ResonanceSuppressor.h.
 enum class DuckMode { Basic, Advanced, Resonance };
 
+// Top-level processing tab, mutually exclusive: switching tabs fully
+// replaces one processing path with the other (not stackable/chainable).
+// Mute/Solo and the output WDRC stage apply identically regardless of
+// which tab is active - only the per-channel dry/ducked vs. per-channel
+// Enhancement-compressed stage differs.
+//   Unmasking   - sidechain-keyed ducking (DuckMode above): make room for
+//                 ONE priority (key) signal by lowering the other 4.
+//   Enhancement - apply independent compression to each of the 5 channels
+//                 directly, based on that channel's OWN level - no key
+//                 channel, no sidechain relationship between channels at
+//                 all. "Make quiet content more audible everywhere"
+//                 instead of "make room for one priority signal."
+enum class ProcessingTab { Unmasking, Enhancement };
+
+// Enhancement's per-channel compressor band structure - ONE global toggle
+// affecting all 5 channels at once (not an independent per-channel
+// choice), so SingleBand vs. Multiband is a clean A/B comparison of the
+// same 5 independently-parameterized channels, not a mix of both at once.
+//   SingleBand - one full-spectrum compressor per channel (reuses the same
+//                GainComputer/EnvelopeFollower math Basic/Advanced/
+//                Resonance already use for the Sidechain Compressor, just
+//                detecting against this channel's own signal). Default.
+//   Multiband  - reuses WdrcCompressor itself (nothing in it is actually
+//                mix-specific - it just takes inL/inR and returns
+//                outL/outR), one independently-parameterized instance per
+//                channel instead of one instance for the summed mix.
+enum class EnhancementBandMode { SingleBand, Multiband };
+
 // Fixed crossover edges used only by the standalone crossover-flatness self-
 // check (see main.cpp's checkCrossoverFlatness()) and by the WDRC output
 // compressor's fixed band split (see WdrcCompressor.h) - NOT by Advanced

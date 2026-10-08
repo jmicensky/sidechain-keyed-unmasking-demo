@@ -74,6 +74,11 @@ public:
         gainComputer_.setParams(params_);
     }
 
+    void setKneeDb(double kneeDb) {
+        params_.kneeDb = kneeDb;
+        gainComputer_.setParams(params_);
+    }
+
     void setMakeupGainDb(double makeupGainDb) {
         makeupGainLinear_ = std::pow(10.0, makeupGainDb / 20.0);
     }

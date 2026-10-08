@@ -9,6 +9,7 @@
 #include "Crossover.h"
 #include "ResonanceSuppressor.h"
 #include "WdrcCompressor.h"
+#include "EnhancementCompressor.h"
 
 namespace demo {
 
@@ -85,6 +86,19 @@ public:
         wdrcCompressor_.setAttackMs(wdrcAttackMs_);
         wdrcCompressor_.setReleaseMs(wdrcReleaseMs_);
 
+        // Enhancement tab: every channel gets both a single-band and a
+        // multiband instance prepared and kept in sync with the same
+        // independent per-channel params at all times, so switching
+        // EnhancementBandMode mid-playback doesn't need to reseed anything -
+        // whichever one isn't currently selected just sits idle (not
+        // ticked - see process()) rather than bypassed-but-running.
+        for (int c = 0; c < kNumClasses; ++c) {
+            enhancementSingleBand_[c].prepare(sampleRate, enhancementParams_[c]);
+            enhancementMultiband_[c].prepare(sampleRate);
+            enhancementMultiband_[c].setBypassed(false); // always "live" - see tick()'s own bypass-ramp note above
+            syncEnhancementChannel(c);
+        }
+
         for (int c = 0; c < kNumClasses; ++c) {
             strips_[c].audibleGain.prepare(sampleRate, kAudibleRampMs);
             strips_[c].audibleGain.reset(1.0); // audible by default
@@ -122,6 +136,51 @@ public:
     size_t numFrames() const { return numFrames_; }
 
     void setMode(DuckMode mode) { mode_ = mode; }
+
+    // Top-level tab switch - see Types.h's ProcessingTab doc comment.
+    // Mutually exclusive with Unmasking's DuckMode: switching to
+    // Enhancement means process() takes an entirely different branch for
+    // steps 1-2 (no sidechain detector, no key channel, no keyBlend - every
+    // channel is always independently compressed), then rejoins the same
+    // shared output-bus WDRC stage (step 3) either way.
+    void setProcessingTab(ProcessingTab tab) { processingTab_ = tab; }
+
+    // Enhancement-only: one global toggle for all 5 channels at once (not
+    // an independent per-channel choice) - see Types.h's EnhancementBandMode
+    // doc comment. Both band-mode instances stay prepared/in-sync
+    // regardless of which is selected (see prepare()/syncEnhancementChannel()),
+    // so toggling mid-playback never needs to reseed parameters.
+    void setEnhancementBandMode(EnhancementBandMode bandMode) { enhancementBandMode_ = bandMode; }
+
+    // Enhancement-only: each channel's fully independent threshold/ratio/
+    // knee/attack/release - unlike Advanced Per-channel ducking (which only
+    // frees threshold/ratio, sharing knee/attack/release across all 5),
+    // Enhancement frees all 5 per channel, since there's no shared
+    // sidechain detector to keep in sync with here at all.
+    void setEnhancementThresholdDb(int channel, double thresholdDb) {
+        enhancementParams_[channel].thresholdDb = thresholdDb;
+        syncEnhancementChannel(channel);
+    }
+
+    void setEnhancementRatio(int channel, double ratio) {
+        enhancementParams_[channel].ratio = std::clamp(ratio, 1.0, 10.0);
+        syncEnhancementChannel(channel);
+    }
+
+    void setEnhancementKneeDb(int channel, double kneeDb) {
+        enhancementParams_[channel].kneeDb = kneeDb;
+        syncEnhancementChannel(channel);
+    }
+
+    void setEnhancementAttackMs(int channel, double attackMs) {
+        enhancementParams_[channel].attackMs = attackMs;
+        syncEnhancementChannel(channel);
+    }
+
+    void setEnhancementReleaseMs(int channel, double releaseMs) {
+        enhancementParams_[channel].releaseMs = releaseMs;
+        syncEnhancementChannel(channel);
+    }
 
     void setUnmaskEnabled(bool enabled) {
         unmaskEnabled_ = enabled;
@@ -303,6 +362,37 @@ public:
                 continue;
             }
 
+            double mixL = 0.0, mixR = 0.0;
+
+            if (processingTab_ == ProcessingTab::Enhancement) {
+                // Enhancement: every channel compresses its own raw signal
+                // independently - no key channel, no sidechain detector, no
+                // keyBlend crossfade (there's nothing to cross-fade between;
+                // every channel is always "enhanced"). Mute/Solo still
+                // applies identically via audibleGain, same as Unmasking.
+                double minGain = 1.0;
+                for (int c = 0; c < kNumClasses; ++c) {
+                    double rawL = stemsL_[c][sampleIndex_];
+                    double rawR = stemsR_[c][sampleIndex_];
+                    double chL, chR;
+                    double gainReductionDb;
+                    if (enhancementBandMode_ == EnhancementBandMode::SingleBand) {
+                        enhancementSingleBand_[c].tick(rawL, rawR, chL, chR);
+                        gainReductionDb = enhancementSingleBand_[c].lastGainReductionDb();
+                    } else {
+                        enhancementMultiband_[c].tick(rawL, rawR, chL, chR);
+                        gainReductionDb = enhancementMultiband_[c].lastGainReductionDb();
+                    }
+                    double channelGain = std::pow(10.0, gainReductionDb / 20.0);
+                    lastEnhancementChannelGain_[c] = channelGain;
+                    minGain = std::min(minGain, channelGain);
+
+                    double audible = strips_[c].audibleGain.tick();
+                    mixL += audible * chL;
+                    mixR += audible * chR;
+                }
+                lastGainLinear_ = minGain;
+            } else {
             // --- 1. Sidechain detector: current key channel's mono-summed
             //     raw sample, gated to silence if that channel is muted.
             //     Basic/Advanced use a single-band envelope+gain (g);
@@ -365,7 +455,6 @@ public:
             // --- 2. Per-channel processing + smoothed mix, L and R run
             //     through identical per-sample math (same g, same keyBlend)
             //     but independent filter state so the stereo image survives.
-            double mixL = 0.0, mixR = 0.0;
             for (int c = 0; c < kNumClasses; ++c) {
                 double rawL = stemsL_[c][sampleIndex_];
                 double rawR = stemsR_[c][sampleIndex_];
@@ -415,6 +504,7 @@ public:
                 mixR += audible * outR;
             }
             if (perChannelAdvanced) lastGainLinear_ = minChannelGain;
+            } // end Unmasking branch
 
             // --- 3. Output-bus WDRC compressor, applied once to the final
             //     mix of all 5 channels - independent of duck mode and of
@@ -446,6 +536,13 @@ public:
     // reads this while AdvancedDuckingMode::PerChannel is active - see
     // Engine::process()'s Advanced-mode branch.
     double channelGainLinear(int channel) const { return lastChannelGainLinear_[channel]; }
+
+    // Per-channel gain from the most recently processed sample (1.0 = no
+    // reduction) - only meaningful while setProcessingTab(Enhancement) is
+    // active (stale otherwise). For the Enhancement tab's per-channel
+    // gain-reduction meter UI - mirrors channelGainLinear() above, which
+    // serves the same role for Advanced Per-channel ducking.
+    double enhancementChannelGainLinear(int channel) const { return lastEnhancementChannelGain_[channel]; }
 
     // Resonance mode's dynamic peak centers (Hz) and depths (linear gain,
     // 1.0 = no cut) from the most recently processed hop - only meaningful
@@ -533,6 +630,19 @@ private:
         perChannelGainComputer_[c].setParams(p);
     }
 
+    // Pushes channel c's independent Enhancement params into BOTH band-mode
+    // instances at once (not just whichever is currently selected), so
+    // setEnhancementBandMode() never needs to reseed anything - see
+    // prepare()'s comment on why both are always kept in sync.
+    void syncEnhancementChannel(int c) {
+        enhancementSingleBand_[c].setParams(enhancementParams_[c]);
+        enhancementMultiband_[c].setThresholdDb(enhancementParams_[c].thresholdDb);
+        enhancementMultiband_[c].setRatio(enhancementParams_[c].ratio);
+        enhancementMultiband_[c].setKneeDb(enhancementParams_[c].kneeDb);
+        enhancementMultiband_[c].setAttackMs(enhancementParams_[c].attackMs);
+        enhancementMultiband_[c].setReleaseMs(enhancementParams_[c].releaseMs);
+    }
+
     // Floors a linear gain at maxReductionDb_'s ceiling (never boosts - a
     // gain already above that floor, i.e. cutting less, passes through
     // unchanged). See setMaxReductionDb().
@@ -542,6 +652,7 @@ private:
     }
 
     double sampleRate_ = 48000.0;
+    ProcessingTab processingTab_ = ProcessingTab::Unmasking;
     DuckMode mode_ = DuckMode::Advanced;
     bool unmaskEnabled_ = false;
     int keyChannel_ = kDialogue;
@@ -562,6 +673,17 @@ private:
     // Default pulls reductions toward a more transparent -2 to -6dB range
     // rather than letting the raw threshold/ratio law cut arbitrarily deep.
     double maxReductionDb_ = 6.0;
+
+    // Enhancement tab's state - see setProcessingTab()/
+    // setEnhancementBandMode()/process()'s Enhancement branch. Each
+    // channel's own independent 5-parameter CompressorParams (defaults
+    // match the Sidechain Compressor's own defaults, as a reasonable
+    // starting point, not a literature-derived value for this new mode).
+    EnhancementBandMode enhancementBandMode_ = EnhancementBandMode::SingleBand;
+    std::array<CompressorParams, kNumClasses> enhancementParams_{};
+    std::array<SingleBandEnhancementCompressor, kNumClasses> enhancementSingleBand_;
+    std::array<WdrcCompressor, kNumClasses> enhancementMultiband_;
+    std::array<double, kNumClasses> lastEnhancementChannelGain_{1.0, 1.0, 1.0, 1.0, 1.0};
 
     // Resonance-mode-only settings. Defaults match the values this project
     // shipped with before these became live-adjustable.

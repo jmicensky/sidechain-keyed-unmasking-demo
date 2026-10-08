@@ -15,40 +15,75 @@ architecture described in the paper, built both as a native CLI test harness
 and as a WebAssembly module driving a browser AudioWorklet UI. It takes five
 pre-separated stem recordings (Dialogue, Music, Background Noise, Safety
 Alerts, Other) — from a source separator, in the paper's framing — and lets
-you interactively:
+you interactively work in one of two mutually-exclusive top-level tabs (see
+`Types.h`'s `ProcessingTab`):
 
-- Select any one class as the **Unmask key** — the other four are ducked
-  based on that class's envelope (or, in Resonance mode, its spectral peaks).
-- Choose one of three duck modes:
-  - **Basic** — full-spectrum ducking, one shared gain applied everywhere.
-  - **Advanced** — band-limited ducking, restricted to the *currently-keyed
-    class's own frequency range* (e.g. 400 Hz–7 kHz while Dialogue is the
-    key, 60 Hz–2 kHz while Background Noise is the key — see
-    `kUnmaskFrequencyRanges` in `Types.h`). The ducked band visibly moves
-    with the key selection, both in a UI badge and in the Gain Reduction
-    graph. Within Advanced mode, a second choice governs *how* the
-    threshold/ratio law is applied:
-    - **Summed-bus** (default) — one shared threshold/ratio ducks every
-      non-key channel identically.
-    - **Per-channel** — each of the 5 channels gets its own independently
-      adjustable threshold/ratio (still driven by the same shared detector
-      level), with a live gain-reduction meter per channel so you can watch
-      the effect of tuning each one.
-  - **Resonance** — STFT-based dynamic notch ducking: finds the key signal's
-    N loudest, mutually-separated spectral peaks each hop and ducks only
-    those frequencies in the other channels, tracking wherever the key's
-    energy actually moves (loosely modeled on resonance suppressors like
-    Soothe2).
-- Tune the shared **Sidechain Compressor** (threshold, knee, ratio, attack,
-  release, and a **Max Reduction** ceiling — pull this back for a more
-  transparent, -2 to -6 dB result instead of letting the raw law cut
-  arbitrarily deep) that drives Basic and both Advanced sub-modes.
-- Tune **Resonance Mode**'s own settings (peak count, bandwidth in octaves,
-  and its own separate Max Reduction ceiling).
+- **Unmasking** — sidechain-keyed ducking: make room for ONE priority (key)
+  signal by lowering the other four. The paper's core argument; everything
+  below in this bullet is Unmasking-only.
+  - Select any one class as the **Unmask key** — the other four are ducked
+    based on that class's envelope (or, in Resonance mode, its spectral peaks).
+  - Choose one of three duck modes:
+    - **Basic** — full-spectrum ducking, one shared gain applied everywhere.
+    - **Advanced** — band-limited ducking, restricted to the *currently-keyed
+      class's own frequency range* (e.g. 400 Hz–7 kHz while Dialogue is the
+      key, 60 Hz–2 kHz while Background Noise is the key — see
+      `kUnmaskFrequencyRanges` in `Types.h`). The ducked band visibly moves
+      with the key selection, both in a UI badge and in the Gain Reduction
+      graph. Within Advanced mode, a second choice governs *how* the
+      threshold/ratio law is applied:
+      - **Summed-bus** (default) — one shared threshold/ratio ducks every
+        non-key channel identically.
+      - **Per-channel** — each of the 5 channels gets its own independently
+        adjustable threshold/ratio (still driven by the same shared detector
+        level), with a live gain-reduction meter per channel so you can watch
+        the effect of tuning each one.
+    - **Resonance** — STFT-based dynamic notch ducking: finds the key signal's
+      N loudest, mutually-separated spectral peaks each hop and ducks only
+      those frequencies in the other channels, tracking wherever the key's
+      energy actually moves (loosely modeled on resonance suppressors like
+      Soothe2).
+  - Tune the shared **Sidechain Compressor** (threshold, knee, ratio, attack,
+    release, and a **Max Reduction** ceiling — pull this back for a more
+    transparent, -2 to -6 dB result instead of letting the raw law cut
+    arbitrarily deep) that drives Basic and both Advanced sub-modes.
+  - Tune **Resonance Mode**'s own settings (peak count, bandwidth in octaves,
+    and its own separate Max Reduction ceiling).
+- **Enhancement** — the opposite framing from Unmasking: no key/priority
+  channel at all. Every one of the 5 channels gets its own independent
+  compressor, reacting only to its own level - an "enhancement" goal (make
+  quiet content more audible everywhere) instead of "unmasking" (make room
+  for one priority signal). Added to explore whether this is a viable
+  alternative path for the paper's argument, not assumed to be one.
+  - Each channel's **Threshold/Ratio/Knee/Attack/Release are fully
+    independent** (25 knobs total, on the same per-channel rows as
+    Unmasking's waveforms/mute/solo - see `buildChannelRows()` in `app.js`),
+    unlike Advanced Per-channel ducking (which only frees threshold/ratio,
+    sharing the rest).
+  - One global **Band mode** toggle (not per-channel) switches all 5
+    channels at once between:
+    - **Single-band** (default) — reuses the same `GainComputer`/
+      `EnvelopeFollower` math the Sidechain Compressor uses, per channel,
+      detecting that channel's own signal instead of a key channel's.
+    - **Multiband** — reuses `WdrcCompressor` itself (nothing in it is
+      actually mix-specific), one independently-parameterized 6-band
+      instance per channel instead of one instance for the summed mix.
+  - Mutually exclusive with Unmasking (switching tabs fully replaces one
+    processing path with the other, not stackable) - see `Engine::process()`'s
+    top-level `if (processingTab_ == ProcessingTab::Enhancement)` branch.
+    Mute/Solo and the output WDRC stage below apply identically regardless
+    of which tab is active.
+  - **No measurement/metrics methodology decided yet** - Unmasking's whole
+    analysis pipeline (margin gain, STOI gain, loudness reduction) is built
+    around "does the priority class get more audible relative to everything
+    else," which doesn't map onto Enhancement's no-priority-class framing.
+    Deliberately left open (exploratory, per the task this was built from)
+    rather than forcing Unmasking's metrics onto a different question.
 - Apply an **Output Compressor (WDRC)** — a 6-band, fixed-crossover
   (100/299/894/2675/8000 Hz) compressor on the final summed mix, independent
-  of duck mode, with its own threshold/ratio/makeup-gain/attack/release and
-  a bypass switch (bypassed by default). Was originally targeted at 12
+  of duck mode *and* of the Unmasking/Enhancement tab, with its own
+  threshold/ratio/makeup-gain/attack/release and a bypass switch (bypassed
+  by default). Was originally targeted at 12
   bands (to approximate a higher-end commercial hearing aid) but this
   engine's nested-crossover filterbank measurably can't do 12 bands this
   closely spaced without real coloration — see `WdrcCompressor.h`'s and
@@ -77,13 +112,17 @@ demo_engine/
 ├── include/
 │   ├── Types.h              Shared constants, enums, parameter structs -
 │   │                        per-key-channel frequency ranges, DuckMode,
-│   │                        AdvancedDuckingMode, CompressorParams
+│   │                        AdvancedDuckingMode, ProcessingTab,
+│   │                        EnhancementBandMode, CompressorParams
 │   ├── Smoother.h            Generic click-free parameter ramp
 │   ├── GainComputer.h        Envelope follower + soft-knee gain computer (Eqs. 1–2)
 │   ├── Crossover.h           Biquad + LR4 crossover split + N-band filterbank (template)
 │   ├── FFT.h                 Minimal radix-2 Cooley-Tukey FFT (power-of-two sizes)
 │   ├── ResonanceSuppressor.h STFT-based dynamic-notch suppressor (Resonance mode)
-│   ├── WdrcCompressor.h      Output-bus 6-band WDRC-style compressor
+│   ├── WdrcCompressor.h      Output-bus 6-band WDRC-style compressor (also reused
+│   │                        per-channel for Enhancement's Multiband mode)
+│   ├── EnhancementCompressor.h Single-band per-channel compressor (Enhancement
+│   │                        tab's SingleBand mode)
 │   └── Engine.h              Top-level signal flow, ties everything together
 ├── src/
 │   └── main.cpp              CLI: scripted-timeline demo mode (default) and
@@ -237,7 +276,21 @@ understanding before modifying:
   floors the linear gain wherever the shared threshold/ratio law computes it
   directly — Basic mode, Advanced-SummedBus, and each channel's independent
   gain in Advanced-PerChannel. It deliberately never touches Resonance
-  mode's own, separate `resonanceMaxReductionDb_`.
+  mode's own, separate `resonanceMaxReductionDb_`, nor Enhancement's
+  compressors (which have no shared ceiling at all - each channel's own
+  threshold/ratio/knee IS the whole law, with no extra clamp on top).
+- **Enhancement tab** (`processingTab_`, `ProcessingTab::Enhancement`) is a
+  top-level branch at the start of `process()`'s per-sample loop, entirely
+  separate from the Unmasking code below it - no sidechain detector, no key
+  channel, no `keyBlend` crossfade (nothing to cross-fade between; every
+  channel is always independently compressed). Both band-mode instances per
+  channel (`enhancementSingleBand_`/`enhancementMultiband_`, 5 each) are
+  always kept prepared and parameter-synced (`syncEnhancementChannel()`),
+  regardless of which `EnhancementBandMode` is actually selected, so
+  toggling `setEnhancementBandMode()` mid-playback never needs to reseed
+  anything. Both branches converge on the same `mixL`/`mixR` before the
+  shared output-bus WDRC stage, so Mute/Solo and WDRC apply identically
+  either way.
 
 Per-sample signal flow inside `Engine::process()`:
 1. Read the current key channel's raw sample; gate to silence if that
@@ -319,16 +372,25 @@ auto-regenerated. Requires Emscripten (pinned path in the script:
 
 ### `web/` (browser UI)
 - `index.html` — all markup + CSS. Layout: a load bar, then a single
-  "Decomposed Mix" panel (per-channel waveforms/mute/solo/per-channel
-  threshold-ratio-meter knobs, then the control stack: Unmask/Key/Mode/
-  Advanced-ducking-mode, a two-column row with Sidechain Compressor +
-  Resonance Mode controls on the left and the Gain Reduction graph on the
-  right (sized to match their combined height), then the WDRC section). No
-  separate "Unprocessed" reference panel - it played the scene's whole-mix
-  blend file for A/B comparison, which was redundant with just leaving
-  Unmask disabled on this same panel; removed rather than kept as a
-  second, weaker control for the same thing. (Also required for Restaurant
-  Scene, which has no whole-mix blend file to begin with.)
+  "Decomposed Mix" panel (per-channel waveforms/mute/solo, then a
+  **tab selector** (Unmasking/Enhancement, `.tab-btn`/`.tab-btn.active`),
+  then the control stack. Each per-channel row carries BOTH a
+  `channelKnobs${c}` fieldset (Advanced Per-channel's 2 knobs - visible
+  only on the Unmasking tab) and an `enhancementKnobs${c}` fieldset
+  (Enhancement's 5 fully-independent knobs - visible only on the
+  Enhancement tab); exactly one is shown at a time, toggled by
+  `app.js`'s `setActiveTab()`. Below the channels: `unmaskingControls`
+  (Unmask/Key/Mode/Advanced-ducking-mode, Sidechain Compressor +
+  Resonance Mode controls, Gain Reduction graph) and `enhancementControls`
+  (just the global Single-band/Multiband toggle button - the real controls
+  are the per-channel fieldsets above) are sibling divs, shown/hidden by
+  the same tab switch. The WDRC section is a sibling to *both*, always
+  visible regardless of tab. No separate "Unprocessed" reference panel -
+  it played the scene's whole-mix blend file for A/B comparison, which was
+  redundant with just leaving Unmask disabled on this same panel; removed
+  rather than kept as a second, weaker control for the same thing. (Also
+  required for Restaurant Scene, which has no whole-mix blend file to
+  begin with.)
 - `app.js` — decodes all WAVs, draws waveform overviews, owns all control
   wiring (postMessage to the worklet), and draws the Gain Reduction EQ-style
   graph (mirrors `kUnmaskFrequencyRanges` in a JS-side `UNMASK_CHANNEL_RANGES`

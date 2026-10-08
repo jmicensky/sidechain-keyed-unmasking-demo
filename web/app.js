@@ -52,6 +52,12 @@ let engineNode = null;
 let workletReady = null; // Promise, resolves once the AudioWorklet's WASM module has loaded
 let numFrames = 0;
 let sampleRate = 48000;
+// Top-level tab (see Types.h's ProcessingTab) and Enhancement's one global
+// band-mode toggle (see Types.h's EnhancementBandMode) - mirrored here so
+// the UI can decide which controls/meters are live without round-tripping
+// to the engine for state that's purely cosmetic (show/hide).
+let activeTab = 'unmasking';
+let enhancementBandMode = 0; // 0 = SingleBand, 1 = Multiband
 // Independent copies of the currently-loaded scene's stems, retained
 // specifically for "Export All Examples" offline renders (including its
 // "unprocessed" condition, rendered via the engine with Unmask off rather
@@ -329,6 +335,7 @@ function ensureAudioGraph() {
           updateGainVisualization();
           updateWdrcMeter(msg.wdrcGainReductionDb || 0);
           if (msg.channelGains) updateChannelGainMeters(msg.channelGains);
+          if (msg.enhancementChannelGains) updateEnhancementGainMeters(msg.enhancementChannelGains);
         }
       };
     });
@@ -476,6 +483,49 @@ function updateWdrcMeter(reductionDb) {
   $('wdrcGrReadout').textContent = `${reductionDb.toFixed(1)} dB`;
 }
 
+// Updates the 5 per-channel Enhancement gain-reduction meters - unlike
+// updateChannelGainMeters() above (only meaningful for one Advanced
+// sub-mode, and skips the key channel), every channel is always live here
+// since Enhancement has no key/priority concept at all.
+function updateEnhancementGainMeters(enhancementChannelGains) {
+  if (activeTab !== 'enhancement') return;
+  for (let c = 0; c < 5; c++) {
+    const db = gainLinearToDb(enhancementChannelGains[c]);
+    const pct = Math.min(100, (Math.abs(db) / WDRC_METER_MAX_DB) * 100);
+    $(`enhGrFill${c}`).style.width = `${pct}%`;
+    $(`enhGrReadout${c}`).textContent = `${db.toFixed(1)} dB`;
+  }
+}
+
+// Top-level Unmasking/Enhancement tab switch - toggles which control block
+// and which per-channel fieldset is visible, and tells the engine which
+// processing path to actually run (see Types.h's ProcessingTab). The two
+// are mutually exclusive by design (§ the task this was built from), so
+// switching tabs doesn't try to reconcile/share state between them.
+function setActiveTab(tab) {
+  activeTab = tab;
+  $('tabUnmasking').classList.toggle('active', tab === 'unmasking');
+  $('tabEnhancement').classList.toggle('active', tab === 'enhancement');
+  $('unmaskingControls').style.display = tab === 'unmasking' ? '' : 'none';
+  $('enhancementControls').style.display = tab === 'enhancement' ? '' : 'none';
+  for (let c = 0; c < 5; c++) {
+    $(`channelKnobs${c}`).style.display = tab === 'unmasking' ? '' : 'none';
+    $(`enhancementKnobs${c}`).style.display = tab === 'enhancement' ? '' : 'none';
+  }
+  if (tab === 'unmasking') updateChannelKnobsState(); // re-assert Advanced Per-channel's own disabled/value state
+  engineNode?.port.postMessage({ type: 'setProcessingTab', tab: tab === 'enhancement' ? 1 : 0 });
+}
+
+// Enhancement's one global band-mode toggle (see Types.h's
+// EnhancementBandMode) - a two-state button rather than a dropdown, since
+// there are only ever two states and this is meant to be flipped back and
+// forth quickly while comparing.
+function toggleEnhancementBandMode() {
+  enhancementBandMode = enhancementBandMode === 0 ? 1 : 0;
+  $('enhancementBandModeBtn').textContent = enhancementBandMode === 0 ? 'Single-band' : 'Multiband (WDRC)';
+  engineNode?.port.postMessage({ type: 'setEnhancementBandMode', bandMode: enhancementBandMode });
+}
+
 // Reads every control's current DOM value and pushes it to `port` (the live
 // engine's port by default). Also used to configure a temporary offline
 // engine instance for "Export All Examples" (see exportAllExamples()) so
@@ -509,6 +559,15 @@ function applyAllControls(port) {
   for (let c = 0; c < 5; c++) {
     port.postMessage({ type: 'setMute', channel: c, muted: $(`mute${c}`).checked });
     port.postMessage({ type: 'setSolo', channel: c, soloed: $(`solo${c}`).checked });
+  }
+  port.postMessage({ type: 'setProcessingTab', tab: activeTab === 'enhancement' ? 1 : 0 });
+  port.postMessage({ type: 'setEnhancementBandMode', bandMode: enhancementBandMode });
+  for (let c = 0; c < 5; c++) {
+    port.postMessage({ type: 'setEnhancementThresholdDb', channel: c, thresholdDb: parseFloat($(`enhThresholdDb${c}`).value) });
+    port.postMessage({ type: 'setEnhancementRatio', channel: c, ratio: parseFloat($(`enhRatio${c}`).value) });
+    port.postMessage({ type: 'setEnhancementKneeDb', channel: c, kneeDb: parseFloat($(`enhKneeDb${c}`).value) });
+    port.postMessage({ type: 'setEnhancementAttackMs', channel: c, attackMs: parseFloat($(`enhAttackMs${c}`).value) });
+    port.postMessage({ type: 'setEnhancementReleaseMs', channel: c, releaseMs: parseFloat($(`enhReleaseMs${c}`).value) });
   }
 }
 
@@ -837,6 +896,32 @@ function buildChannelRows() {
           <span id="chGrReadout${c}" class="gr-meter-label">0.0 dB</span>
         </span>
       </fieldset>
+      <fieldset class="channel-knobs enhancement-knobs" id="enhancementKnobs${c}" style="display:none;">
+        <label>Threshold:
+          <input type="range" id="enhThresholdDb${c}" min="-60" max="0" step="1" value="-30">
+          <span id="enhThresholdReadout${c}" class="readout">-30 dB</span>
+        </label>
+        <label>Ratio:
+          <input type="range" id="enhRatio${c}" min="1" max="10" step="0.1" value="4">
+          <span id="enhRatioReadout${c}" class="readout">4.0:1</span>
+        </label>
+        <label>Knee:
+          <input type="range" id="enhKneeDb${c}" min="0" max="24" step="1" value="6">
+          <span id="enhKneeReadout${c}" class="readout">6 dB</span>
+        </label>
+        <label>Attack:
+          <input type="range" id="enhAttackMs${c}" min="1" max="50" step="1" value="5">
+          <span id="enhAttackReadout${c}" class="readout">5 ms</span>
+        </label>
+        <label>Release:
+          <input type="range" id="enhReleaseMs${c}" min="20" max="400" step="5" value="120">
+          <span id="enhReleaseReadout${c}" class="readout">120 ms</span>
+        </label>
+        <span class="gr-meter">
+          <span class="gr-meter-track"><span id="enhGrFill${c}" class="gr-meter-fill"></span></span>
+          <span id="enhGrReadout${c}" class="gr-meter-label">0.0 dB</span>
+        </span>
+      </fieldset>
       <div class="waveform-container">
         <canvas id="wave${c}" class="waveform"></canvas>
         <div id="playhead${c}" class="playhead"></div>
@@ -898,6 +983,41 @@ function wireControls() {
       engineNode?.port.postMessage({ type: 'setChannelRatio', channel: c, ratio: r });
     });
   }
+  // Enhancement tab: each channel's 5 fully independent params - see
+  // Types.h's ProcessingTab/EnhancementBandMode doc comments for why
+  // there's no shared-value syncing here the way Advanced Per-channel's
+  // SummedBus sync above has (Enhancement has no shared/SummedBus concept
+  // to sync from at all - every channel is independent from the start).
+  for (let c = 0; c < 5; c++) {
+    $(`enhThresholdDb${c}`).addEventListener('input', () => {
+      const db = parseFloat($(`enhThresholdDb${c}`).value);
+      $(`enhThresholdReadout${c}`).textContent = `${db} dB`;
+      engineNode?.port.postMessage({ type: 'setEnhancementThresholdDb', channel: c, thresholdDb: db });
+    });
+    $(`enhRatio${c}`).addEventListener('input', () => {
+      const r = parseFloat($(`enhRatio${c}`).value);
+      $(`enhRatioReadout${c}`).textContent = `${r.toFixed(1)}:1`;
+      engineNode?.port.postMessage({ type: 'setEnhancementRatio', channel: c, ratio: r });
+    });
+    $(`enhKneeDb${c}`).addEventListener('input', () => {
+      const knee = parseFloat($(`enhKneeDb${c}`).value);
+      $(`enhKneeReadout${c}`).textContent = `${knee} dB`;
+      engineNode?.port.postMessage({ type: 'setEnhancementKneeDb', channel: c, kneeDb: knee });
+    });
+    $(`enhAttackMs${c}`).addEventListener('input', () => {
+      const ms = parseFloat($(`enhAttackMs${c}`).value);
+      $(`enhAttackReadout${c}`).textContent = `${ms} ms`;
+      engineNode?.port.postMessage({ type: 'setEnhancementAttackMs', channel: c, attackMs: ms });
+    });
+    $(`enhReleaseMs${c}`).addEventListener('input', () => {
+      const ms = parseFloat($(`enhReleaseMs${c}`).value);
+      $(`enhReleaseReadout${c}`).textContent = `${ms} ms`;
+      engineNode?.port.postMessage({ type: 'setEnhancementReleaseMs', channel: c, releaseMs: ms });
+    });
+  }
+  $('tabUnmasking').addEventListener('click', () => setActiveTab('unmasking'));
+  $('tabEnhancement').addEventListener('click', () => setActiveTab('enhancement'));
+  $('enhancementBandModeBtn').addEventListener('click', toggleEnhancementBandMode);
   $('duckMode').addEventListener('change', () => {
     engineNode?.port.postMessage({ type: 'setMode', mode: parseInt($('duckMode').value, 10) });
     updateGainVisualization();

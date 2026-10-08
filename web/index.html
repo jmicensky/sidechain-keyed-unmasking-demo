@@ -9,6 +9,10 @@
   h2 { font-size: 15px; text-transform: uppercase; letter-spacing: 0.04em; color: #444; margin: 0 0 10px; }
   .loadbar { display: flex; align-items: center; gap: 10px; margin: 14px 0 20px; }
   .loadbar.export-bar { margin-top: -8px; flex-wrap: wrap; }
+  .tab-selector { display: flex; align-items: center; gap: 10px; margin: 14px 0; flex-wrap: wrap; }
+  .tab-btn { padding: 6px 14px; border: 1px solid #d8d8d8; border-radius: 6px; background: #f6f6f6; cursor: pointer; font-size: 13px; }
+  .tab-btn.active { background: #2c5a8a; color: #fff; border-color: #2c5a8a; }
+  .enhancement-knobs { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e5e5e5; }
   .export-bar #exportProjectName { width: 160px; padding: 3px 6px; }
   .export-bar-note { flex-basis: 100%; }
   .panel { border: 1px solid #d8d8d8; border-radius: 8px; padding: 14px 18px 18px; margin: 14px 0; }
@@ -78,9 +82,23 @@
     <span id="time" class="time">0:00 / 0:00</span>
   </div>
 
+  <div class="tab-selector">
+    <button type="button" id="tabUnmasking" class="tab-btn active">Unmasking</button>
+    <button type="button" id="tabEnhancement" class="tab-btn">Enhancement</button>
+    <span class="hint">Unmasking ducks other channels to make room for one priority (key) signal. Enhancement instead compresses every channel independently, with no key/priority concept - the two are mutually exclusive.</span>
+  </div>
+
   <div id="channels"></div>
 
   <div class="controls">
+  <div id="enhancementControls" style="display:none;">
+    <label>Band mode:
+      <button type="button" id="enhancementBandModeBtn">Single-band</button>
+      <span class="hint">applies to all 5 channels at once - Single-band reuses the Sidechain Compressor's math per channel; Multiband reuses the 6-band WDRC compressor per channel. Each channel's own Threshold/Ratio/Knee/Attack/Release knobs are on its row above.</span>
+    </label>
+  </div>
+
+  <div id="unmaskingControls">
     <label><input type="checkbox" id="unmaskEnabled"> Unmask enabled</label>
     <label>Key channel: <select id="keyChannel"></select></label>
     <label>Mode:
@@ -174,30 +192,31 @@
         </div>
       </div>
     </div>
+  </div>
 
-    <div class="compressor-controls">
-      <div class="compressor-header">
-        Output Compressor (WDRC) <span class="hint">applied once to the final 5-channel mix, independent of duck mode</span>
-        <span class="gr-meter">
-          <span class="gr-meter-track"><span id="wdrcGrFill" class="gr-meter-fill"></span></span>
-          <span id="wdrcGrReadout" class="gr-meter-label">0.0 dB</span>
-        </span>
-      </div>
-      <label><input type="checkbox" id="wdrcBypassed" checked> Bypassed</label>
-      <label>Threshold:
-        <input type="range" id="wdrcThresholdDb" min="-50" max="0" step="1" value="-24">
-        <span id="wdrcThresholdReadout" class="time">-24 dB</span>
-      </label>
-      <label>Ratio:
-        <input type="range" id="wdrcRatio" min="1" max="10" step="0.1" value="2">
-        <span id="wdrcRatioReadout" class="time">2.0:1</span>
-      </label>
-      <label>Makeup Gain:
-        <input type="range" id="wdrcMakeupGainDb" min="-12" max="24" step="1" value="0">
-        <span id="wdrcMakeupGainReadout" class="time">0 dB</span>
-      </label>
-      <label>Attack: <span class="hint">1&ndash;50ms, common range in WDRC literature</span>
-        <input type="range" id="wdrcAttackMs" min="1" max="50" step="1" value="5">
+  <div class="compressor-controls">
+    <div class="compressor-header">
+      Output Compressor (WDRC) <span class="hint">applied once to the final mix, independent of duck mode and Unmasking/Enhancement tab</span>
+      <span class="gr-meter">
+        <span class="gr-meter-track"><span id="wdrcGrFill" class="gr-meter-fill"></span></span>
+        <span id="wdrcGrReadout" class="gr-meter-label">0.0 dB</span>
+      </span>
+    </div>
+    <label><input type="checkbox" id="wdrcBypassed" checked> Bypassed</label>
+    <label>Threshold:
+      <input type="range" id="wdrcThresholdDb" min="-50" max="0" step="1" value="-24">
+      <span id="wdrcThresholdReadout" class="time">-24 dB</span>
+    </label>
+    <label>Ratio:
+      <input type="range" id="wdrcRatio" min="1" max="10" step="0.1" value="2">
+      <span id="wdrcRatioReadout" class="time">2.0:1</span>
+    </label>
+    <label>Makeup Gain:
+      <input type="range" id="wdrcMakeupGainDb" min="-12" max="24" step="1" value="0">
+      <span id="wdrcMakeupGainReadout" class="time">0 dB</span>
+    </label>
+    <label>Attack: <span class="hint">1&ndash;50ms, common range in WDRC literature</span>
+      <input type="range" id="wdrcAttackMs" min="1" max="50" step="1" value="5">
         <span id="wdrcAttackReadout" class="time">5 ms</span>
       </label>
       <label>Release: <span class="hint">30&ndash;3000ms, fast/syllabic to slow-acting</span>

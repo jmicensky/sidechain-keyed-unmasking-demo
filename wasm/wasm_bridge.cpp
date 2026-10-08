@@ -150,6 +150,57 @@ void engine_set_channel_ratio(Engine* e, int channel, double ratio) {
     e->setChannelRatio(channel, ratio);
 }
 
+// Top-level tab switch (see Types.h ProcessingTab). 0 = Unmasking,
+// 1 = Enhancement.
+EMSCRIPTEN_KEEPALIVE
+void engine_set_processing_tab(Engine* e, int tab) {
+    e->setProcessingTab(tab == 1 ? ProcessingTab::Enhancement : ProcessingTab::Unmasking);
+}
+
+// Enhancement-only (see Types.h EnhancementBandMode) - one global toggle
+// for all 5 channels at once. 0 = SingleBand, 1 = Multiband.
+EMSCRIPTEN_KEEPALIVE
+void engine_set_enhancement_band_mode(Engine* e, int bandMode) {
+    e->setEnhancementBandMode(bandMode == 1 ? EnhancementBandMode::Multiband : EnhancementBandMode::SingleBand);
+}
+
+// Enhancement-only: each channel's fully independent 5-parameter
+// compressor (see Engine::setEnhancement*() doc comments) - unlike Advanced
+// Per-channel ducking, every one of these 5 is independent per channel.
+EMSCRIPTEN_KEEPALIVE
+void engine_set_enhancement_threshold_db(Engine* e, int channel, double thresholdDb) {
+    e->setEnhancementThresholdDb(channel, thresholdDb);
+}
+
+EMSCRIPTEN_KEEPALIVE
+void engine_set_enhancement_ratio(Engine* e, int channel, double ratio) {
+    e->setEnhancementRatio(channel, ratio);
+}
+
+EMSCRIPTEN_KEEPALIVE
+void engine_set_enhancement_knee_db(Engine* e, int channel, double kneeDb) {
+    e->setEnhancementKneeDb(channel, kneeDb);
+}
+
+EMSCRIPTEN_KEEPALIVE
+void engine_set_enhancement_attack_ms(Engine* e, int channel, double attackMs) {
+    e->setEnhancementAttackMs(channel, attackMs);
+}
+
+EMSCRIPTEN_KEEPALIVE
+void engine_set_enhancement_release_ms(Engine* e, int channel, double releaseMs) {
+    e->setEnhancementReleaseMs(channel, releaseMs);
+}
+
+// Per-channel gain-reduction meter for the Enhancement tab (only
+// meaningful while engine_set_processing_tab(e, 1) is active) - mirrors
+// engine_channel_gain_linear() below, which serves the same role for
+// Advanced Per-channel ducking.
+EMSCRIPTEN_KEEPALIVE
+double engine_enhancement_channel_gain_linear(Engine* e, int channel) {
+    return e->enhancementChannelGainLinear(channel);
+}
+
 // Output-bus WDRC compressor (see Engine::setWdrc*() doc comment) - applied
 // once to the final 5-channel mix, independent of duck mode.
 EMSCRIPTEN_KEEPALIVE

@@ -77,6 +77,20 @@ class EngineProcessor extends AudioWorkletProcessor {
         m._engine_set_channel_threshold_db(e, msg.channel, msg.thresholdDb); break;
       case 'setChannelRatio':
         m._engine_set_channel_ratio(e, msg.channel, msg.ratio); break;
+      case 'setProcessingTab':
+        m._engine_set_processing_tab(e, msg.tab); break;
+      case 'setEnhancementBandMode':
+        m._engine_set_enhancement_band_mode(e, msg.bandMode); break;
+      case 'setEnhancementThresholdDb':
+        m._engine_set_enhancement_threshold_db(e, msg.channel, msg.thresholdDb); break;
+      case 'setEnhancementRatio':
+        m._engine_set_enhancement_ratio(e, msg.channel, msg.ratio); break;
+      case 'setEnhancementKneeDb':
+        m._engine_set_enhancement_knee_db(e, msg.channel, msg.kneeDb); break;
+      case 'setEnhancementAttackMs':
+        m._engine_set_enhancement_attack_ms(e, msg.channel, msg.attackMs); break;
+      case 'setEnhancementReleaseMs':
+        m._engine_set_enhancement_release_ms(e, msg.channel, msg.releaseMs); break;
       case 'setResonanceNumPeaks':
         m._engine_set_resonance_num_peaks(e, msg.count); break;
       case 'setResonanceBandwidthOctaves':
@@ -157,8 +171,10 @@ class EngineProcessor extends AudioWorkletProcessor {
       const gainLinear = m._engine_last_gain_linear(e);
       const wdrcGainReductionDb = m._engine_wdrc_gain_reduction_db(e);
       const channelGains = [];
+      const enhancementChannelGains = [];
       for (let c = 0; c < kNumClasses; c++) {
         channelGains.push(m._engine_channel_gain_linear(e, c));
+        enhancementChannelGains.push(m._engine_enhancement_channel_gain_linear(e, c));
       }
       // Queried live (not cached) since the peak count can change mid-playback.
       const numPeaks = m._engine_resonance_num_peaks(e);
@@ -169,7 +185,7 @@ class EngineProcessor extends AudioWorkletProcessor {
           gainLinear: m._engine_resonance_gain_linear(e, p),
         });
       }
-      this.port.postMessage({ type: 'playhead', frame: playhead, gainLinear, wdrcGainReductionDb, channelGains, resonance: { peaks } });
+      this.port.postMessage({ type: 'playhead', frame: playhead, gainLinear, wdrcGainReductionDb, channelGains, enhancementChannelGains, resonance: { peaks } });
     }
 
     return true;
