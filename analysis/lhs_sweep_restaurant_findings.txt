@@ -1,0 +1,85 @@
+LATIN HYPERCUBE PARAMETER SWEEP -- RESTAURANT SCENE -- FINDINGS
+Restaurant Scene, Dialogue priority class, 100 points x {Basic, Advanced}
+Search ranges: threshold -60 to -18dB, ratio 1.5-10:1, knee 0-24dB,
+attack 1-50ms, release 20-400ms (Latin Hypercube design, seed=42)
+Data: analysis/lhs_sweep_results_restaurant_dialogue.csv
+Script: analysis/run_lhs_sweep.py --scene restaurant --key dialogue --n 100
+======================================================================
+
+PURPOSE: third scene-generalization check (after Construction's original
+150-point sweep and Public Transit's 50-point first look) - does the same
+"threshold dominates, all three metrics move together" pattern hold on a
+third, differently-mixed scene, at closer to full sample size this time.
+
+BASELINE: mean_margin=-8.08dB, STOI=0.317, 68.1% of Dialogue's specific
+loudness masked before any processing - Restaurant's unprocessed baseline
+is actually the LEAST severe of the three scenes tested so far
+(Construction -9.51dB, Public Transit -13.28dB, Restaurant -8.08dB), so
+this is a genuinely different starting point again, not another harder
+case.
+
+FINDING 1 -- Threshold dominance replicates, and is if anything tighter
+here than either prior scene.
+  Correlation with Advanced-mode margin gain, each parameter alone:
+    threshold   r = -0.949   (Construction: -0.929, Public Transit: -0.930)
+    release     r = +0.236
+    ratio       r = +0.123
+    knee        r = +0.050
+    attack      r = -0.033
+  Binned by threshold (Advanced mode) - same monotonic plateau-then-falloff
+  shape as both other scenes:
+    thr [-60,-54): mean +6.71dB (max +6.75dB)  n=14
+    thr [-54,-48): mean +6.51dB (max +6.73dB)  n=14
+    thr [-48,-42): mean +5.33dB (max +6.46dB)  n=15
+    thr [-42,-36): mean +3.68dB (max +5.13dB)  n=14
+    thr [-36,-30): mean +1.54dB (max +3.30dB)  n=15
+    thr [-30,-24): mean +0.54dB (max +2.56dB)  n=14
+    thr [-24,-18): mean +0.14dB (max +0.67dB)  n=14
+
+FINDING 2 -- The near-perfect cross-metric correlation replicates again,
+tighter than either prior scene.
+  STOI gain vs. margin gain: r=0.999 (Construction: 0.994, Public Transit: 0.981)
+  Loudness reduction vs. margin gain: r=0.999 (Construction: 0.994, Public Transit: 1.000)
+  Same conclusion as both other scenes: no parameter combination decouples
+  "measurably transparent" from "measurably intelligible" here either.
+
+FINDING 3 -- Best point found here shows the largest loudness-reduction
+figure of any scene tested, worth noting but not over-reading given
+threshold's dominance (any near-maximal threshold performs similarly).
+  Threshold -56.2dB | Ratio 4.0:1 | Knee 17.7dB | Attack 1.2ms | Release 294ms
+  Mean margin gain +6.75dB | STOI gain +0.123 | Loudness reduction +16.4pp
+  (Construction's best: +6.96dB/+0.104/+11.4pp; Public Transit's best:
+  +6.35dB/+0.094/+12.9pp - Restaurant's STOI and loudness gains are the
+  highest of the three, margin gain is mid-pack - consistent with margin
+  gain, STOI gain, and loudness reduction being different lenses on the
+  same effect rather than the same effect at the same absolute scale
+  across scenes.)
+
+CROSS-SCENE SUMMARY (all three scenes, Advanced mode, Dialogue priority):
+                    Construction   PublicTransit   Restaurant
+  n                 150            50              100
+  baseline margin    -9.51dB       -13.28dB        -8.08dB
+  baseline STOI       0.393         0.275           0.317
+  threshold r         -0.929        -0.930          -0.949
+  STOI vs margin r     0.994         0.981           0.999
+  loud vs margin r     0.994         1.000           0.999
+  best margin gain    +6.96dB       +6.35dB         +6.75dB
+
+Three scenes in, with meaningfully different baselines and mix content,
+the pattern hasn't broken once: threshold dominates (r consistently
+-0.93 to -0.95), and the three outcome metrics move together almost
+perfectly (r consistently >=0.98) regardless of scene. This looks like a
+property of the ducking architecture itself, not an artifact of any one
+scene's specific audio content.
+
+NEXT STEPS NOT YET DONE:
+  - Extend the threshold search below -60dB (still not done for any
+    scene - the curve was still rising at that edge in Construction's
+    original 150-point sweep).
+  - Try a non-Dialogue priority class on Restaurant or Public Transit to
+    check whether the pattern also holds off Dialogue, not just off
+    Construction.
+  - Bring Restaurant up to a full 150-point sweep if its settings are
+    going to be cited directly the way Construction's tiers are (this
+    100-point run is a solid look, per the tightened correlations above,
+    but wasn't run at the full size).
