@@ -29,13 +29,20 @@ public:
         gainComputer_.setParams(params);
     }
 
+    // Static makeup gain, applied after compression - same convention as
+    // WdrcCompressor::setMakeupGainDb() (not a factor in the gain-reduction
+    // meter, which only reports the compressor's own cut).
+    void setMakeupGainDb(double makeupGainDb) {
+        makeupGainLinear_ = std::pow(10.0, makeupGainDb / 20.0);
+    }
+
     void tick(double inL, double inR, double& outL, double& outR) {
         double mono = 0.5 * (inL + inR);
         double levelDb = detector_.tick(mono);
         double g = gainComputer_.computeLinearGain(levelDb);
         lastGainReductionDb_ = 20.0 * std::log10(std::max(g, 1e-6));
-        outL = inL * g;
-        outR = inR * g;
+        outL = inL * g * makeupGainLinear_;
+        outR = inR * g * makeupGainLinear_;
     }
 
     // 0 = no reduction, negative = reduction amount - for a gain-reduction
@@ -46,6 +53,7 @@ private:
     EnvelopeFollower detector_;
     GainComputer gainComputer_;
     double lastGainReductionDb_ = 0.0;
+    double makeupGainLinear_ = 1.0;
 };
 
 } // namespace demo

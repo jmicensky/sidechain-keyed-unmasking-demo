@@ -192,6 +192,11 @@ void engine_set_enhancement_release_ms(Engine* e, int channel, double releaseMs)
     e->setEnhancementReleaseMs(channel, releaseMs);
 }
 
+EMSCRIPTEN_KEEPALIVE
+void engine_set_enhancement_makeup_gain_db(Engine* e, int channel, double makeupGainDb) {
+    e->setEnhancementMakeupGainDb(channel, makeupGainDb);
+}
+
 // Per-channel gain-reduction meter for the Enhancement tab (only
 // meaningful while engine_set_processing_tab(e, 1) is active) - mirrors
 // engine_channel_gain_linear() below, which serves the same role for

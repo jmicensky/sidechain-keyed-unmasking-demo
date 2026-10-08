@@ -55,11 +55,13 @@ you interactively work in one of two mutually-exclusive top-level tabs (see
   quiet content more audible everywhere) instead of "unmasking" (make room
   for one priority signal). Added to explore whether this is a viable
   alternative path for the paper's argument, not assumed to be one.
-  - Each channel's **Threshold/Ratio/Knee/Attack/Release are fully
-    independent** (25 knobs total, on the same per-channel rows as
+  - Each channel's **Threshold/Ratio/Knee/Attack/Release/Makeup Gain are
+    fully independent** (30 knobs total, on the same per-channel rows as
     Unmasking's waveforms/mute/solo - see `buildChannelRows()` in `app.js`),
     unlike Advanced Per-channel ducking (which only frees threshold/ratio,
-    sharing the rest).
+    sharing the rest). Makeup gain isn't part of `CompressorParams` (that
+    struct's reused for the compression law only) - tracked in its own
+    per-channel array, `Engine::enhancementMakeupGainDb_`.
   - One global **Band mode** toggle (not per-channel) switches all 5
     channels at once between:
     - **Single-band** (default) — reuses the same `GainComputer`/

@@ -91,6 +91,8 @@ class EngineProcessor extends AudioWorkletProcessor {
         m._engine_set_enhancement_attack_ms(e, msg.channel, msg.attackMs); break;
       case 'setEnhancementReleaseMs':
         m._engine_set_enhancement_release_ms(e, msg.channel, msg.releaseMs); break;
+      case 'setEnhancementMakeupGainDb':
+        m._engine_set_enhancement_makeup_gain_db(e, msg.channel, msg.makeupGainDb); break;
       case 'setResonanceNumPeaks':
         m._engine_set_resonance_num_peaks(e, msg.count); break;
       case 'setResonanceBandwidthOctaves':

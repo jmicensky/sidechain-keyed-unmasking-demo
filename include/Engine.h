@@ -182,6 +182,16 @@ public:
         syncEnhancementChannel(channel);
     }
 
+    // Static makeup gain, applied after compression - independent per
+    // channel, same as the other 5 Enhancement params. Not part of
+    // CompressorParams (that struct's reused for the compression law only;
+    // makeup gain isn't a factor in computeLinearGain() at all), so it's
+    // tracked in its own array instead.
+    void setEnhancementMakeupGainDb(int channel, double makeupGainDb) {
+        enhancementMakeupGainDb_[channel] = makeupGainDb;
+        syncEnhancementChannel(channel);
+    }
+
     void setUnmaskEnabled(bool enabled) {
         unmaskEnabled_ = enabled;
         updateKeyBlendTargets();
@@ -636,11 +646,13 @@ private:
     // prepare()'s comment on why both are always kept in sync.
     void syncEnhancementChannel(int c) {
         enhancementSingleBand_[c].setParams(enhancementParams_[c]);
+        enhancementSingleBand_[c].setMakeupGainDb(enhancementMakeupGainDb_[c]);
         enhancementMultiband_[c].setThresholdDb(enhancementParams_[c].thresholdDb);
         enhancementMultiband_[c].setRatio(enhancementParams_[c].ratio);
         enhancementMultiband_[c].setKneeDb(enhancementParams_[c].kneeDb);
         enhancementMultiband_[c].setAttackMs(enhancementParams_[c].attackMs);
         enhancementMultiband_[c].setReleaseMs(enhancementParams_[c].releaseMs);
+        enhancementMultiband_[c].setMakeupGainDb(enhancementMakeupGainDb_[c]);
     }
 
     // Floors a linear gain at maxReductionDb_'s ceiling (never boosts - a
@@ -681,6 +693,7 @@ private:
     // starting point, not a literature-derived value for this new mode).
     EnhancementBandMode enhancementBandMode_ = EnhancementBandMode::SingleBand;
     std::array<CompressorParams, kNumClasses> enhancementParams_{};
+    std::array<double, kNumClasses> enhancementMakeupGainDb_{}; // 0dB default each
     std::array<SingleBandEnhancementCompressor, kNumClasses> enhancementSingleBand_;
     std::array<WdrcCompressor, kNumClasses> enhancementMultiband_;
     std::array<double, kNumClasses> lastEnhancementChannelGain_{1.0, 1.0, 1.0, 1.0, 1.0};

@@ -568,6 +568,7 @@ function applyAllControls(port) {
     port.postMessage({ type: 'setEnhancementKneeDb', channel: c, kneeDb: parseFloat($(`enhKneeDb${c}`).value) });
     port.postMessage({ type: 'setEnhancementAttackMs', channel: c, attackMs: parseFloat($(`enhAttackMs${c}`).value) });
     port.postMessage({ type: 'setEnhancementReleaseMs', channel: c, releaseMs: parseFloat($(`enhReleaseMs${c}`).value) });
+    port.postMessage({ type: 'setEnhancementMakeupGainDb', channel: c, makeupGainDb: parseFloat($(`enhMakeupGainDb${c}`).value) });
   }
 }
 
@@ -917,6 +918,10 @@ function buildChannelRows() {
           <input type="range" id="enhReleaseMs${c}" min="20" max="400" step="5" value="120">
           <span id="enhReleaseReadout${c}" class="readout">120 ms</span>
         </label>
+        <label>Makeup:
+          <input type="range" id="enhMakeupGainDb${c}" min="-12" max="24" step="1" value="0">
+          <span id="enhMakeupGainReadout${c}" class="readout">0 dB</span>
+        </label>
         <span class="gr-meter">
           <span class="gr-meter-track"><span id="enhGrFill${c}" class="gr-meter-fill"></span></span>
           <span id="enhGrReadout${c}" class="gr-meter-label">0.0 dB</span>
@@ -1013,6 +1018,11 @@ function wireControls() {
       const ms = parseFloat($(`enhReleaseMs${c}`).value);
       $(`enhReleaseReadout${c}`).textContent = `${ms} ms`;
       engineNode?.port.postMessage({ type: 'setEnhancementReleaseMs', channel: c, releaseMs: ms });
+    });
+    $(`enhMakeupGainDb${c}`).addEventListener('input', () => {
+      const db = parseFloat($(`enhMakeupGainDb${c}`).value);
+      $(`enhMakeupGainReadout${c}`).textContent = `${db} dB`;
+      engineNode?.port.postMessage({ type: 'setEnhancementMakeupGainDb', channel: c, makeupGainDb: db });
     });
   }
   $('tabUnmasking').addEventListener('click', () => setActiveTab('unmasking'));
