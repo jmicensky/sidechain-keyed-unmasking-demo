@@ -1,0 +1,102 @@
+RESONANCE MODE PARAMETER SWEEP -- FINDINGS
+Construction Scene, Dialogue priority class, Resonance duck mode only
+100 points, 7D Latin Hypercube: threshold -60 to -18dB, ratio 1.5-10:1,
+knee 0-24dB, attack 1-50ms, release 20-400ms (same ranges as Basic/
+Advanced's sweeps), num_peaks 1-6, bandwidth_octaves 0.05-4.0
+Data: analysis/resonance_sweep_results_construction_dialogue.csv
+Script: analysis/run_resonance_sweep.py --n 100
+======================================================================
+
+MOTIVATION: a hypothesis that Resonance mode, reconfigured as 1-2 WIDE-
+bandwidth peaks rather than its current default framing (several narrow,
+precise notches), might work more like a moving-band multiband compressor
+- tracking wherever the key's energy currently is - and could be a viable
+alternative to Basic/Advanced. Went in expecting this probably wouldn't
+match Basic/Advanced's intelligibility improvement, but worth testing
+rather than assuming.
+
+METHODOLOGY NOTE - REAL BUG FOUND AND FIXED BEFORE THESE RESULTS: the
+first run of this sweep produced nonsensical numbers (margin gain up to
++12.5dB - higher than anything Basic/Advanced ever produced - while STOI
+gain and loudness reduction were uniformly, severely NEGATIVE across
+nearly the entire parameter space, barely varying with settings at all).
+Root cause: Resonance mode has a fixed, deterministic algorithmic latency
+of exactly kFftSize=2048 samples (42.7ms @ 48kHz - ResonanceSuppressor.h's
+kLatencySamples). Neither compute_stoi()'s lag search (+/-20ms) nor
+compute_masking_margin() (no lag correction at all) accounted for this,
+so every metric was comparing temporally-misaligned signals. Confirmed
+directly via a wide (+/-100ms) cross-correlation search independently
+landing on exactly 2048 samples. Fixed by trimming the known latency from
+the rendered mix before scoring (run_resonance_sweep.py's
+evaluate_condition()) - this run reflects that fix.
+
+FINDING 1 -- Confirms the going-in hypothesis: Resonance mode's ceiling is
+real but meaningfully lower than Basic/Advanced's.
+  Best achieved here: margin gain +4.05dB, STOI gain +0.070, loudness
+  reduction +11.5pp.
+  Construction's Basic/Advanced sweep (150pt, same scene/key): margin gain
+  +6.96dB, STOI gain +0.104-0.121, loudness reduction +11.4pp.
+  Margin gain ceiling: ~42% lower. STOI gain ceiling: ~33-42% lower.
+  Loudness reduction ceiling: essentially tied (+11.5 vs +11.4).
+  Resonance mode duck the masker enough to meaningfully reduce perceived
+  loudness/masking overlap, but doesn't translate that into as much raw
+  level-margin or predicted-intelligibility gain as ducking a fixed,
+  wider band does.
+
+FINDING 2 -- "Wide bandwidth" (wide Q) is a real, validated lever; "few
+peaks" specifically is not.
+  Correlation with STOI gain:
+    threshold            r = -0.746  (dominant, as in every other sweep)
+    bandwidth_octaves    r = +0.416  (second-strongest - wider is better)
+    release              r = +0.217
+    ratio                r = +0.076
+    num_peaks            r = -0.057  (essentially no relationship)
+    knee                 r = -0.055
+    attack               r = +0.002
+  Standardized multiple regression on STOI gain (controls for all 7
+  parameters simultaneously, R^2=0.813):
+    threshold   -0.775
+    bandwidth   +0.505   <- second-strongest independent predictor
+    release     +0.112
+    attack      -0.105
+    ratio       +0.047
+    num_peaks   +0.061   <- small, and if anything slightly POSITIVE
+    knee        -0.017
+  Direct comparison, peaks<=2 vs. peaks>2 (not controlling for anything
+  else, just the raw sample split):
+    peaks<=2 (n=30): mean STOI gain +0.0177, mean margin gain +0.60dB
+    peaks>2  (n=70): mean STOI gain +0.0172, mean margin gain +0.74dB
+  These are statistically indistinguishable. The top 15 points by STOI
+  gain span num_peaks 1 through 5 fairly evenly (not clustered at 1-2) -
+  what they share is uniformly high bandwidth (mean 2.82 octaves among the
+  top 20, vs. 2.03 octaves overall).
+
+CONCLUSION ON THE ORIGINAL HYPOTHESIS: half right. Wide bandwidth is
+genuinely the active ingredient - confirmed both by simple correlation and
+by a regression that controls for every other parameter at once. Peak
+COUNT is not - 1-2 peaks perform about the same as 3-6, once bandwidth is
+already wide. So "moving-band multiband compressor" framing is directionally
+right (wide, few notches DOES look more like a moving fixed-band duck than
+Resonance's original narrow-notch default), but the mechanism is "duck a
+wide swath wherever the key's energy is" rather than specifically "use as
+few bands as possible" - num_peaks turned out to be close to a free
+parameter in this search.
+
+Even at its best (wide bandwidth, near-maximal threshold), Resonance
+mode's ceiling stays below Basic/Advanced's on the two metrics that matter
+most for the paper's intelligibility argument (margin gain, STOI gain) -
+consistent with the user's own expectation going in. Loudness reduction
+being competitive is worth noting but is the weaker of the three metrics
+for judging intelligibility specifically.
+
+NEXT STEPS NOT YET DONE:
+  - This sweep used Resonance's default per-peak level-compensation
+    constant (Engine.h's kResonanceLevelCompensationDb=12.0, unchanged) -
+    not verified whether that constant is still well-calibrated at the
+    wide-bandwidth, few-peak configurations this sweep found best (it was
+    tuned empirically for the original several-narrow-peaks framing).
+  - Not tested against Public Transit or Restaurant scenes, or non-
+    Dialogue priority classes.
+  - The resonance-max-reduction ceiling (kept at Engine.h's own default,
+    24dB, not swept) could itself be a limiting factor at the high-
+    bandwidth end - not investigated separately from the swept parameters.

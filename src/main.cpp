@@ -304,18 +304,23 @@ static std::string flagString(const std::map<std::string, std::string>& flags, c
 static void printStaticUsage() {
     std::cerr <<
         "Usage: demo_engine_cli --static --scene <name> --key <ClassName> "
-        "--mode <unprocessed|basic|advanced> --out <path.wav>\n"
+        "--mode <unprocessed|basic|advanced|resonance> --out <path.wav>\n"
         "         [--threshold dB] [--ratio r] [--knee dB] [--attack ms] "
         "[--release ms] [--max-reduction dB]\n"
+        "         [--peaks n] [--bandwidth octaves] [--resonance-max-reduction dB]\n"
         "  --scene: \"Construction Scene\", \"PublicTransit Scene\", or "
         "\"Restaurant Scene\" (aliases: Construction, PublicTransit, Restaurant)\n"
         "  --key:   Dialogue | Music | \"Background Noise\" | \"Safety Alerts\" | Other\n"
         "  --mode:  unprocessed (true sum of the 5 raw stems, Unmask off) | "
-        "basic | advanced (Summed-bus)\n"
-        "  Compressor flags are ignored for --mode unprocessed. For basic/advanced "
-        "they default to Types.h's CompressorParams/Engine defaults if omitted -\n"
-        "  pass the same values to both a basic and an advanced run to isolate the "
-        "effect of band-limiting in a comparison.\n";
+        "basic | advanced (Summed-bus) | resonance\n"
+        "  Compressor flags are ignored for --mode unprocessed. For basic/advanced/"
+        "resonance they default to Types.h's CompressorParams/Engine defaults if\n"
+        "  omitted - pass the same values across runs to isolate the effect of "
+        "band-limiting vs. dynamic-notch ducking in a comparison.\n"
+        "  --peaks/--bandwidth/--resonance-max-reduction only apply to --mode "
+        "resonance (ignored otherwise) - see ResonanceSuppressor.h/Engine.h for\n"
+        "  their valid ranges (peaks 1-12, bandwidth 0.05-4.0 octaves, "
+        "resonance-max-reduction 0-60dB).\n";
 }
 
 // mode=unprocessed: renders the true, unweighted sum of the 5 raw stems -
@@ -423,16 +428,31 @@ static int runStaticDucked(const SceneSpec& scene, int keyChannel, const std::st
     params.releaseMs      = flagDouble(flags, "release", params.releaseMs);
     double maxReductionDb = flagDouble(flags, "max-reduction", 6.0); // matches Engine.h's own default
 
+    // Resonance-only flags - ignored (and left at Engine.h's own defaults)
+    // for basic/advanced, same convention as compressor flags being ignored
+    // for --mode unprocessed.
+    int resonanceNumPeaks = static_cast<int>(flagDouble(flags, "peaks", 4.0));
+    double resonanceBandwidthOctaves = flagDouble(flags, "bandwidth", 1.16);
+    double resonanceMaxReductionDb = flagDouble(flags, "resonance-max-reduction", 24.0);
+
     Engine engine;
     engine.prepare(loadedSampleRate, params);
     engine.loadStems(stemsL, stemsR);
     // Fixed configuration applied once, before any processing - no mid-clip
     // changes, unlike the scripted-timeline path below main().
-    engine.setMode(modeName == "basic" ? DuckMode::Basic : DuckMode::Advanced);
+    DuckMode mode = DuckMode::Advanced;
+    if (modeName == "basic") mode = DuckMode::Basic;
+    else if (modeName == "resonance") mode = DuckMode::Resonance;
+    engine.setMode(mode);
     engine.setAdvancedDuckingMode(AdvancedDuckingMode::SummedBus); // task scope: Summed-bus only, see spec
     engine.setUnmaskEnabled(true);
     engine.setKeyChannel(keyChannel);
     engine.setMaxReductionDb(maxReductionDb);
+    if (mode == DuckMode::Resonance) {
+        engine.setResonanceNumPeaks(resonanceNumPeaks);
+        engine.setResonanceBandwidthOctaves(resonanceBandwidthOctaves);
+        engine.setResonanceMaxReductionDb(resonanceMaxReductionDb);
+    }
     // WDRC output stage stays at its default (bypassed) - out of scope for
     // this metric, which is specifically about the sidechain-keyed ducking.
 
@@ -453,9 +473,19 @@ static int runStaticDucked(const SceneSpec& scene, int keyChannel, const std::st
               << "  key=" << classIndexToName(keyChannel) << " mode=" << modeName
               << " threshold=" << params.thresholdDb << "dB ratio=" << params.ratio
               << ":1 knee=" << params.kneeDb << "dB attack=" << params.attackMs
-              << "ms release=" << params.releaseMs << "ms maxReduction=" << maxReductionDb
-              << "dB safetyGain=" << params.safetyGainDb << "dB\n"
-              << "[self-check] Click detector: " << clicks << " sample-to-sample jumps > 0.35 amplitude\n";
+              << "ms release=" << params.releaseMs << "ms";
+    if (mode == DuckMode::Resonance) {
+        // maxReductionDb (the shared ceiling) deliberately never applies to
+        // Resonance mode - see Engine.h's setMaxReductionDb() doc comment -
+        // so it's omitted here rather than printed alongside a value that
+        // doesn't actually affect this render.
+        std::cout << " peaks=" << resonanceNumPeaks << " bandwidth=" << resonanceBandwidthOctaves
+                   << "oct resonanceMaxReduction=" << resonanceMaxReductionDb << "dB";
+    } else {
+        std::cout << " maxReduction=" << maxReductionDb << "dB";
+    }
+    std::cout << " safetyGain=" << params.safetyGainDb << "dB"
+              << "\n[self-check] Click detector: " << clicks << " sample-to-sample jumps > 0.35 amplitude\n";
     if (clicks > 0) {
         std::cout << "  WARNING: unexpected discontinuity in a static (no mid-clip changes) "
                      "render - investigate before treating this as valid measurement data.\n";
@@ -475,8 +505,8 @@ static int runStaticExport(int argc, char** argv) {
         printStaticUsage();
         return 1;
     }
-    if (modeName != "unprocessed" && modeName != "basic" && modeName != "advanced") {
-        std::cerr << "Unknown --mode '" << modeName << "' (expected unprocessed, basic, or advanced)\n";
+    if (modeName != "unprocessed" && modeName != "basic" && modeName != "advanced" && modeName != "resonance") {
+        std::cerr << "Unknown --mode '" << modeName << "' (expected unprocessed, basic, advanced, or resonance)\n";
         return 1;
     }
 

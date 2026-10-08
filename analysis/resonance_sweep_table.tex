@@ -1,0 +1,99 @@
+% Resonance duck mode parameter sweep results table. Companion to
+% parameter_sweep_table.tex (Advanced) / parameter_sweep_table_basic.tex
+% (Basic) - same color-coding convention, applied to Resonance's 100-point
+% sweep instead of the original 9-run manual sweep.
+%
+% Data source: analysis/run_resonance_sweep.py --n 100 (Construction Scene,
+% Dialogue priority). Resonance mode reuses the same Sidechain Compressor
+% law (threshold/ratio/knee/attack/release) as Basic/Advanced, applied per
+% spectral peak, plus two Resonance-only parameters: num_peaks (how many
+% spectral peaks are tracked) and bandwidth_octaves (how wide each peak's
+% gain-reduction bump is) - see ResonanceSuppressor.h/Engine.h.
+%
+% METHODOLOGY NOTE: this sweep required two real fixes before these numbers
+% were trustworthy. (1) main.cpp's --static export mode did not support
+% --mode resonance at all before this sweep was built - added --peaks/
+% --bandwidth/--resonance-max-reduction flags. (2) Resonance mode has a
+% fixed 2048-sample (42.7ms @ 48kHz) algorithmic latency that neither
+% compute_stoi()'s lag search (+/-20ms) nor compute_masking_margin() (no
+% lag correction at all) accounted for - the first run of this sweep
+% produced nonsensical numbers (margin gain exceeding anything Basic/
+% Advanced ever produced, STOI/loudness uniformly and severely negative)
+% purely from comparing temporally-misaligned signals. Confirmed via a
+% wide +/-100ms cross-correlation search independently landing on exactly
+% 2048 samples; fixed by trimming that known, deterministic latency from
+% the rendered mix before scoring. See analysis/resonance_sweep_findings.txt
+% for the full writeup this table summarizes.
+%
+% Requires packages already in main.tex's preamble: booktabs, siunitx (the
+% footnote below uses \SI{}{}). Also requires colortbl for \cellcolor - see
+% parameter_sweep_table.tex's header comment (add \usepackage{colortbl} or
+% change to \usepackage[table]{xcolor}).
+%
+% Plain right-aligned (r) columns throughout, not siunitx S columns - same
+% reasoning as parameter_sweep_table.tex: \cellcolor combined with an
+% S column's number-parsing is fragile, so precision is fixed by hand
+% instead.
+%
+% COLOR CODING: the 7 swept-input columns (Thr./Ratio/Knee/Atk./Rel./
+% Peaks/Bandwidth) get grey header backgrounds; Margin Gain/STOI Gain/
+% Loud. Red. are shaded per-cell, intensity scaled linearly between this
+% table's own min and max (i.e. relative to these 5 curated rows only, not
+% the full 100-point sweep or any other table's scale).
+%
+% ROW SELECTION: not a ranked top-N (unlike parameter_sweep_table.tex) -
+% these 5 rows are chosen specifically to show the sweep's two headline
+% findings side by side: (1) the best point found regardless of peak count,
+% plus the best 1-peak and best 2-peak points, are all close to each other
+% and all use wide bandwidth - peak count doesn't separate them; (2) the
+% "Narrow bandwidth" row uses a comparably aggressive threshold and a
+% moderate peak count (4) but a narrow bandwidth (0.12 octaves) and
+% collapses to almost no effect - isolating bandwidth, not threshold or
+% peak count, as the reason it fails; (3) the "Weak threshold" row is the
+% same near-zero floor every other sweep in this project shows once
+% threshold is too conservative to engage at all.
+
+\definecolor{paramgrey}{gray}{0.85}
+
+\begin{table}[h]
+\centering
+\tiny
+\caption{Resonance duck mode parameter sweep (100-point Latin Hypercube,
+Construction Scene, Dialogue priority): five representative points
+isolating bandwidth, not peak count, as the parameter that separates a
+strong result from a weak one. Gains are relative to the unprocessed
+baseline. Best point found here, ranked by STOI gain (margin +3.67dB,
+STOI +0.070, loudness reduction +10.6pp), falls meaningfully short of
+Advanced mode's own 150-point-sweep ceiling on the same scene (margin
++6.96dB, STOI +0.104) -- loudness reduction is the one metric where
+Resonance is competitive (this sweep's own loudness-reduction ceiling,
++11.5pp, essentially matches Advanced's +11.4pp).}
+\label{tab:resonance-sweep}
+\begin{tabular}{@{}l r r r r r r r r r r@{}}
+\toprule
+\cellcolor{paramgrey}\textbf{Point} & \cellcolor{paramgrey}\textbf{Thr.} & \cellcolor{paramgrey}\textbf{Ratio} & \cellcolor{paramgrey}\textbf{Knee} & \cellcolor{paramgrey}\textbf{Atk.} & \cellcolor{paramgrey}\textbf{Rel.} & \cellcolor{paramgrey}\textbf{Peaks} & \cellcolor{paramgrey}\textbf{BW (oct)} & \textbf{Margin Gain} & \textbf{STOI Gain} & \textbf{Loud.\ Red.} \\
+ & \cellcolor{paramgrey}(dB) & \cellcolor{paramgrey}{} & \cellcolor{paramgrey}(dB) & \cellcolor{paramgrey}(ms) & \cellcolor{paramgrey}(ms) & \cellcolor{paramgrey}{} & \cellcolor{paramgrey}{} & (dB) & & (pp) \\
+\midrule
+Best overall (3 peaks)   & -50.6 & 2.4 & 11.4 & 46.0 & 319 & 3 & 3.98 & \cellcolor{green!70}+3.67 & \cellcolor{yellow!70}+0.070 & \cellcolor{orange!66}+10.6 \\
+Best 1-peak              & -56.0 & 6.1 & 5.0  & 13.9 & 230 & 1 & 3.56 & \cellcolor{green!50}+2.36 & \cellcolor{yellow!66}+0.065 & \cellcolor{orange!70}+11.5 \\
+Best 2-peak              & -52.4 & 8.8 & 23.6 & 16.8 & 381 & 2 & 2.28 & \cellcolor{green!41}+1.76 & \cellcolor{yellow!46}+0.040 & \cellcolor{orange!54}+8.1  \\
+Narrow bandwidth (contrast) & -54.7 & 9.3 & 6.5  & 24.3 & 155 & 4 & 0.12 & \cellcolor{green!16}+0.08 & \cellcolor{yellow!20}+0.006 & \cellcolor{orange!20}+1.0  \\
+Weak threshold (floor)   & -18.2 & 6.0 & 13.7 & 29.3 & 174 & 2 & 2.73 & \cellcolor{green!15}+0.00 & \cellcolor{yellow!15}+0.000 & \cellcolor{orange!15}+0.0  \\
+\bottomrule
+\end{tabular}
+\par\vspace{4pt}
+\raggedright\footnotesize Note the "Narrow bandwidth" row uses a threshold
+about as aggressive as the top three rows (\SI{-54.7}{\decibel}) and a
+moderate peak count (4) -- what collapses its result to almost nothing is
+specifically its narrow \SI{0.12}{octave} bandwidth, not its threshold or
+peak count. Across the full 100-point sweep, bandwidth is the
+second-strongest predictor of STOI gain after threshold (standardized
+regression coefficient $+0.505$, vs.\ threshold's $-0.775$, $R^2=0.813$),
+while peak count's independent contribution is negligible ($+0.061$) --
+1--2 peaks and 3--6 peaks perform statistically indistinguishably once
+bandwidth is already wide. Margin gain is a weaker signal for Resonance
+mode specifically than for Basic/Advanced: it is measured on Dialogue's
+fixed nominal band, but Resonance ducks wherever the key's spectral peaks
+currently are, not a fixed band -- see
+\texttt{analysis/resonance\_sweep\_findings.txt} for the full caveat.
+\end{table}
