@@ -78,7 +78,7 @@ SCENES = {
 # Mirrors Types.h's kUnmaskFrequencyRanges (low_hz, high_hz), keyed by the
 # same slug used in export filenames.
 CLASS_RANGES = {
-    "dialogue": (400.0, 7000.0),
+    "dialogue": (175.0, 7000.0),  # lowered from 400Hz - see Types.h's kUnmaskFrequencyRanges
     "music": (75.0, 12000.0),
     "background": (60.0, 2000.0),
     "safety": (300.0, 2000.0),
@@ -133,7 +133,7 @@ def frame_rms_db(signal, sr, frame_ms=FRAME_MS, overlap=FRAME_OVERLAP):
 #
 # Reason: this script's own Butterworth bandpass, applied to the rendered
 # output, interacts with Advanced mode's own internal LR4 crossover (a
-# different filter shape) near the shared 400Hz/7kHz-style edges, inflating
+# different filter shape) near the shared nominal-range edges, inflating
 # Basic mode's measured margin gain relative to Advanced's by a spurious
 # ~0.9dB at the nominal edges even though the engine applies bit-identical
 # gain within the class's core band in both modes. Sweeping padding amounts

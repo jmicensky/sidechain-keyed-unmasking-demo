@@ -116,7 +116,7 @@ struct UnmaskFreqRange {
 
 // Indexed by ClassIndex.
 inline constexpr UnmaskFreqRange kUnmaskFrequencyRanges[kNumClasses] = {
-    {400.0, 7000.0},   // kDialogue: voice
+    {175.0, 7000.0},   // kDialogue: voice (lowered from 400Hz to reach more of the fundamental range)
     {75.0, 12000.0},   // kMusic
     {60.0, 2000.0},    // kBackgroundNoise
     {300.0, 2000.0},   // kSafetyAlerts

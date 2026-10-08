@@ -26,7 +26,7 @@ you interactively work in one of two mutually-exclusive top-level tabs (see
   - Choose one of three duck modes:
     - **Basic** — full-spectrum ducking, one shared gain applied everywhere.
     - **Advanced** — band-limited ducking, restricted to the *currently-keyed
-      class's own frequency range* (e.g. 400 Hz–7 kHz while Dialogue is the
+      class's own frequency range* (e.g. 175 Hz–7 kHz while Dialogue is the
       key, 60 Hz–2 kHz while Background Noise is the key — see
       `kUnmaskFrequencyRanges` in `Types.h`). The ducked band visibly moves
       with the key selection, both in a UI badge and in the Gain Reduction
@@ -70,6 +70,14 @@ you interactively work in one of two mutually-exclusive top-level tabs (see
     - **Multiband** — reuses `WdrcCompressor` itself (nothing in it is
       actually mix-specific), one independently-parameterized 6-band
       instance per channel instead of one instance for the summed mix.
+  - A **Bypassed** checkbox lets you A/B the whole tab's processing
+    against the raw signal without switching tabs (which would hide the
+    per-channel knobs/meters you're comparing against) - see
+    `Engine::setEnhancementBypassed()`. The per-channel compressors keep
+    running even while bypassed (not skipped) so there's no cold
+    envelope-follower state to click into when un-bypassing; the
+    gain-reduction meters correctly read 0dB while bypassed even though
+    the compressors are still computing in the background.
   - Mutually exclusive with Unmasking (switching tabs fully replaces one
     processing path with the other, not stackable) - see `Engine::process()`'s
     top-level `if (processingTab_ == ProcessingTab::Enhancement)` branch.
@@ -162,7 +170,7 @@ demo_engine/
 - `AdvancedDuckingMode`: `SummedBus` / `PerChannel` — see §1.
 - `kUnmaskFrequencyRanges[kNumClasses]`: the frequency range Advanced mode
   ducks other channels within when each class is the key — Dialogue
-  400Hz–7kHz, Music 75Hz–12kHz, Background Noise 60Hz–2kHz, Safety Alerts
+  175Hz–7kHz, Music 75Hz–12kHz, Background Noise 60Hz–2kHz, Safety Alerts
   300Hz–2kHz, Other 700Hz–12kHz.
 - `kWdrcNumBands` (6) / `kWdrcCrossoverHz` (100/299/894/2675/8000 Hz) —
   **only** used by the standalone crossover-flatness self-check in
@@ -425,7 +433,9 @@ masking-margin measurement doesn't represent what it does.
      active; reports mean and worst-case margin. **Not** measured on the
      priority class's full nominal `kUnmaskFrequencyRanges` band —
      `MARGIN_MEASUREMENT_PAD_OCTAVES` (0.85) pads inward from both edges
-     first (Dialogue's nominal 400Hz–7kHz becomes ~721Hz–3.9kHz measured).
+     first (Dialogue's nominal 175Hz–7kHz becomes ~315Hz–3.9kHz measured -
+     historical sweep data collected before this range was lowered from
+     400Hz used ~721Hz–3.9kHz instead; not retroactively recomputed).
      Reason: this script's own analysis bandpass filter, applied to the
      rendered output, interacts with Advanced mode's internal LR4
      crossover (a different filter shape) right at the shared nominal

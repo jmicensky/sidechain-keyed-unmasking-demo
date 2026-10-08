@@ -13,7 +13,7 @@ const CLASS_NAMES = ['Dialogue', 'Music', 'Background Noise', 'Safety Alerts', '
 // "Advanced-mode ducked band" badge and the gain-viz notch position, kept
 // in sync with the C++ side by hand since it's a fixed, rarely-changed table.
 const UNMASK_CHANNEL_RANGES = [
-  { lowHz: 400, highHz: 7000 },   // Dialogue
+  { lowHz: 175, highHz: 7000 },   // Dialogue
   { lowHz: 75, highHz: 12000 },   // Music
   { lowHz: 60, highHz: 2000 },    // Background Noise
   { lowHz: 300, highHz: 2000 },   // Safety Alerts
@@ -562,6 +562,7 @@ function applyAllControls(port) {
   }
   port.postMessage({ type: 'setProcessingTab', tab: activeTab === 'enhancement' ? 1 : 0 });
   port.postMessage({ type: 'setEnhancementBandMode', bandMode: enhancementBandMode });
+  port.postMessage({ type: 'setEnhancementBypassed', bypassed: $('enhancementBypassed').checked });
   for (let c = 0; c < 5; c++) {
     port.postMessage({ type: 'setEnhancementThresholdDb', channel: c, thresholdDb: parseFloat($(`enhThresholdDb${c}`).value) });
     port.postMessage({ type: 'setEnhancementRatio', channel: c, ratio: parseFloat($(`enhRatio${c}`).value) });
@@ -1028,6 +1029,9 @@ function wireControls() {
   $('tabUnmasking').addEventListener('click', () => setActiveTab('unmasking'));
   $('tabEnhancement').addEventListener('click', () => setActiveTab('enhancement'));
   $('enhancementBandModeBtn').addEventListener('click', toggleEnhancementBandMode);
+  $('enhancementBypassed').addEventListener('change', () => {
+    engineNode?.port.postMessage({ type: 'setEnhancementBypassed', bypassed: $('enhancementBypassed').checked });
+  });
   $('duckMode').addEventListener('change', () => {
     engineNode?.port.postMessage({ type: 'setMode', mode: parseInt($('duckMode').value, 10) });
     updateGainVisualization();

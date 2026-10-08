@@ -81,6 +81,8 @@ class EngineProcessor extends AudioWorkletProcessor {
         m._engine_set_processing_tab(e, msg.tab); break;
       case 'setEnhancementBandMode':
         m._engine_set_enhancement_band_mode(e, msg.bandMode); break;
+      case 'setEnhancementBypassed':
+        m._engine_set_enhancement_bypassed(e, msg.bypassed ? 1 : 0); break;
       case 'setEnhancementThresholdDb':
         m._engine_set_enhancement_threshold_db(e, msg.channel, msg.thresholdDb); break;
       case 'setEnhancementRatio':

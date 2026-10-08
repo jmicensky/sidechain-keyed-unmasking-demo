@@ -92,6 +92,7 @@
 
   <div class="controls">
   <div id="enhancementControls" style="display:none;">
+    <label><input type="checkbox" id="enhancementBypassed"> Bypassed <span class="hint">hear the raw signal without leaving this tab - all 5 channels' knobs/meters stay visible</span></label>
     <label>Band mode:
       <button type="button" id="enhancementBandModeBtn">Single-band</button>
       <span class="hint">applies to all 5 channels at once - Single-band reuses the Sidechain Compressor's math per channel; Multiband reuses the 6-band WDRC compressor per channel. Each channel's own Threshold/Ratio/Knee/Attack/Release knobs are on its row above.</span>
@@ -109,7 +110,7 @@
       </select>
     </label>
     <div class="range-badge">
-      Advanced-mode ducked band: <strong id="unmaskRangeReadout">400Hz&ndash;7kHz</strong>
+      Advanced-mode ducked band: <strong id="unmaskRangeReadout">175Hz&ndash;7kHz</strong>
       <span class="hint">tracks Key Channel (currently <span id="unmaskRangeChannelName">Dialogue</span>) - other channels get ducked only in this range</span>
     </div>
     <label>Advanced ducking:

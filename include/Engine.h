@@ -98,6 +98,8 @@ public:
             enhancementMultiband_[c].setBypassed(false); // always "live" - see tick()'s own bypass-ramp note above
             syncEnhancementChannel(c);
         }
+        enhancementBypassBlend_.prepare(sampleRate, kEnhancementBypassRampMs);
+        enhancementBypassBlend_.reset(1.0); // starts un-bypassed (processing active)
 
         for (int c = 0; c < kNumClasses; ++c) {
             strips_[c].audibleGain.prepare(sampleRate, kAudibleRampMs);
@@ -151,6 +153,22 @@ public:
     // regardless of which is selected (see prepare()/syncEnhancementChannel()),
     // so toggling mid-playback never needs to reseed parameters.
     void setEnhancementBandMode(EnhancementBandMode bandMode) { enhancementBandMode_ = bandMode; }
+
+    // Lets you A/B the Enhancement tab's processing against the raw signal
+    // without switching tabs (which would hide the per-channel knobs/
+    // meters you're comparing against). Unlike the Unmasking tab's "hear
+    // the dry signal" path (just disable Unmask - no separate bypass
+    // needed there), Enhancement has no such toggle built into its own
+    // controls, since every channel is always "enhanced" by design - this
+    // adds the same kind of smooth dry/processed crossfade WdrcCompressor
+    // already uses for its own bypass switch, applied to the whole tab at
+    // once rather than per-channel. The per-channel compressors keep
+    // running even while bypassed (not skipped, unlike WdrcCompressor's
+    // optimization for its always-ticked output stage) so there's no cold
+    // envelope-follower state to click into when un-bypassing.
+    void setEnhancementBypassed(bool bypassed) {
+        enhancementBypassBlend_.setTarget(bypassed ? 0.0 : 1.0);
+    }
 
     // Enhancement-only: each channel's fully independent threshold/ratio/
     // knee/attack/release - unlike Advanced Per-channel ducking (which only
@@ -380,6 +398,12 @@ public:
                 // keyBlend crossfade (there's nothing to cross-fade between;
                 // every channel is always "enhanced"). Mute/Solo still
                 // applies identically via audibleGain, same as Unmasking.
+                // bypassBlend crossfades the whole tab's processing in/out
+                // (1 = fully processed, 0 = raw) - see
+                // setEnhancementBypassed(). The compressors still run every
+                // sample regardless of blend, so their envelope-follower
+                // state never goes cold and un-bypassing can't click.
+                double bypassBlend = enhancementBypassBlend_.tick();
                 double minGain = 1.0;
                 for (int c = 0; c < kNumClasses; ++c) {
                     double rawL = stemsL_[c][sampleIndex_];
@@ -394,12 +418,21 @@ public:
                         gainReductionDb = enhancementMultiband_[c].lastGainReductionDb();
                     }
                     double channelGain = std::pow(10.0, gainReductionDb / 20.0);
-                    lastEnhancementChannelGain_[c] = channelGain;
-                    minGain = std::min(minGain, channelGain);
+                    // Reported gain reflects what's actually reaching the
+                    // mix, not the compressor's raw internal computation -
+                    // interpolated the same way the signal itself is below
+                    // (bypassed contributes unity gain), so the meter reads
+                    // 0dB while fully bypassed instead of a reduction amount
+                    // that isn't actually being heard.
+                    double effectiveGain = bypassBlend * channelGain + (1.0 - bypassBlend) * 1.0;
+                    lastEnhancementChannelGain_[c] = effectiveGain;
+                    minGain = std::min(minGain, effectiveGain);
 
+                    double outL = (1.0 - bypassBlend) * rawL + bypassBlend * chL;
+                    double outR = (1.0 - bypassBlend) * rawR + bypassBlend * chR;
                     double audible = strips_[c].audibleGain.tick();
-                    mixL += audible * chL;
-                    mixR += audible * chR;
+                    mixL += audible * outL;
+                    mixR += audible * outR;
                 }
                 lastGainLinear_ = minGain;
             } else {
@@ -585,6 +618,9 @@ public:
 private:
     static constexpr double kAudibleRampMs = 8.0;
     static constexpr double kKeyRampMs = 30.0;
+    // Matches WdrcCompressor's own kBypassRampMs - same kind of transition
+    // (crossfading a whole processing stage in/out), same ramp speed.
+    static constexpr double kEnhancementBypassRampMs = 25.0;
     // A single ~1-octave-wide analysis bump inherently captures far less
     // energy than the full-band detector Basic/Advanced use for the same
     // real signal, so the same CompressorParams threshold would almost
@@ -692,6 +728,7 @@ private:
     // match the Sidechain Compressor's own defaults, as a reasonable
     // starting point, not a literature-derived value for this new mode).
     EnhancementBandMode enhancementBandMode_ = EnhancementBandMode::SingleBand;
+    Smoother enhancementBypassBlend_; // see setEnhancementBypassed()
     std::array<CompressorParams, kNumClasses> enhancementParams_{};
     std::array<double, kNumClasses> enhancementMakeupGainDb_{}; // 0dB default each
     std::array<SingleBandEnhancementCompressor, kNumClasses> enhancementSingleBand_;

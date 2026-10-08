@@ -164,6 +164,13 @@ void engine_set_enhancement_band_mode(Engine* e, int bandMode) {
     e->setEnhancementBandMode(bandMode == 1 ? EnhancementBandMode::Multiband : EnhancementBandMode::SingleBand);
 }
 
+// Lets the Enhancement tab's processing be A/B'd against the raw signal
+// without switching tabs - see Engine::setEnhancementBypassed() doc comment.
+EMSCRIPTEN_KEEPALIVE
+void engine_set_enhancement_bypassed(Engine* e, int bypassed) {
+    e->setEnhancementBypassed(bypassed != 0);
+}
+
 // Enhancement-only: each channel's fully independent 5-parameter
 // compressor (see Engine::setEnhancement*() doc comments) - unlike Advanced
 // Per-channel ducking, every one of these 5 is independent per channel.
