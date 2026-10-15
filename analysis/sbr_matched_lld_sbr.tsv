@@ -2,9 +2,9 @@ setting	target_sbr_db	trim_db	scene	web_sbr_db	lld_sbr_db_lag0	lld_sbr_db_lag102
 basic_HI	5.1	0.1	construction	7.84146	8.09002	8.0036	7.96725
 basic_HI	5.1	0.1	publictransit	2.33898	2.33431	2.3089	2.26887
 basic_HI	5.1	0.1	restaurant	4.15262	3.65375	3.65431	3.61414
-basic_NH	12.2	2.6	construction	14.5642	17.6439	17.2597	15.0328
-basic_NH	12.2	2.6	publictransit	9.88802	11.5968	11.3974	9.28266
-basic_NH	12.2	2.6	restaurant	13.7794	13.2122	13.2003	10.8842
+basic_NH	12.2	1.1	construction	14.7787	15.7843	15.4177	14.9569
+basic_NH	12.2	1.1	publictransit	9.68603	10.0434	9.86368	9.45436
+basic_NH	12.2	1.1	restaurant	12.7935	11.777	11.768	11.2568
 comp_HI	5.1	1	construction	5.53615	7.12052	7.12052	6.33581
 comp_HI	5.1	1	publictransit	5.24597	4.81418	4.81418	3.99122
 comp_HI	5.1	1	restaurant	4.59883	4.73668	4.73668	3.9103

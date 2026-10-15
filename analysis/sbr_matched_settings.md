@@ -17,7 +17,7 @@ Field names are `ProcessingSettings` / `GroupCompressorSettings` (unity/Runtime/
 
 | thresholdDb | ratio | kneeDb | attackMs | releaseMs | maxReductionDb | keyGainDb |
 |---|---|---|---|---|---|---|
-| -55.4 | 9.77 | 0.0 | 47.1 | 517 | 26.2 | 0 |
+| -59.6 | 9.34 | 21.1 | 42.5 | 402 | 15.9 | 0 |
 
 ## Group compression - HI +5.1 dB  (`PS_comp_HI`)
 

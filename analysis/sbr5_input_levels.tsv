@@ -1,0 +1,6 @@
+scene	channel	rms_dbfs	rms_active_dbfs	peak_dbfs	lufs_integrated
+construction	Dialogue	-32.1441	-30.954	-8.96444	-28.7364
+construction	Music	-39.957	-40.1553	-18.5728	-37.0015
+construction	Background	-35.2007	-35.2166	-14.3816	-32.669
+construction	Safety	-47.4509	-46.5388	-19.0123	-35.2198
+construction	Other	-38.0121	-37.6255	-4.5599	-32.3162

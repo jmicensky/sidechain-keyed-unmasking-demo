@@ -1,0 +1,13 @@
+setting	target_sbr_db	trim_db	stage	channel	threshold_db	ratio	knee_db	attack_ms	release_ms	max_gr_db	makeup_db	construction_mean_gr_db	construction_mean_gr_active_db	construction_max_gr_db
+basic_T	5	-2.5	Sidechain	Music/Background/Safety/Other	-34.7	13.41	7.5	9	433	4	0	3.3436	3.82248	4
+comp_T	5	1.7	Compressor	Dialogue	-24.8	3.6	19.7	1.4	170	60	0	1.70404	2.22684	9.14422
+comp_T	5	1.7	Compressor	Music	-27.4	7.25	19.7	6.8	363	60	0	0.672377	0.639264	4.19756
+comp_T	5	1.7	Compressor	Background	-53.5	1.73	19.7	6.8	363	60	0	10.4376	10.4292	13.311
+comp_T	5	1.7	Compressor	Safety	-46	3.3	19.7	6.8	363	60	0	0.996718	1.09797	16.9818
+comp_T	5	1.7	Compressor	Other	-46.7	5.18	19.7	6.8	363	60	0	11.3564	11.5446	25.5867
+combined_T	5	1.1	Compressor	Dialogue	-34.5	2.28	22	17.1	85	60	0	1.982	2.59711	8.54199
+combined_T	5	1.1	Compressor	Music	-26.6	6.34	22	20.6	106	60	0	0.192422	0.172678	2.36965
+combined_T	5	1.1	Compressor	Background	-33.1	8.75	22	20.6	106	60	0	2.91223	2.90483	6.01253
+combined_T	5	1.1	Compressor	Safety	-39	5.35	22	20.6	106	60	0	0.35501	0.409813	12.5406
+combined_T	5	1.1	Compressor	Other	-32.3	3.8	22	20.6	106	60	0	0.893189	0.929847	9.68522
+combined_T	5	1.1	Sidechain	Music/Background/Safety/Other	-52.5	6.07	7.4	38.9	22	8.1	0	4.95099	6.45842	8.1

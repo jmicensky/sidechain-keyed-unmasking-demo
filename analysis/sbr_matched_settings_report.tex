@@ -1,6 +1,6 @@
 \documentclass[11pt]{article}
 \usepackage[margin=0.9in]{geometry}
-\usepackage{amsmath,booktabs,siunitx,float,enumitem}
+\usepackage{amsmath,booktabs,siunitx,float,enumitem,graphicx}
 \usepackage[colorlinks=true,linkcolor=blue,urlcolor=blue]{hyperref}
 \setlength{\emergencystretch}{2em}
 \title{SBR-Matched Dynamics Settings:\\ the Six Best Settings per Mode and Target}
@@ -24,10 +24,71 @@ scene (group compression and Combined).
 left by an RMS distance of at least 0.10 (parameters scaled to their search ranges), so the columns show different ways
 of reaching the target, not near-copies of \#1. \#1 is the setting used for the presets, renders and Unity handoff
 (those use it rounded to slider precision).
+\item \textbf{Chosen for the Unity test sequence} (column marked \textbf{Unity}): Basic unmasking HI \#1 and NH \#3;
+Group compression HI \#1 and NH \#1. Combined (group compression, then Basic unmasking keyed on uncompressed Dialogue)
+is not chosen yet; its \#1 is marked provisional.
 \item Scene SBRs unprocessed: Construction $+1.31$, Public Transit $-4.50$, Restaurant $-2.71$\,dB; raw Dialogue dynamic
 range (99th$-$30th percentile of 125\,ms levels) 14.3, 14.7, 14.5\,dB.
 \end{itemize}
 
+
+\section{Unity settings: SBR $+5.0$\,dB on Construction}
+One setting per Unity mixer snapshot, each searched so the Construction scene lands at $+5.0 \pm 0.10$\,dB (objective: error beyond $\pm0.05$\,dB penalized, then least gain reduction). Key and makeup gains 0\,dB; Dialogue compressed 1.5--6\,dB in the two compression modes. Values are the rounded ones shipped to Unity; the SBR rows were re-measured with those rounded values. Public Transit and Restaurant are for reference only.
+
+\begin{table}[H]\centering\scriptsize
+\caption{Web-engine parameters of the three Unity settings (--- = not part of that mode).}
+\resizebox{\linewidth}{!}{\begin{tabular}{@{}l l rrr@{}}\toprule
+\textbf{Parameter} & & \textbf{Unmasked} & \textbf{GroupCompress} & \textbf{GroupCompressed$>$Unmasked} \\\midrule
+Dialogue comp.\ threshold & dB & --- & -27.8 & -38.9 \\
+Dialogue comp.\ ratio & :1 & --- & 3.60 & 2.28 \\
+Dialogue comp.\ attack & ms & --- & 1.4 & 17.1 \\
+Dialogue comp.\ release & ms & --- & 170 & 85 \\
+Music comp.\ threshold & dB & --- & -35.6 & -33.9 \\
+Music comp.\ ratio & :1 & --- & 7.25 & 6.34 \\
+Background comp.\ threshold & dB & --- & -58.2 & -37.5 \\
+Background comp.\ ratio & :1 & --- & 1.73 & 8.75 \\
+Safety comp.\ threshold & dB & --- & -53.6 & -45.0 \\
+Safety comp.\ ratio & :1 & --- & 3.30 & 5.35 \\
+Other comp.\ threshold & dB & --- & -54.3 & -38.4 \\
+Other comp.\ ratio & :1 & --- & 5.18 & 3.80 \\
+Comp.\ knee (all groups) & dB & --- & 19.7 & 22.0 \\
+Comp.\ attack (4 background groups) & ms & --- & 6.8 & 20.6 \\
+Comp.\ release (4 background groups) & ms & --- & 363 & 106 \\
+Duck threshold & dB & -42.4 & --- & -61.4 \\
+Duck ratio & :1 & 13.41 & --- & 6.07 \\
+Duck knee & dB & 7.5 & --- & 7.4 \\
+Duck attack & ms & 9.0 & --- & 38.9 \\
+Duck release & ms & 433 & --- & 22 \\
+Duck max reduction & dB & 4.0 & --- & 8.1 \\
+Key / makeup gain & dB & 0 & 0 & 0 \\\midrule
+SBR, Constr. (reference) & dB & \textbf{+4.98} & \textbf{+5.00} & \textbf{+5.00} \\
+SBR, Transit & dB & -0.85 & +2.37 & +3.20 \\
+SBR, Rest. & dB & +0.93 & +2.64 & +3.53 \\
+SBR, Constr., LL Dynamics values (emulated, 1024-sample lag) & dB & +5.00 & +5.04 & +5.00 \\
+\bottomrule\end{tabular}}\end{table}
+
+\begin{table}[H]\centering\scriptsize
+\caption{LL Dynamics values to enter in Unity (Construction web-test levels; add each group's level offset $\Delta$ in Unity). Mean GR = speech-active mean gain reduction on Construction.}
+\resizebox{\linewidth}{!}{\begin{tabular}{@{}lllrrrrrrr@{}}\toprule
+Snapshot & Effect & Group & Thr.\ dB & Ratio & Knee dB & Atk.\ ms & Rel.\ ms & Max GR dB & Mean GR dB \\\midrule
+Unmasked & Sidechain & Music, Bkg., FX & -34.7 & 13.41 & 7.5 & 9.0 & 433 & 4.0 & 3.8 \\
+\midrule
+GroupCompress & Compressor & Dialogue & -24.8 & 3.60 & 19.7 & 1.4 & 170 & 60.0 & 2.2 \\
+GroupCompress & Compressor & Music & -27.4 & 7.25 & 19.7 & 6.8 & 363 & 60.0 & 0.6 \\
+GroupCompress & Compressor & Background & -53.5 & 1.73 & 19.7 & 6.8 & 363 & 60.0 & 10.4 \\
+GroupCompress & Compressor & Safety & -46.0 & 3.30 & 19.7 & 6.8 & 363 & 60.0 & 1.1 \\
+GroupCompress & Compressor & Other & -46.7 & 5.18 & 19.7 & 6.8 & 363 & 60.0 & 11.5 \\
+\midrule
+GroupCompressed$>$Unmasked & Compressor & Dialogue & -34.5 & 2.28 & 22.0 & 17.1 & 85 & 60.0 & 2.6 \\
+GroupCompressed$>$Unmasked & Compressor & Music & -26.6 & 6.34 & 22.0 & 20.6 & 106 & 60.0 & 0.2 \\
+GroupCompressed$>$Unmasked & Compressor & Background & -33.1 & 8.75 & 22.0 & 20.6 & 106 & 60.0 & 2.9 \\
+GroupCompressed$>$Unmasked & Compressor & Safety & -39.0 & 5.35 & 22.0 & 20.6 & 106 & 60.0 & 0.4 \\
+GroupCompressed$>$Unmasked & Compressor & Other & -32.3 & 3.80 & 22.0 & 20.6 & 106 & 60.0 & 0.9 \\
+GroupCompressed$>$Unmasked & Sidechain & Music, Bkg., FX & -52.5 & 6.07 & 7.4 & 38.9 & 22 & 8.1 & 6.5 \\
+\bottomrule
+\end{tabular}}\end{table}
+
+\clearpage
 
 \section{Basic unmasking}
 
@@ -35,7 +96,7 @@ range (99th$-$30th percentile of 125\,ms levels) 14.3, 14.7, 14.5\,dB.
 \begin{table}[H]\centering\scriptsize
 \begin{tabular}{@{}l l rrrrrr@{}}
 \toprule
-\textbf{Parameter} & & \textbf{\#1} & \textbf{\#2} & \textbf{\#3} & \textbf{\#4} & \textbf{\#5} & \textbf{\#6} \\
+\textbf{Parameter} & & \textbf{\#1} \textbf{(Unity)} & \textbf{\#2} & \textbf{\#3} & \textbf{\#4} & \textbf{\#5} & \textbf{\#6} \\
 \midrule
 Duck threshold & dB & -43.6 & -55.5 & -66.3 & -42.0 & -43.9 & -53.0 \\
 Duck ratio & :1 & 18.83 & 1.71 & 4.37 & 15.14 & 18.24 & 1.50 \\
@@ -60,7 +121,7 @@ Search objective $J$ & & 2.88 & 2.92 & 3.04 & 3.04 & 3.08 & 3.09 \\
 \begin{table}[H]\centering\scriptsize
 \begin{tabular}{@{}l l rrrrrr@{}}
 \toprule
-\textbf{Parameter} & & \textbf{\#1} & \textbf{\#2} & \textbf{\#3} & \textbf{\#4} & \textbf{\#5} & \textbf{\#6} \\
+\textbf{Parameter} & & \textbf{\#1} & \textbf{\#2} & \textbf{\#3} \textbf{(Unity)} & \textbf{\#4} & \textbf{\#5} & \textbf{\#6} \\
 \midrule
 Duck threshold & dB & -55.4 & -58.5 & -59.6 & -50.3 & -55.3 & -48.6 \\
 Duck ratio & :1 & 9.77 & 5.83 & 9.34 & 15.68 & 18.07 & 18.18 \\
@@ -89,7 +150,7 @@ Search objective $J$ & & 2.67 & 2.77 & 2.83 & 2.86 & 2.86 & 2.93 \\
 \begin{table}[H]\centering\scriptsize
 \begin{tabular}{@{}l l rrrrrr@{}}
 \toprule
-\textbf{Parameter} & & \textbf{\#1} & \textbf{\#2} & \textbf{\#3} & \textbf{\#4} & \textbf{\#5} & \textbf{\#6} \\
+\textbf{Parameter} & & \textbf{\#1} \textbf{(Unity)} & \textbf{\#2} & \textbf{\#3} & \textbf{\#4} & \textbf{\#5} & \textbf{\#6} \\
 \midrule
 Dialogue comp.\ threshold & dB & -38.9 & -41.2 & -39.4 & -42.7 & -43.8 & -33.1 \\
 Dialogue comp.\ ratio & :1 & 3.49 & 2.57 & 3.62 & 2.59 & 2.29 & 4.00 \\
@@ -124,7 +185,7 @@ Search objective $J$ & & 0.77 & 1.03 & 1.07 & 1.22 & 1.23 & 1.25 \\
 \begin{table}[H]\centering\scriptsize
 \begin{tabular}{@{}l l rrrrrr@{}}
 \toprule
-\textbf{Parameter} & & \textbf{\#1} & \textbf{\#2} & \textbf{\#3} & \textbf{\#4} & \textbf{\#5} & \textbf{\#6} \\
+\textbf{Parameter} & & \textbf{\#1} \textbf{(Unity)} & \textbf{\#2} & \textbf{\#3} & \textbf{\#4} & \textbf{\#5} & \textbf{\#6} \\
 \midrule
 Dialogue comp.\ threshold & dB & -31.8 & -34.1 & -31.0 & -39.0 & -35.9 & -39.3 \\
 Dialogue comp.\ ratio & :1 & 3.47 & 3.33 & 3.39 & 2.00 & 2.42 & 2.67 \\
@@ -163,7 +224,7 @@ Search objective $J$ & & 0.58 & 0.95 & 1.23 & 1.30 & 1.35 & 1.46 \\
 \begin{table}[H]\centering\scriptsize
 \begin{tabular}{@{}l l rrrrrr@{}}
 \toprule
-\textbf{Parameter} & & \textbf{\#1} & \textbf{\#2} & \textbf{\#3} & \textbf{\#4} & \textbf{\#5} & \textbf{\#6} \\
+\textbf{Parameter} & & \textbf{\#1} \textbf{(Unity, prov.)} & \textbf{\#2} & \textbf{\#3} & \textbf{\#4} & \textbf{\#5} & \textbf{\#6} \\
 \midrule
 Dialogue comp.\ threshold & dB & -44.7 & -44.1 & -39.1 & -39.8 & -40.2 & -39.0 \\
 Dialogue comp.\ ratio & :1 & 2.76 & 2.56 & 2.83 & 2.53 & 3.51 & 3.60 \\
@@ -207,7 +268,7 @@ Search objective $J$ & & 0.52 & 0.66 & 1.24 & 1.25 & 1.28 & 1.37 \\
 \begin{table}[H]\centering\scriptsize
 \begin{tabular}{@{}l l rrrrrr@{}}
 \toprule
-\textbf{Parameter} & & \textbf{\#1} & \textbf{\#2} & \textbf{\#3} & \textbf{\#4} & \textbf{\#5} & \textbf{\#6} \\
+\textbf{Parameter} & & \textbf{\#1} \textbf{(Unity, prov.)} & \textbf{\#2} & \textbf{\#3} & \textbf{\#4} & \textbf{\#5} & \textbf{\#6} \\
 \midrule
 Dialogue comp.\ threshold & dB & -33.6 & -36.1 & -41.4 & -36.5 & -39.9 & -40.4 \\
 Dialogue comp.\ ratio & :1 & 3.98 & 3.88 & 3.32 & 3.08 & 3.29 & 2.32 \\
@@ -293,9 +354,9 @@ Setting & Scene & SBR dB & True margin gain dB & Estimator margin gain dB & Best
 \texttt{basic\_HI} & Transit & +2.34 & +7.41 & +8.46 & +6.68 \\
 \texttt{basic\_HI} & Rest. & +4.15 & +7.19 & +8.48 & +6.82 \\
 \midrule
-\texttt{basic\_NH} & Constr. & +14.56 & +19.17 & +24.96 & +6.97 \\
-\texttt{basic\_NH} & Transit & +9.89 & +18.83 & +24.12 & +6.68 \\
-\texttt{basic\_NH} & Rest. & +13.78 & +18.71 & +25.84 & +6.82 \\
+\texttt{basic\_NH} & Constr. & +14.78 & +15.40 & +19.19 & +6.97 \\
+\texttt{basic\_NH} & Transit & +9.69 & +15.47 & +18.87 & +6.68 \\
+\texttt{basic\_NH} & Rest. & +12.79 & +15.62 & +20.45 & +6.82 \\
 \midrule
 \texttt{comp\_HI} & Constr. & +5.54 & +5.65 & -- & +6.97 \\
 \texttt{comp\_HI} & Transit & +5.25 & +10.79 & -- & +6.68 \\

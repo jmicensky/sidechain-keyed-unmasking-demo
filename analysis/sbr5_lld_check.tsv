@@ -1,0 +1,4 @@
+setting	scene	web_sbr_db	lld_sbr_db_lag0	lld_sbr_db_lag1024
+basic_T	construction	4.97611	4.70826	4.65246
+comp_T	construction	4.99996	5.63566	5.63566
+combined_T	construction	5.00419	5.49028	5.29118

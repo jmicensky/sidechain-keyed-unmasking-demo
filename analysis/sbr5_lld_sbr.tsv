@@ -1,0 +1,4 @@
+setting	target_sbr_db	trim_db	scene	web_sbr_db	lld_sbr_db_lag0	lld_sbr_db_lag1024	lld_trimmed_sbr_db_lag1024
+basic_T	5	-2.5	construction	4.97611	4.70826	4.65246	4.99723
+comp_T	5	1.7	construction	4.99996	5.63566	5.63566	5.03653
+combined_T	5	1.1	construction	5.00419	5.49028	5.29118	5.00484

@@ -2,9 +2,9 @@ setting	scene	stage	channel	web_threshold_db	ratio	knee_db	attack_ms	release_ms	
 basic_HI	construction	sidechain	Music/Background/Safety/Other	-43.6	18.83	20.3	31.9	607	5.96942	7.305	8	-34.6594	8	5.96942	6.84888	8
 basic_HI	publictransit	sidechain	Music/Background/Safety/Other	-43.6	18.83	20.3	31.9	607	5.66163	7.18283	8	-35.4178	8	5.66163	6.89153	8
 basic_HI	restaurant	sidechain	Music/Background/Safety/Other	-43.6	18.83	20.3	31.9	607	7.19311	7.19416	8	-37.0152	8	7.19311	7.19418	8
-basic_NH	construction	sidechain	Music/Background/Safety/Other	-55.4	9.77	0	47.1	517	15.4406	18.8148	26.2	-47.7991	26.2	15.4406	17.2561	24.6859
-basic_NH	publictransit	sidechain	Music/Background/Safety/Other	-55.4	9.77	0	47.1	517	14.4588	18.155	26.2	-48.4015	26.2	14.4588	17.1942	24.4864
-basic_NH	restaurant	sidechain	Music/Background/Safety/Other	-55.4	9.77	0	47.1	517	18.7102	18.7123	26.2	-50.2003	26.2	18.7102	18.712	25.8173
+basic_NH	construction	sidechain	Music/Background/Safety/Other	-59.6	9.34	21.1	42.5	402	13.0155	15.3116	15.9	-47.248	15.9	13.0155	14.6936	15.9
+basic_NH	publictransit	sidechain	Music/Background/Safety/Other	-59.6	9.34	21.1	42.5	402	12.4234	15.2727	15.9	-48.4613	15.9	12.4234	14.8734	15.9
+basic_NH	restaurant	sidechain	Music/Background/Safety/Other	-59.6	9.34	21.1	42.5	402	15.6166	15.6174	15.9	-53.1958	15.9	15.6166	15.6173	15.9
 comp_HI	construction	compressor	Dialogue	-38.9	3.49	5.1	9	170	3.69305	4.85585	14.5567	-34.5701	60	3.69306	4.81618	12.8235
 comp_HI	construction	compressor	Music	-44.8	6.81	5.1	19.3	461	3.52297	3.49061	11.6334	-37.8587	60	3.52297	3.46065	11.11
 comp_HI	construction	compressor	Background	-53.2	4.66	5.1	19.3	461	15.711	15.7235	20.0706	-49.7977	60	15.711	15.6991	20.042

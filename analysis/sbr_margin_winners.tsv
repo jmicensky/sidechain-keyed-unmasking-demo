@@ -2,9 +2,9 @@ setting	scene	sbr_db	true_margin_gain_db	estimator_margin_gain_db	best_margin_ga
 basic_HI	construction	7.841	7.382	8.739	6.966
 basic_HI	publictransit	2.339	7.409	8.461	6.681
 basic_HI	restaurant	4.153	7.194	8.477	6.819
-basic_NH	construction	14.564	19.173	24.956	6.966
-basic_NH	publictransit	9.888	18.826	24.118	6.681
-basic_NH	restaurant	13.779	18.710	25.836	6.819
+basic_NH	construction	14.779	15.396	19.190	6.966
+basic_NH	publictransit	9.686	15.468	18.874	6.681
+basic_NH	restaurant	12.793	15.618	20.453	6.819
 comp_HI	construction	5.536	5.646	nan	6.966
 comp_HI	publictransit	5.246	10.794	nan	6.681
 comp_HI	restaurant	4.599	10.132	nan	6.819

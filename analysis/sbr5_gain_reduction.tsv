@@ -1,0 +1,13 @@
+setting	scene	stage	channel	web_threshold_db	ratio	knee_db	attack_ms	release_ms	web_mean_gr_db	web_mean_gr_active_db	web_max_gr_db	lld_threshold_db	lld_max_gr_param_db	lld_mean_gr_db	lld_mean_gr_active_db	lld_max_gr_db
+basic_T	construction	sidechain	Music/Background/Safety/Other	-42.4	13.41	7.5	9	433	3.04975	3.80974	4	-32.2318	4	3.04975	3.64284	4
+comp_T	construction	compressor	Dialogue	-27.8	3.6	19.7	1.4	170	1.71308	2.25308	10.1918	-24.8321	60	1.71308	2.23853	9.16743
+comp_T	construction	compressor	Music	-35.6	7.25	19.7	6.8	363	1.03925	1.01254	5.40284	-29.0517	60	1.03925	1.00189	5.25838
+comp_T	construction	compressor	Background	-58.2	1.73	19.7	6.8	363	11.1352	11.1386	13.656	-55.1532	60	11.1352	11.1268	14.0086
+comp_T	construction	compressor	Safety	-53.6	3.3	19.7	6.8	363	1.18092	1.29538	18.6027	-47.7457	60	1.18092	1.29647	18.1985
+comp_T	construction	compressor	Other	-54.3	5.18	19.7	6.8	363	12.6824	12.9164	28.2258	-48.4106	60	12.6824	12.8777	26.967
+combined_T	construction	compressor	Dialogue	-38.9	2.28	22	17.1	85	1.9766	2.59941	9.92224	-34.4788	60	1.9766	2.59008	8.53006
+combined_T	construction	compressor	Music	-33.9	6.34	22	20.6	106	0.195729	0.181725	2.46505	-26.6458	60	0.195729	0.175842	2.38921
+combined_T	construction	compressor	Background	-37.5	8.75	22	20.6	106	2.91063	2.90723	6.29687	-33.0967	60	2.91063	2.90324	6.01022
+combined_T	construction	compressor	Safety	-45	5.35	22	20.6	106	0.355451	0.408279	12.6869	-39.0085	60	0.355451	0.4103	12.5476
+combined_T	construction	compressor	Other	-38.4	3.8	22	20.6	106	0.887898	0.918266	9.40564	-32.2712	60	0.887898	0.924387	9.664
+combined_T	construction	sidechain	Music/Background/Safety/Other	-61.4	6.07	7.4	38.9	22	5.12384	6.73137	8.1	-53.5547	8.1	5.12384	6.72547	8.1

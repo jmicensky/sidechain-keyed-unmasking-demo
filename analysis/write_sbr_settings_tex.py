@@ -76,7 +76,14 @@ def settings_table(mode, mode_label, target):
     o.append("\\begin{table}[H]\\centering\\scriptsize")
     o.append(f"\\begin{{tabular}}{{@{{}}l l {'r' * cols}@{{}}}}")
     o.append("\\toprule")
-    o.append("\\textbf{Parameter} & & " + " & ".join(f"\\textbf{{\\#{i + 1}}}" for i in range(cols)) + " \\\\")
+    from export_sbr_presets import SELECTION, PROVISIONAL
+    chosen = SELECTION[(mode, target)]
+    def head(i):
+        if i + 1 != chosen:
+            return f"\\textbf{{\\#{i + 1}}}"
+        tag = "Unity, prov." if (mode, target) in PROVISIONAL else "Unity"
+        return f"\\textbf{{\\#{i + 1}}} \\textbf{{({tag})}}"
+    o.append("\\textbf{Parameter} & & " + " & ".join(head(i) for i in range(cols)) + " \\\\")
     o.append("\\midrule")
     for p in params:
         label, unit = LABELS[p]
@@ -181,10 +188,68 @@ def crossover():
     return "\n".join(o)
 
 
+def sbr5_section():
+    """The three settings chosen for Unity: +5.0 dB SBR on Construction, one per snapshot."""
+    tsv = HERE / "sbr5_settings.tsv"
+    if not tsv.exists():
+        return ""
+    settings = {l.split("\t")[1]: l.split("\t")[2] for l in tsv.read_text().splitlines() if l}
+    evals = read_csv(HERE / "sbr5_eval.tsv", "\t")
+    lld = read_csv(HERE / "sbr5_lld_settings.tsv", "\t")
+    lld_sbr = read_csv(HERE / "sbr5_lld_sbr.tsv", "\t")
+    lag = next(k for k in lld_sbr[0] if k.startswith("lld_trimmed_sbr_db_lag")).split("lag")[-1]
+    modes = [("basic", "Unmasked"), ("comp", "GroupCompress"), ("combined", "GroupCompressed$>$Unmasked")]
+
+    def dims(mode):
+        with open(HERE / f"sbr5_{mode}.csv") as f:
+            header = next(csv.reader(f))
+        return [h for h in header[2:] if h in LABELS]
+
+    vals = {m: dict(zip(dims(m), (float(v) for v in settings[m].split(",")))) for m, _ in modes}
+    allp = [p for p in LABELS if any(p in vals[m] for m, _ in modes)]
+    o = ["\\clearpage", "\\section{Unity settings: SBR $+5.0$\\,dB on Construction}",
+         "One setting per Unity mixer snapshot, each searched so the Construction scene lands at $+5.0 \\pm 0.10$\\,dB "
+         "(objective: error beyond $\\pm0.05$\\,dB penalized, then least gain reduction). Key and makeup gains 0\\,dB; "
+         "Dialogue compressed 1.5--6\\,dB in the two compression modes. Values are the rounded ones shipped to Unity; "
+         "the SBR rows were re-measured with those rounded values. Public Transit and Restaurant are for reference only.",
+         "", "\\begin{table}[H]\\centering\\scriptsize",
+         "\\caption{Web-engine parameters of the three Unity settings (--- = not part of that mode).}",
+         "\\resizebox{\\linewidth}{!}{\\begin{tabular}{@{}l l rrr@{}}\\toprule",
+         "\\textbf{Parameter} & & " + " & ".join(f"\\textbf{{{snap}}}" for _, snap in modes) + " \\\\\\midrule"]
+    for p in allp:
+        label, unit = LABELS[p]
+        o.append(f"{label} & {unit} & " + " & ".join(fmt(p, vals[m][p]) if p in vals[m] else "---" for m, _ in modes) + " \\\\")
+    o.append("Key / makeup gain & dB & 0 & 0 & 0 \\\\\\midrule")
+    for sc in SCENES:
+        cells = []
+        for m, _ in modes:
+            e = next(x for x in evals if x["id"] == f"{m}_T" and x["scene"] == sc)
+            v = float(e["sbr_db"])
+            cells.append(f"\\textbf{{{v:+.2f}}}" if sc == "construction" else f"{v:+.2f}")
+        o.append(f"SBR, {SCENE_SHORT[sc]}{' (reference)' if sc == 'construction' else ''} & dB & " + " & ".join(cells) + " \\\\")
+    o.append(f"SBR, Constr., LL Dynamics values (emulated, {lag}-sample lag) & dB & " + " & ".join(
+        f"{float(next(x for x in lld_sbr if x['setting'] == m + '_T')[f'lld_trimmed_sbr_db_lag{lag}']):+.2f}" for m, _ in modes) + " \\\\")
+    o += ["\\bottomrule\\end{tabular}}\\end{table}", "",
+          "\\begin{table}[H]\\centering\\scriptsize",
+          "\\caption{LL Dynamics values to enter in Unity (Construction web-test levels; add each group's level offset "
+          "$\\Delta$ in Unity). Mean GR = speech-active mean gain reduction on Construction.}",
+          "\\resizebox{\\linewidth}{!}{\\begin{tabular}{@{}lllrrrrrrr@{}}\\toprule",
+          "Snapshot & Effect & Group & Thr.\\ dB & Ratio & Knee dB & Atk.\\ ms & Rel.\\ ms & Max GR dB & Mean GR dB \\\\\\midrule"]
+    for i, (m, snap) in enumerate(modes):
+        for r in [x for x in lld if x["setting"] == f"{m}_T"]:
+            grp = "Music, Bkg., FX" if r["channel"] == "Music/Background/Safety/Other" else r["channel"]
+            o.append(f"{snap} & {r['stage']} & {grp} & {float(r['threshold_db']):.1f} & {float(r['ratio']):.2f} & "
+                     f"{float(r['knee_db']):.1f} & {float(r['attack_ms']):.1f} & {float(r['release_ms']):.0f} & "
+                     f"{float(r['max_gr_db']):.1f} & {float(r['construction_mean_gr_active_db']):.1f} \\\\")
+        o.append("\\midrule" if i < len(modes) - 1 else "\\bottomrule")
+    o.append("\\end{tabular}}\\end{table}")
+    return "\n".join(o)
+
+
 def main():
     parts = [r"""\documentclass[11pt]{article}
 \usepackage[margin=0.9in]{geometry}
-\usepackage{amsmath,booktabs,siunitx,float,enumitem}
+\usepackage{amsmath,booktabs,siunitx,float,enumitem,graphicx}
 \usepackage[colorlinks=true,linkcolor=blue,urlcolor=blue]{hyperref}
 \setlength{\emergencystretch}{2em}
 \title{SBR-Matched Dynamics Settings:\\ the Six Best Settings per Mode and Target}
@@ -208,10 +273,15 @@ scene (group compression and Combined).
 left by an RMS distance of at least 0.10 (parameters scaled to their search ranges), so the columns show different ways
 of reaching the target, not near-copies of \#1. \#1 is the setting used for the presets, renders and Unity handoff
 (those use it rounded to slider precision).
+\item \textbf{Chosen for the Unity test sequence} (column marked \textbf{Unity}): Basic unmasking HI \#1 and NH \#3;
+Group compression HI \#1 and NH \#1. Combined (group compression, then Basic unmasking keyed on uncompressed Dialogue)
+is not chosen yet; its \#1 is marked provisional.
 \item Scene SBRs unprocessed: Construction $+1.31$, Public Transit $-4.50$, Restaurant $-2.71$\,dB; raw Dialogue dynamic
 range (99th$-$30th percentile of 125\,ms levels) 14.3, 14.7, 14.5\,dB.
 \end{itemize}
 """]
+    parts.append(sbr5_section().replace("\\clearpage\n", "", 1))
+    parts.append("\\clearpage")
     for mode, label in MODES:
         parts.append(f"\\section{{{label}}}")
         for target in TARGETS:

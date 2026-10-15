@@ -32,7 +32,7 @@ window.SBR_EXAMPLES = {
         {
           "label": "Basic unmasking (NH target)",
           "file": "../paper-audio/sbr-matched/construction_basic_NH.mp3",
-          "sbrDb": 14.56,
+          "sbrDb": 14.78,
           "dialogueRangeDb": 14.35
         },
         {
@@ -80,7 +80,7 @@ window.SBR_EXAMPLES = {
         {
           "label": "Basic unmasking (NH target)",
           "file": "../paper-audio/sbr-matched/publictransit_basic_NH.mp3",
-          "sbrDb": 9.89,
+          "sbrDb": 9.69,
           "dialogueRangeDb": 14.72
         },
         {
@@ -128,7 +128,7 @@ window.SBR_EXAMPLES = {
         {
           "label": "Basic unmasking (NH target)",
           "file": "../paper-audio/sbr-matched/restaurant_basic_NH.mp3",
-          "sbrDb": 13.78,
+          "sbrDb": 12.79,
           "dialogueRangeDb": 14.49
         },
         {

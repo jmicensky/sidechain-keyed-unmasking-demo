@@ -1,6 +1,6 @@
 setting	target_sbr_db	trim_db	stage	channel	threshold_db	ratio	knee_db	attack_ms	release_ms	max_gr_db	makeup_db	construction_mean_gr_db	construction_mean_gr_active_db	construction_max_gr_db	publictransit_mean_gr_db	publictransit_mean_gr_active_db	publictransit_max_gr_db	restaurant_mean_gr_db	restaurant_mean_gr_active_db	restaurant_max_gr_db
 basic_HI	5.1	0.1	Sidechain	Music/Background/Safety/Other	-35.6	18.83	20.3	31.9	607	8	0	6.31979	7.12938	8	5.72568	6.93733	8	6.78058	6.78167	8
-basic_NH	12.2	2.6	Sidechain	Music/Background/Safety/Other	-46.2	9.77	0	47.1	517	26.2	0	14.0499	15.737	23.2505	12.6897	15.1764	22.5102	15.1196	15.1214	22.2265
+basic_NH	12.2	1.1	Sidechain	Music/Background/Safety/Other	-48.5	9.34	21.1	42.5	402	15.9	0	13.4929	14.9744	15.9	12.4364	14.8323	15.9	14.7244	14.7258	15.9
 comp_HI	5.1	1	Compressor	Dialogue	-34.6	3.49	5.1	9	170	60	0	3.70785	4.8351	12.8448	3.28035	4.23544	12.5474	4.06284	4.06371	12.0265
 comp_HI	5.1	1	Compressor	Music	-38.8	6.81	5.1	19.3	461	60	0	4.20853	4.1501	11.9131	7.13878	7.02908	11.514	8.23788	8.23691	17.1964
 comp_HI	5.1	1	Compressor	Background	-48.2	4.66	5.1	19.3	461	60	0	14.4563	14.4443	18.7871	17.9621	17.9629	27.878	14.1468	14.1471	21.9957

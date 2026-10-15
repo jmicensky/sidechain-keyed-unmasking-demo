@@ -3,8 +3,9 @@
 window.SBR_PRESETS = [
   {
     "id": "basic_HI",
-    "label": "Basic unmasking - HI +5.1 dB",
+    "label": "Basic unmasking - HI +5.1 dB (#1)",
     "target": "HI",
+    "rank": 1,
     "mode": "basic",
     "duck": {
       "thresholdDb": -43.6,
@@ -18,23 +19,25 @@ window.SBR_PRESETS = [
   },
   {
     "id": "basic_NH",
-    "label": "Basic unmasking - NH +12.2 dB",
+    "label": "Basic unmasking - NH +12.2 dB (#3)",
     "target": "NH",
+    "rank": 3,
     "mode": "basic",
     "duck": {
-      "thresholdDb": -55.4,
-      "ratio": 9.77,
-      "kneeDb": 0.0,
-      "attackMs": 47.1,
-      "releaseMs": 517.0,
-      "maxReductionDb": 26.2,
+      "thresholdDb": -59.6,
+      "ratio": 9.34,
+      "kneeDb": 21.1,
+      "attackMs": 42.5,
+      "releaseMs": 402.0,
+      "maxReductionDb": 15.9,
       "keyGainDb": 0.0
     }
   },
   {
     "id": "comp_HI",
-    "label": "Group compression - HI +5.1 dB",
+    "label": "Group compression - HI +5.1 dB (#1)",
     "target": "HI",
+    "rank": 1,
     "mode": "comp",
     "groups": [
       {
@@ -81,8 +84,9 @@ window.SBR_PRESETS = [
   },
   {
     "id": "comp_NH",
-    "label": "Group compression - NH +12.2 dB",
+    "label": "Group compression - NH +12.2 dB (#1)",
     "target": "NH",
+    "rank": 1,
     "mode": "comp",
     "groups": [
       {
@@ -129,8 +133,9 @@ window.SBR_PRESETS = [
   },
   {
     "id": "combined_HI",
-    "label": "Combined - HI +5.1 dB",
+    "label": "Combined - HI +5.1 dB (#1) (provisional)",
     "target": "HI",
+    "rank": 1,
     "mode": "combined",
     "duck": {
       "thresholdDb": -59.1,
@@ -186,8 +191,9 @@ window.SBR_PRESETS = [
   },
   {
     "id": "combined_NH",
-    "label": "Combined - NH +12.2 dB",
+    "label": "Combined - NH +12.2 dB (#1) (provisional)",
     "target": "NH",
+    "rank": 1,
     "mode": "combined",
     "duck": {
       "thresholdDb": -60.8,

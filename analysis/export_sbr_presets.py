@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Turns sbr_matched_search's winning settings into the three places they're used.
 
-Reads analysis/sbr_matched_{basic,comp,combined}_best.tsv (+ the matching
-.csv for parameter names), rounds every value to the precision the web
+Takes the settings chosen for the Unity test sequence (SELECTION below: a rank
+in the "#1-#6 best distinct settings" tables of sbr_matched_settings_report.pdf,
+ranked by the same code), rounds every value to the precision the web
 sliders / Unity fields hold, and writes:
 
   analysis/sbr_matched_settings.tsv  - rounded settings, input to
@@ -25,6 +26,19 @@ MODE_LABEL = {"basic": "Basic unmasking", "comp": "Group compression", "combined
 TARGET_LABEL = {"HI": "HI +5.1 dB", "NH": "NH +12.2 dB"}
 CLASSES = ["dialogue", "music", "background", "safety", "other"]
 CLASS_LABEL = ["Dialogue", "Music", "Background Noise", "Safety Alerts", "Other"]
+
+# Settings chosen for the Unity test sequence: (mode, target) -> rank (#) in that
+# mode/target's table in sbr_matched_settings_report.pdf. Chosen 2026-10-15.
+# Combined is still provisional (#1) - not chosen yet.
+SELECTION = {
+    ("basic", "HI"): 1,
+    ("basic", "NH"): 3,
+    ("comp", "HI"): 1,
+    ("comp", "NH"): 1,
+    ("combined", "HI"): 1,
+    ("combined", "NH"): 1,
+}
+PROVISIONAL = {("combined", "HI"), ("combined", "NH")}
 
 
 def rounding(name):
@@ -71,22 +85,26 @@ def to_settings(mode, p):
 
 def main():
     tsv_lines, presets, md = [], [], []
+    import sys
+    sys.path.insert(0, str(ANALYSIS))
+    from write_sbr_settings_tex import pick_distinct, read_csv, LABELS
     for mode in MODES:
-        best = ANALYSIS / f"sbr_matched_{mode}_best.tsv"
-        if not best.exists():
-            continue
+        rows = read_csv(ANALYSIS / f"sbr_matched_{mode}.csv")
         names = dims_for(mode)
-        for line in best.read_text().splitlines():
-            label, _, values = line.split("\t")
-            target = label.split("_")[-1]
-            vals = [round(float(v), rounding(n)) for n, v in zip(names, values.split(","))]
+        for target in ("HI", "NH"):
+            rank = SELECTION[(mode, target)]
+            ranked, _ = pick_distinct(rows, [k for k in rows[0] if k in LABELS], target)
+            chosen = ranked[rank - 1]
+            vals = [round(float(chosen[n]), rounding(n)) for n in names]
             p = dict(zip(names, vals))
             tsv_lines.append(f"{mode}_{target}\t{mode}\t" + ",".join(repr(v) for v in vals))
             settings = to_settings(mode, p)
+            note = " (provisional)" if (mode, target) in PROVISIONAL else ""
             presets.append({
                 "id": f"{mode}_{target}",
-                "label": f"{MODE_LABEL[mode]} - {TARGET_LABEL[target]}",
+                "label": f"{MODE_LABEL[mode]} - {TARGET_LABEL[target]} (#{rank}){note}",
                 "target": target,
+                "rank": rank,
                 **settings,
             })
             md.append((mode, target, settings))

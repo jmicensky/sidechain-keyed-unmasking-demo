@@ -376,13 +376,14 @@ std::vector<std::vector<double>> latinHypercube(const std::vector<Dim>& dims, in
 
 const char* kSceneNames[3] = {"construction", "publictransit", "restaurant"};
 
-void writeEvalHeader(std::ostream& f, const std::vector<Dim>& dims) {
+void writeEvalHeader(std::ostream& f, const std::vector<Dim>& dims,
+                     const char* errCols = "worst_err_hi_db,worst_err_nh_db") {
     f << "stage,target";
     for (auto& d : dims) f << "," << d.name;
     for (auto* s : kSceneNames)
         f << "," << s << "_sbr_db," << s << "_mean_duck_db," << s << "_duck_engaged_frac," << s
           << "_dialogue_gr_db," << s << "_background_gr_db," << s << "_dialogue_range_db";
-    f << ",worst_err_hi_db,worst_err_nh_db,processing_db,penalty\n";
+    f << "," << errCols << ",processing_db,penalty\n";
 }
 
 void writeEval(std::ostream& f, const std::string& stage, const std::string& target, const Eval& e) {
@@ -682,6 +683,15 @@ int main(int argc, char** argv) {
                   << r.dialogueRangeDb << " dB\n";
     }
 
+    if (a.count("--only-scene")) {
+        // Restrict --report / --render / --eval to one scene (e.g. the reference scene).
+        std::vector<Scene> keep;
+        for (auto& s : scenes) if (s.name == a["--only-scene"]) keep.push_back(std::move(s));
+        if (keep.empty()) { std::cerr << "unknown --only-scene\n"; return 1; }
+        scenes = std::move(keep);
+    }
+    const std::string outPrefix = "analysis/" + (a.count("--tag") ? a["--tag"] : std::string("sbr_matched"));
+
     if (a.count("--validate")) {
         std::mt19937 rng(7);
         for (std::string mode : {"basic", "comp"}) {
@@ -766,7 +776,7 @@ int main(int argc, char** argv) {
         const char* chName[kNumClasses] = {"Dialogue", "Music", "Background", "Safety", "Other"};
         const int lagBlock = a.count("--lag") ? std::stoi(a["--lag"]) : 1024;
 
-        std::ofstream lv("analysis/sbr_matched_input_levels.tsv");
+        std::ofstream lv(outPrefix + "_input_levels.tsv");
         lv << "scene\tchannel\trms_dbfs\trms_active_dbfs\tpeak_dbfs\tlufs_integrated\n";
         for (auto& s : scenes)
             for (int c = 0; c < kNumClasses; ++c) {
@@ -782,19 +792,19 @@ int main(int argc, char** argv) {
                    << integratedLufs(s.L[c], s.R[c]) << "\n";
             }
 
-        std::ofstream gr("analysis/sbr_matched_gain_reduction.tsv");
+        std::ofstream gr(outPrefix + "_gain_reduction.tsv");
         gr << "setting\tscene\tstage\tchannel\tweb_threshold_db\tratio\tknee_db\tattack_ms\trelease_ms\t"
               "web_mean_gr_db\tweb_mean_gr_active_db\tweb_max_gr_db\tlld_threshold_db\tlld_max_gr_param_db\t"
               "lld_mean_gr_db\tlld_mean_gr_active_db\tlld_max_gr_db\n";
-        std::ofstream chk("analysis/sbr_matched_lld_check.tsv");
+        std::ofstream chk(outPrefix + "_lld_check.tsv");
         chk << "setting\tscene\tweb_sbr_db\tlld_sbr_db_lag0\tlld_sbr_db_lag" << lagBlock << "\n";
 
-        std::ofstream fin("analysis/sbr_matched_lld_settings.tsv");
+        std::ofstream fin(outPrefix + "_lld_settings.tsv");
         fin << "setting\ttarget_sbr_db\ttrim_db\tstage\tchannel\tthreshold_db\tratio\tknee_db\tattack_ms\t"
                "release_ms\tmax_gr_db\tmakeup_db";
         for (auto& s : scenes) fin << "\t" << s.name << "_mean_gr_db\t" << s.name << "_mean_gr_active_db\t" << s.name << "_max_gr_db";
         fin << "\n";
-        std::ofstream finSbr("analysis/sbr_matched_lld_sbr.tsv");
+        std::ofstream finSbr(outPrefix + "_lld_sbr.tsv");
         finSbr << "setting\ttarget_sbr_db\ttrim_db\tscene\tweb_sbr_db\tlld_sbr_db_lag0\tlld_sbr_db_lag" << lagBlock
                << "\tlld_trimmed_sbr_db_lag" << lagBlock << "\n";
 
@@ -863,7 +873,8 @@ int main(int argc, char** argv) {
 
             // One trim (dB) on top of the scene-averaged thresholds so the LL Dynamics
             // chain, with a one-block sidechain lag, lands on the target SBR in all scenes.
-            const double target = label.find("_NH") != std::string::npos ? 12.2 : 5.1;
+            const double target = a.count("--target") ? std::stod(a["--target"])
+                                                      : (label.find("_NH") != std::string::npos ? 12.2 : 5.1);
             auto worstErr = [&](float delta) {
                 double worst = 0.0;
                 for (auto& s : scenes) worst = std::max(worst, std::fabs(lldChain(s, trimmed(single, delta), lagBlock).sbrDb - target));
@@ -969,6 +980,80 @@ int main(int argc, char** argv) {
     const int perGen = a.count("--per-gen") ? std::stoi(a["--per-gen"]) : 30;
     const auto dims = dimsFor(mode);
     std::mt19937 rng(a.count("--seed") ? std::stoul(a["--seed"]) : 42u);
+
+    if (a.count("--target")) {
+        // Fixed-target mode: one setting whose SBR on ONE reference scene is within
+        // tolerance of --target (other scenes are rendered and logged for reference
+        // only). Objective: error beyond +-0.05 dB is heavily penalized, so inside
+        // that band the gentlest processing wins; Dialogue-compression constraint
+        // applied on the reference scene.
+        const double T = std::stod(a["--target"]);
+        const std::string ref = a.count("--ref-scene") ? a["--ref-scene"] : "construction";
+        size_t ri = 0;
+        while (ri < scenes.size() && scenes[ri].name != ref) ++ri;
+        if (ri == scenes.size()) { std::cerr << "unknown --ref-scene " << ref << "\n"; return 1; }
+        auto refScore = [&](Eval& e) {
+            const SceneResult& r = e.scenes[ri];
+            Setting st = toSetting(mode, dims, e.v);
+            double pen = 0.0;
+            if (st.comp) {
+                double gr = -r.meanDialogueGrDb;
+                if (gr < kDialogueGrMinDb) pen += kDialogueGrMinDb - gr;
+                if (gr > kDialogueGrMaxDb) pen += gr - kDialogueGrMaxDb;
+            }
+            double proc = -r.meanDuckDb - r.meanBackgroundGrDb - r.meanDialogueGrDb;
+            e.err[0] = std::fabs(r.sbrDb - T);
+            e.err[1] = 0.0;
+            e.processing = proc;
+            e.penalty = pen;
+            // The Dialogue-compression constraint is as hard as the SBR tolerance (same weight).
+            e.J[0] = 20.0 * std::max(e.err[0] - 0.05, 0.0) + kProcessingWeight * proc + 20.0 * pen;
+        };
+        const std::string tag = a.count("--tag") ? a["--tag"] : "sbr5";
+        std::ofstream log("analysis/" + tag + "_" + mode + ".csv");
+        log.precision(6);
+        writeEvalHeader(log, dims, "ref_err_db,unused");
+        std::vector<Eval> pop;
+        for (auto& v : latinHypercube(dims, lhsN, rng)) pop.push_back(Eval{v});
+        evaluateBatch(pop, mode, dims, scenes, threads);
+        for (auto& e : pop) { refScore(e); writeEval(log, "lhs", "T", e); }
+        std::vector<Eval> elite = pop;
+        auto byJ = [](const Eval& x, const Eval& y) { return x.J[0] < y.J[0]; };
+        std::sort(elite.begin(), elite.end(), byJ);
+        elite.resize(10);
+        std::normal_distribution<double> nrm(0.0, 1.0);
+        for (int g = 0; g < gens; ++g) {
+            const double sigma = 0.08 * std::pow(0.85, g);
+            std::uniform_int_distribution<size_t> pick(0, elite.size() - 1);
+            std::vector<Eval> kids;
+            for (int k = 0; k < perGen; ++k) {
+                Eval child{elite[pick(rng)].v};
+                for (size_t d = 0; d < dims.size(); ++d)
+                    child.v[d] = std::clamp(child.v[d] + sigma * (dims[d].hi - dims[d].lo) * nrm(rng), dims[d].lo, dims[d].hi);
+                kids.push_back(child);
+            }
+            evaluateBatch(kids, mode, dims, scenes, threads);
+            for (auto& e : kids) { refScore(e); writeEval(log, "refine", "T", e); }
+            elite.insert(elite.end(), kids.begin(), kids.end());
+            std::sort(elite.begin(), elite.end(), byJ);
+            elite.resize(10);
+        }
+        const Eval& b = elite.front();
+        writeEval(log, "best", "T", b);
+        std::printf("\n%s / %s %+.2f dB: SBR error %.3f dB, processing %.1f dB, penalty %.2f\n", mode.c_str(),
+                    ref.c_str(), T, b.err[0], b.processing, b.penalty);
+        for (size_t si = 0; si < scenes.size(); ++si) {
+            const SceneResult& r = b.scenes[si];
+            std::printf("  %-14s SBR %+6.2f  duck mean %6.2f dB engaged %3.0f%%  Dialogue GR %5.2f  background GR %6.2f  "
+                        "Dialogue range %5.1f dB%s\n", scenes[si].name.c_str(), r.sbrDb, r.meanDuckDb,
+                        100 * r.duckEngagedFrac, r.meanDialogueGrDb, r.meanBackgroundGrDb, r.dialogueRangeDb,
+                        si == ri ? "  <- reference" : "");
+        }
+        std::ofstream best("analysis/" + tag + "_" + mode + "_best.tsv");
+        best << mode << "_T\t" << mode << "\t";
+        for (size_t d = 0; d < dims.size(); ++d) best << b.v[d] << (d + 1 < dims.size() ? "," : "\n");
+        return 0;
+    }
 
     std::ofstream log("analysis/sbr_matched_" + mode + ".csv");
     log.precision(6);
