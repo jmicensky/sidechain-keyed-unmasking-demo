@@ -1,0 +1,125 @@
+Speech-to-background ratio sweeps vs. Johnson & Healy (2024) optimal SBR
+SBR = speech-active RMS(processed Dialogue) / RMS(processed sum of the other 4 stems)
+Targets: HI +5.1 dB (95% window 4.7-5.8), NH +12.2 dB (95% window 2.8-22.4)
+'On target' = within +-0.5 dB. Unprocessed SBRs (same gate): construction +1.31 dB, publictransit -4.50 dB, restaurant -2.71 dB
+
+==============================================================================
+SWEEP: basic  (1000 Latin Hypercube points)
+==============================================================================
+
+--- construction: unprocessed SBR +1.31 dB; swept range -0.67 to +29.09 dB
+  HI target +5.1 dB: 47 points within +-0.5 dB, 49 inside J&H window [4.7, 5.8]
+    least-processing on-target point #799: SBR +4.75 dB, engaged 58%, mean duck -1.5 dB
+      threshold_db=-33.2, ratio=3.92, knee_db=2.89, attack_ms=37.6, release_ms=727.6, max_reduction_db=23.9, key_gain_db=1.91
+    ...with all key/makeup gains within +-0.5 dB: point #488, SBR +5.27 dB
+      threshold_db=-46.8, ratio=17.3, knee_db=14.9, attack_ms=27.4, release_ms=42.4, max_reduction_db=11.9, key_gain_db=0.34
+  NH target +12.2 dB: 33 points within +-0.5 dB, 661 inside J&H window [2.8, 22.4]
+    least-processing on-target point #755: SBR +11.91 dB, engaged 74%, mean duck -11.3 dB
+      threshold_db=-58.0, ratio=19.9, knee_db=0.54, attack_ms=41.1, release_ms=68.2, max_reduction_db=23.7, key_gain_db=1.81
+    ...with all key/makeup gains within +-0.5 dB: point #757, SBR +12.26 dB
+      threshold_db=-55.7, ratio=19.4, knee_db=5.68, attack_ms=26.3, release_ms=152.2, max_reduction_db=29.4, key_gain_db=0.00
+
+--- publictransit: unprocessed SBR -4.50 dB; swept range -6.48 to +23.57 dB
+  HI target +5.1 dB: 31 points within +-0.5 dB, 35 inside J&H window [4.7, 5.8]
+    least-processing on-target point #782: SBR +4.79 dB, engaged 77%, mean duck -7.8 dB
+      threshold_db=-45.4, ratio=8.35, knee_db=13.7, attack_ms=18.5, release_ms=287.5, max_reduction_db=29.0, key_gain_db=1.99
+    ...with all key/makeup gains within +-0.5 dB: point #671, SBR +5.52 dB
+      threshold_db=-44.3, ratio=5.46, knee_db=2.98, attack_ms=7.14, release_ms=564.8, max_reduction_db=17.3, key_gain_db=-0.03
+  NH target +12.2 dB: 9 points within +-0.5 dB, 365 inside J&H window [2.8, 22.4]
+    least-processing on-target point #505: SBR +12.53 dB, engaged 88%, mean duck -15.2 dB
+      threshold_db=-48.9, ratio=11.7, knee_db=4.72, attack_ms=8.11, release_ms=971.2, max_reduction_db=20.9, key_gain_db=0.88
+    ...with all key/makeup gains within +-0.5 dB: point #742, SBR +12.13 dB
+      threshold_db=-66.3, ratio=8.69, knee_db=0.11, attack_ms=25.8, release_ms=998.3, max_reduction_db=16.9, key_gain_db=-0.12
+
+--- restaurant: unprocessed SBR -2.71 dB; swept range -4.69 to +27.50 dB
+  HI target +5.1 dB: 33 points within +-0.5 dB, 44 inside J&H window [4.7, 5.8]
+    least-processing on-target point #584: SBR +4.62 dB, engaged 94%, mean duck -8.3 dB
+      threshold_db=-40.6, ratio=13.0, knee_db=4.03, attack_ms=4.96, release_ms=223.0, max_reduction_db=26.4, key_gain_db=1.82
+    ...with all key/makeup gains within +-0.5 dB: point #213, SBR +5.22 dB
+      threshold_db=-45.8, ratio=8.94, knee_db=10.8, attack_ms=47.9, release_ms=513.0, max_reduction_db=9.95, key_gain_db=0.47
+  NH target +12.2 dB: 25 points within +-0.5 dB, 421 inside J&H window [2.8, 22.4]
+    least-processing on-target point #676: SBR +12.59 dB, engaged 100%, mean duck -18.6 dB
+      threshold_db=-54.6, ratio=15.2, knee_db=2.80, attack_ms=40.2, release_ms=458.7, max_reduction_db=23.8, key_gain_db=-0.88
+    ...with all key/makeup gains within +-0.5 dB: point #686, SBR +12.39 dB
+      threshold_db=-52.9, ratio=6.11, knee_db=5.04, attack_ms=35.6, release_ms=649.3, max_reduction_db=29.0, key_gain_db=0.33
+
+--- One setting for all three scenes (minimize worst-scene |SBR - target|)
+  HI +5.1 dB: point #928, worst-scene error 2.93 dB (construction +8.03, publictransit +2.20, restaurant +4.07)
+      threshold_db=-58.2, ratio=17.9, knee_db=7.49, attack_ms=30.3, release_ms=735.2, max_reduction_db=6.37, key_gain_db=0.42
+  NH +12.2 dB: point #253, worst-scene error 2.37 dB (construction +14.47, publictransit +9.83, restaurant +13.98)
+      threshold_db=-60.6, ratio=8.93, knee_db=8.75, attack_ms=46.1, release_ms=259.1, max_reduction_db=16.6, key_gain_db=0.83
+
+--- What drives SBR gain (Pearson r of each parameter vs. SBR - unprocessed, mean of 3 scenes)
+  threshold_db             r = -0.829
+  max_reduction_db         r = +0.286
+  release_ms               r = +0.154
+  key_gain_db              r = +0.145
+  attack_ms                r = -0.100
+  ratio                    r = +0.073
+  knee_db                  r = -0.037
+
+==============================================================================
+SWEEP: enhancement  (1500 Latin Hypercube points)
+==============================================================================
+
+--- construction: unprocessed SBR +1.31 dB; swept range -29.35 to +15.92 dB
+  HI target +5.1 dB: 90 points within +-0.5 dB, 103 inside J&H window [4.7, 5.8]
+    least-processing on-target point #187: SBR +4.69 dB, DRC-only shift +0.87 dB (makeup alone gives +3.82 dB)
+      dialogue_threshold_db=-22.1, dialogue_ratio=8.87, dialogue_makeup_db=1.99, music_threshold_db=-35.1, music_ratio=7.55, music_makeup_db=1.62, background_threshold_db=-23.8, background_ratio=7.36, background_makeup_db=-1.88, safety_threshold_db=-30.7, safety_ratio=4.61, safety_makeup_db=-1.52, other_threshold_db=-41.6, other_ratio=8.35, other_makeup_db=0.07, knee_db=11.5, attack_ms=46.6, release_ms=393.4
+    ...no on-target point has all key/makeup gains within +-0.5 dB
+  NH target +12.2 dB: 1 points within +-0.5 dB, 400 inside J&H window [2.8, 22.4]
+    least-processing on-target point #151: SBR +12.23 dB, DRC-only shift +12.38 dB (makeup alone gives -0.15 dB)
+      dialogue_threshold_db=-30.0, dialogue_ratio=4.84, dialogue_makeup_db=-0.76, music_threshold_db=-49.2, music_ratio=4.55, music_makeup_db=-0.06, background_threshold_db=-59.0, background_ratio=5.05, background_makeup_db=0.70, safety_threshold_db=-51.3, safety_ratio=3.14, safety_makeup_db=-0.84, other_threshold_db=-55.2, other_ratio=9.12, other_makeup_db=1.24, knee_db=7.49, attack_ms=40.9, release_ms=660.0
+    ...no on-target point has all key/makeup gains within +-0.5 dB
+
+--- publictransit: unprocessed SBR -4.50 dB; swept range -35.11 to +17.57 dB
+  HI target +5.1 dB: 20 points within +-0.5 dB, 21 inside J&H window [4.7, 5.8]
+    least-processing on-target point #1398: SBR +4.70 dB, DRC-only shift +7.37 dB (makeup alone gives -2.67 dB)
+      dialogue_threshold_db=-23.4, dialogue_ratio=2.62, dialogue_makeup_db=1.56, music_threshold_db=-46.7, music_ratio=5.80, music_makeup_db=-1.96, background_threshold_db=-48.0, background_ratio=6.44, background_makeup_db=-0.44, safety_threshold_db=-42.7, safety_ratio=2.35, safety_makeup_db=0.91, other_threshold_db=-30.8, other_ratio=2.09, other_makeup_db=-1.86, knee_db=6.07, attack_ms=49.3, release_ms=43.1
+    ...no on-target point has all key/makeup gains within +-0.5 dB
+  NH target +12.2 dB: 4 points within +-0.5 dB, 151 inside J&H window [2.8, 22.4]
+    least-processing on-target point #1244: SBR +12.38 dB, DRC-only shift +14.79 dB (makeup alone gives -2.41 dB)
+      dialogue_threshold_db=-12.3, dialogue_ratio=6.87, dialogue_makeup_db=1.25, music_threshold_db=-51.4, music_ratio=4.78, music_makeup_db=-0.83, background_threshold_db=-48.5, background_ratio=3.09, background_makeup_db=-1.69, safety_threshold_db=-41.6, safety_ratio=7.53, safety_makeup_db=0.90, other_threshold_db=-49.1, other_ratio=7.08, other_makeup_db=-1.57, knee_db=18.8, attack_ms=15.3, release_ms=778.7
+    ...no on-target point has all key/makeup gains within +-0.5 dB
+
+--- restaurant: unprocessed SBR -2.71 dB; swept range -31.68 to +13.49 dB
+  HI target +5.1 dB: 10 points within +-0.5 dB, 14 inside J&H window [4.7, 5.8]
+    least-processing on-target point #616: SBR +5.57 dB, DRC-only shift +5.11 dB (makeup alone gives +0.46 dB)
+      dialogue_threshold_db=-11.8, dialogue_ratio=2.09, dialogue_makeup_db=1.90, music_threshold_db=-42.9, music_ratio=9.39, music_makeup_db=-1.52, background_threshold_db=-10.2, background_ratio=2.32, background_makeup_db=-1.74, safety_threshold_db=-36.0, safety_ratio=9.90, safety_makeup_db=-1.47, other_threshold_db=-49.5, other_ratio=4.59, other_makeup_db=-0.77, knee_db=5.68, attack_ms=49.0, release_ms=568.3
+    ...no on-target point has all key/makeup gains within +-0.5 dB
+  NH target +12.2 dB: 2 points within +-0.5 dB, 89 inside J&H window [2.8, 22.4]
+    least-processing on-target point #1441: SBR +12.46 dB, DRC-only shift +13.82 dB (makeup alone gives -1.36 dB)
+      dialogue_threshold_db=-14.0, dialogue_ratio=3.73, dialogue_makeup_db=1.37, music_threshold_db=-54.6, music_ratio=3.10, music_makeup_db=0.44, background_threshold_db=-54.6, background_ratio=3.98, background_makeup_db=0.08, safety_threshold_db=-13.5, safety_ratio=2.36, safety_makeup_db=-0.73, other_threshold_db=-46.6, other_ratio=6.80, other_makeup_db=-0.49, knee_db=14.5, attack_ms=16.8, release_ms=801.6
+    ...no on-target point has all key/makeup gains within +-0.5 dB
+
+--- One setting for all three scenes (minimize worst-scene |SBR - target|)
+  HI +5.1 dB: point #820, worst-scene error 1.46 dB (construction +6.56, publictransit +4.91, restaurant +5.03)
+      dialogue_threshold_db=-28.6, dialogue_ratio=9.96, dialogue_makeup_db=-0.09, music_threshold_db=-55.5, music_ratio=4.96, music_makeup_db=1.54, background_threshold_db=-39.2, background_ratio=4.32, background_makeup_db=-1.22, safety_threshold_db=-49.3, safety_ratio=6.83, safety_makeup_db=1.74, other_threshold_db=-50.1, other_ratio=7.13, other_makeup_db=-0.10, knee_db=9.34, attack_ms=4.02, release_ms=907.7
+  NH +12.2 dB: point #354, worst-scene error 1.10 dB (construction +13.30, publictransit +13.19, restaurant +12.04)
+      dialogue_threshold_db=-24.0, dialogue_ratio=6.61, dialogue_makeup_db=-1.24, music_threshold_db=-47.6, music_ratio=7.88, music_makeup_db=1.14, background_threshold_db=-58.7, background_ratio=8.71, background_makeup_db=-1.33, safety_threshold_db=-53.9, safety_ratio=4.62, safety_makeup_db=1.27, other_threshold_db=-58.2, other_ratio=4.11, other_makeup_db=-0.00, knee_db=8.70, attack_ms=25.2, release_ms=946.2
+
+--- What drives SBR gain (Pearson r of each parameter vs. SBR - unprocessed, mean of 3 scenes)
+  dialogue_threshold_db    r = +0.813
+  background_threshold_db  r = -0.239
+  dialogue_ratio           r = -0.138
+  music_threshold_db       r = -0.137
+  attack_ms                r = +0.133
+  dialogue_makeup_db       r = +0.127
+  background_makeup_db     r = -0.105
+  music_makeup_db          r = -0.092
+  other_threshold_db       r = -0.089
+  release_ms               r = -0.085
+  other_ratio              r = +0.057
+  background_ratio         r = -0.042
+  knee_db                  r = +0.033
+  other_makeup_db          r = -0.031
+  safety_threshold_db      r = -0.015
+  safety_ratio             r = +0.010
+  music_ratio              r = -0.008
+  safety_makeup_db         r = -0.005
+
+--- How much of the SBR change is the compression itself (vs. the +-2 dB makeup gains)
+  construction   DRC-only shift: min -28.56, median -1.22, max +13.55 dB
+  publictransit  DRC-only shift: min -28.35, median +0.33, max +21.31 dB
+  restaurant     DRC-only shift: min -26.95, median -0.83, max +16.22 dB
+

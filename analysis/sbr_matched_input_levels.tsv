@@ -1,0 +1,16 @@
+scene	channel	rms_dbfs	rms_active_dbfs	peak_dbfs	lufs_integrated
+construction	Dialogue	-32.1441	-30.954	-8.96444	-28.7364
+construction	Music	-39.957	-40.1553	-18.5728	-37.0015
+construction	Background	-35.2007	-35.2166	-14.3816	-32.669
+construction	Safety	-47.4509	-46.5388	-19.0123	-35.2198
+construction	Other	-38.0121	-37.6255	-4.5599	-32.3162
+publictransit	Dialogue	-33.2033	-32.0939	-9.05498	-29.4583
+publictransit	Music	-35.9379	-36.0356	-18.2358	-32.7686
+publictransit	Background	-29.766	-29.6119	-6.67977	-27.1831
+publictransit	Safety	-34.9935	-34.0043	-7.10719	-24.4193
+publictransit	Other	-55.1902	-54.7287	-28.7185	-48.942
+restaurant	Dialogue	-32.314	-32.3131	-9.31453	-29.3125
+restaurant	Music	-33.816	-33.8151	-11.3146	-30.8739
+restaurant	Background	-35.6966	-35.6957	-11.4361	-32.9058
+restaurant	Safety	-49.1796	-49.1787	-20.1882	-39.9851
+restaurant	Other	-33.9712	-33.9703	-12.5867	-31.2261

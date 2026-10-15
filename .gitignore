@@ -4,3 +4,4 @@ build/
 output.wav
 exports/
 UnMasking Exports/
+__pycache__/

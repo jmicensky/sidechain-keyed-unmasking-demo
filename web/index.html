@@ -52,6 +52,10 @@
   .compressor-column { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
   .gain-viz-column { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
   .gain-viz-column .gain-viz-container { flex: 1 1 auto; }
+  table.sbr-examples { border-collapse: collapse; font-size: 13px; width: 100%; }
+  table.sbr-examples th, table.sbr-examples td { border-bottom: 1px solid #eee; padding: 6px 8px; text-align: left; vertical-align: middle; }
+  table.sbr-examples td.num { font-variant-numeric: tabular-nums; color: #555; }
+  table.sbr-examples audio { height: 30px; width: 260px; }
 </style>
 </head>
 <body>
@@ -72,6 +76,15 @@
   <button id="exportAllBtn">Export All Examples</button>
   <span id="exportStatus" class="hint"></span>
   <span class="hint export-bar-note">renders unprocessed / basic / whatever mode is currently selected, using today's settings, into one downloaded zip</span>
+</div>
+
+<div class="loadbar export-bar">
+  <label>SBR-matched preset:
+    <select id="sbrPresetSelect"><option value="">(none)</option></select>
+  </label>
+  <button id="sbrPresetApplyBtn">Apply</button>
+  <span id="sbrPresetStatus" class="hint"></span>
+  <span class="hint export-bar-note">settings found by the speech-to-background ratio search (analysis/sbr_matched_search.cpp) - each lands Dialogue at the Johnson &amp; Healy (2024) optimal SBR in all three scenes, with key/makeup gain fixed at 0 dB. Combined presets can't run in the browser engine (Unmasking and Enhancement are exclusive tabs here) - hear them in the section at the bottom.</span>
 </div>
 
 <section class="panel">
@@ -228,6 +241,14 @@
   </div>
 </section>
 
+<section class="panel" id="sbrExamplesPanel">
+  <h2>Same SBR, different processing</h2>
+  <p class="hint">Each render lands Dialogue at the same speech-to-background ratio (Johnson &amp; Healy 2024: HI +5.1 dB, NH +12.2 dB), every render level-matched to the unprocessed mix, so differences are in how the processing sounds, not in SBR or loudness.</p>
+  <div id="sbrExamples"></div>
+</section>
+
+<script src="sbr-presets.js"></script>
+<script src="sbr-examples.js"></script>
 <script type="module" src="app.js"></script>
 </body>
 </html>
