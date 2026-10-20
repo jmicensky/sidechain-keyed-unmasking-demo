@@ -1,0 +1,4 @@
+scene,duration_s,voice_present_frac,voice_onsets_per_s,gate40_frac,utterances,utterance_mean_s
+construction,81.5787,0.727347,2.79485,0.760248,20,3.321
+publictransit,88.4053,0.74267,2.72608,0.774501,15,4.75476
+restaurant,80.5973,0.999628,0.0124074,0.999785,1,80.5673
