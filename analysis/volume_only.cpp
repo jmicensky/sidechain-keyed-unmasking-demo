@@ -46,8 +46,16 @@
 //       10th percentile, -20 LU relative gate). Listening renders (Construction
 //       scene) are matched to the unprocessed mix's integrated LUFS.
 //
+// Scenes: Construction and Public Transit by default. Restaurant is left out
+// (2026-10-20): its Dialogue stem never goes quiet (quieter voice energy
+// ~20 dB below the main talker fills every pause), so it stands in for a
+// source separator that misclassifies background speech as Dialogue rather
+// than a clean test scene. Run it on purpose as that stress case with
+// --scenes construction,publictransit,restaurant.
+//
 // Usage (see analysis/run_volume_only.sh):
-//   volume_only --repo . [--threshold-db -58] [--merge-ms 400] [--min-utt-ms 500]
+//   volume_only --repo . [--scenes construction,publictransit] [--threshold-db -58]
+//               [--merge-ms 400] [--min-utt-ms 500]
 #define DR_WAV_IMPLEMENTATION
 #include "dr_wav.h"
 
@@ -508,13 +516,22 @@ int main(int argc, char** argv) {
     std::vector<Setting> settings = loadSettings(analysis + "/sbr_matched_settings.tsv");
     if (settings.empty()) { std::cerr << "no settings in analysis/sbr_matched_settings.tsv\n"; return 1; }
 
-    std::vector<Scene> scenes = {
+    std::vector<Scene> allScenes = {
         {"construction", "Construction Scene", {"Dialogue.wav", "MUSIC.wav", "BKG.wav", "SAFETY.wav", "OTHER.wav"}},
         {"publictransit", "PublicTransit Scene", {"Dialogue_PublicTransit_01.wav", "MUSIC_publictransit_01.wav",
                                                    "BKG_PublicTransit_01.wav", "SAFETY_publictransit_01.wav",
                                                    "OTHER_publictransit_01.wav"}},
         {"restaurant", "Restaurant Scene", {"Dialogue.wav", "MUSIC.wav", "BGV.wav", "Safety.wav", "OTHER.wav"}},
     };
+    std::vector<Scene> scenes;
+    {
+        std::stringstream ss(a.count("--scenes") ? a["--scenes"] : "construction,publictransit");
+        for (std::string name; std::getline(ss, name, ',');) {
+            auto it = std::find_if(allScenes.begin(), allScenes.end(), [&](const Scene& s) { return s.name == name; });
+            if (it == allScenes.end()) { std::cerr << "unknown scene " << name << "\n"; return 1; }
+            scenes.push_back(*it);
+        }
+    }
 
     std::ofstream res(analysis + "/volume_only_results.csv");
     res << "scene,condition,target,target_db,static_gain_db,jh_sbr_pooled_db,jh_sbr_mean_db,jh_sbr_median_db,"
