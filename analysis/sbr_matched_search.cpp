@@ -36,6 +36,7 @@
 // Usage (see analysis/run_sbr_matched.sh):
 //   sbr_matched_search --repo . --validate 1
 //   sbr_matched_search --repo . --mode basic|comp|combined [--lhs N] [--gens G]
+//                      [--scenes construction,publictransit] [--tag sbr_matched]
 //   sbr_matched_search --repo . --render <settings.tsv> --render-dir exports/sbr_matched
 #define DR_WAV_IMPLEMENTATION
 #include "dr_wav.h"
@@ -319,7 +320,7 @@ void renderSplit(const Scene& sc, const Setting& st, std::vector<float>& dLo, st
 
 struct Eval {
     std::vector<double> v;
-    std::array<SceneResult, 3> scenes;
+    std::vector<SceneResult> scenes; // one per scene in the run
     double J[2] = {0, 0};
     double err[2] = {0, 0};
     double processing = 0.0, penalty = 0.0;
@@ -353,6 +354,7 @@ void evaluateBatch(std::vector<Eval>& batch, const std::string& mode, const std:
         pool.emplace_back([&] {
             for (size_t i = next++; i < batch.size(); i = next++) {
                 Setting st = toSetting(mode, dims, batch[i].v);
+                batch[i].scenes.resize(scenes.size());
                 for (size_t s = 0; s < scenes.size(); ++s) batch[i].scenes[s] = render(scenes[s], st);
                 score(batch[i], st);
             }
@@ -374,13 +376,14 @@ std::vector<std::vector<double>> latinHypercube(const std::vector<Dim>& dims, in
 
 // ---------------------------------------------------------------- output
 
-const char* kSceneNames[3] = {"construction", "publictransit", "restaurant"};
+// Scene names in CSV column order; set in main() from the scenes actually run.
+std::vector<std::string> gSceneNames = {"construction", "publictransit", "restaurant"};
 
 void writeEvalHeader(std::ostream& f, const std::vector<Dim>& dims,
                      const char* errCols = "worst_err_hi_db,worst_err_nh_db") {
     f << "stage,target";
     for (auto& d : dims) f << "," << d.name;
-    for (auto* s : kSceneNames)
+    for (const auto& s : gSceneNames)
         f << "," << s << "_sbr_db," << s << "_mean_duck_db," << s << "_duck_engaged_frac," << s
           << "_dialogue_gr_db," << s << "_background_gr_db," << s << "_dialogue_range_db";
     f << "," << errCols << ",processing_db,penalty\n";
@@ -671,6 +674,18 @@ int main(int argc, char** argv) {
                                                    "OTHER_publictransit_01.wav"}},
         {"restaurant", "Restaurant Scene", {"Dialogue.wav", "MUSIC.wav", "BGV.wav", "Safety.wav", "OTHER.wav"}},
     };
+    if (a.count("--scenes")) {
+        // Restrict every stage to these scenes, e.g. --scenes construction,publictransit
+        // (Restaurant left out as a separator-misclassification case, 2026-10-20).
+        std::vector<Scene> keep;
+        std::stringstream ss(a["--scenes"]);
+        for (std::string name; std::getline(ss, name, ',');) {
+            auto it = std::find_if(scenes.begin(), scenes.end(), [&](const Scene& sc) { return sc.name == name; });
+            if (it == scenes.end()) { std::cerr << "unknown scene " << name << "\n"; return 1; }
+            keep.push_back(*it);
+        }
+        scenes = std::move(keep);
+    }
     for (auto& s : scenes) {
         if (!loadScene(s, repo)) return 1;
         Setting none;
@@ -691,6 +706,8 @@ int main(int argc, char** argv) {
         scenes = std::move(keep);
     }
     const std::string outPrefix = "analysis/" + (a.count("--tag") ? a["--tag"] : std::string("sbr_matched"));
+    gSceneNames.clear();
+    for (auto& s : scenes) gSceneNames.push_back(s.name);
 
     if (a.count("--validate")) {
         std::mt19937 rng(7);
@@ -1055,7 +1072,7 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-    std::ofstream log("analysis/sbr_matched_" + mode + ".csv");
+    std::ofstream log(outPrefix + "_" + mode + ".csv");
     log.precision(6);
     writeEvalHeader(log, dims);
 
@@ -1065,7 +1082,7 @@ int main(int argc, char** argv) {
     for (auto& e : lhs) writeEval(log, "lhs", "", e);
     std::cout << mode << ": " << lhsN << " LHS points evaluated\n";
 
-    std::ofstream best("analysis/sbr_matched_" + mode + "_best.tsv");
+    std::ofstream best(outPrefix + "_" + mode + "_best.tsv");
     for (int t = 0; t < 2; ++t) {
         std::vector<Eval> elite = lhs;
         std::sort(elite.begin(), elite.end(), [&](const Eval& x, const Eval& y) { return x.J[t] < y.J[t]; });
