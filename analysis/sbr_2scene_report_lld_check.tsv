@@ -1,0 +1,13 @@
+setting	scene	web_sbr_db	lld_sbr_db_lag0	lld_sbr_db_lag1024
+basic_HI	construction	7.85084	7.64847	7.56933
+basic_HI	publictransit	2.35379	2.20821	2.1842
+basic_NH	construction	14.5304	16.7734	16.4063
+basic_NH	publictransit	9.86011	11.2569	11.0634
+comp_HI	construction	5.09944	5.49224	5.49224
+comp_HI	publictransit	5.10122	5.27072	5.27072
+comp_NH	construction	12.1965	12.8092	12.8092
+comp_NH	publictransit	12.1934	12.6744	12.6744
+combined_HI	construction	5.06185	5.5187	5.37948
+combined_HI	publictransit	5.06375	5.36491	5.33585
+combined_NH	construction	12.2083	12.7833	12.7823
+combined_NH	publictransit	12.2098	12.6242	12.6241
