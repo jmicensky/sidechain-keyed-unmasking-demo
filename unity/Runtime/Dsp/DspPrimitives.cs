@@ -230,7 +230,7 @@ namespace SidechainUnmasking.Dsp
         /// <summary>Advanced duck mode's ducked range per key class (kUnmaskFrequencyRanges).</summary>
         public static readonly (double lowHz, double highHz)[] UnmaskRanges =
         {
-            (175.0, 7000.0),  // Dialogue
+            (150.0, 8000.0),  // Dialogue
             (75.0, 12000.0),  // Music
             (60.0, 2000.0),   // Background Noise
             (300.0, 2000.0),  // Safety Alerts

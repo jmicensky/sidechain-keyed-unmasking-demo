@@ -13,7 +13,7 @@ const CLASS_NAMES = ['Dialogue', 'Music', 'Background Noise', 'Safety Alerts', '
 // "Advanced-mode ducked band" badge and the gain-viz notch position, kept
 // in sync with the C++ side by hand since it's a fixed, rarely-changed table.
 const UNMASK_CHANNEL_RANGES = [
-  { lowHz: 175, highHz: 7000 },   // Dialogue
+  { lowHz: 150, highHz: 8000 },   // Dialogue
   { lowHz: 75, highHz: 12000 },   // Music
   { lowHz: 60, highHz: 2000 },    // Background Noise
   { lowHz: 300, highHz: 2000 },   // Safety Alerts

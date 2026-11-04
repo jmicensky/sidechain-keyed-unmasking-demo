@@ -271,7 +271,7 @@ Parameter defaults (`ProcessingSettings`, matching the C++ engine):
 | | max reduction | 6 dB | 0–40 |
 | | key gain (`safetyGainDb`) | 0 dB | ±12 |
 | | duck mode | Advanced | Basic / Advanced |
-| | Advanced range by key | Dialogue 175–7000 Hz, Music 75–12k, BG 60–2000, Safety 300–2000, Other 700–12k | `DspTables.UnmaskRanges` |
+| | Advanced range by key | Dialogue 150–8000 Hz, Music 75–12k, BG 60–2000, Safety 300–2000, Other 700–12k | `DspTables.UnmaskRanges` |
 | Enhancement (per group) | thr / ratio / knee / atk / rel / makeup | −30 / 4 / 6 / 5 / 120 / 0 | multiband clamps atk 1–50, rel 30–3000 |
 | | band mode | single-band | single / 6-band (100, 299, 894, 2675, 8000 Hz) |
 | Output WDRC | thr / ratio / knee / atk / rel / makeup | −24 / 2 / 6 / 5 / 80 / 0 | |

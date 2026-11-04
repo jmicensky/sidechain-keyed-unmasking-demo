@@ -26,7 +26,7 @@ you interactively work in one of two mutually-exclusive top-level tabs (see
   - Choose one of three duck modes:
     - **Basic** — full-spectrum ducking, one shared gain applied everywhere.
     - **Advanced** — band-limited ducking, restricted to the *currently-keyed
-      class's own frequency range* (e.g. 175 Hz–7 kHz while Dialogue is the
+      class's own frequency range* (e.g. 150 Hz–8 kHz while Dialogue is the
       key, 60 Hz–2 kHz while Background Noise is the key — see
       `kUnmaskFrequencyRanges` in `Types.h`). The ducked band visibly moves
       with the key selection, both in a UI badge and in the Gain Reduction
@@ -170,7 +170,7 @@ demo_engine/
 - `AdvancedDuckingMode`: `SummedBus` / `PerChannel` — see §1.
 - `kUnmaskFrequencyRanges[kNumClasses]`: the frequency range Advanced mode
   ducks other channels within when each class is the key — Dialogue
-  175Hz–7kHz, Music 75Hz–12kHz, Background Noise 60Hz–2kHz, Safety Alerts
+  150Hz–8kHz, Music 75Hz–12kHz, Background Noise 60Hz–2kHz, Safety Alerts
   300Hz–2kHz, Other 700Hz–12kHz.
 - `kWdrcNumBands` (6) / `kWdrcCrossoverHz` (100/299/894/2675/8000 Hz) —
   **only** used by the standalone crossover-flatness self-check in

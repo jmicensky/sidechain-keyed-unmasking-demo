@@ -308,6 +308,7 @@ static void printStaticUsage() {
         "         [--threshold dB] [--ratio r] [--knee dB] [--attack ms] "
         "[--release ms] [--max-reduction dB]\n"
         "         [--peaks n] [--bandwidth octaves] [--resonance-max-reduction dB]\n"
+        "         [--split-out <prefix>]  (also write <prefix>_key.wav / <prefix>_nonkey.wav)\n"
         "  --scene: \"Construction Scene\", \"PublicTransit Scene\", or "
         "\"Restaurant Scene\" (aliases: Construction, PublicTransit, Restaurant)\n"
         "  --key:   Dialogue | Music | \"Background Noise\" | \"Safety Alerts\" | Other\n"
@@ -321,6 +322,40 @@ static void printStaticUsage() {
         "resonance (ignored otherwise) - see ResonanceSuppressor.h/Engine.h for\n"
         "  their valid ranges (peaks 1-12, bandwidth 0.05-4.0 octaves, "
         "resonance-max-reduction 0-60dB).\n";
+}
+
+using StemSet = std::array<std::vector<float>, kNumClasses>;
+using RenderFn = std::function<void(const StemSet&, const StemSet&, std::vector<float>&, std::vector<float>&)>;
+
+// --split-out <prefix>: besides the mix, writes <prefix>_key.wav (the key
+// channel's own share of the output) and <prefix>_nonkey.wav (everything
+// else), for metrics that need the priority signal and its masker
+// separately - compute_metrics.py's separated masking margin and SII.
+// The key's share comes from a second render with every non-key stem
+// zeroed: in every mode the key passes through unducked and the duck gain
+// is driven by the key alone, so that render is exactly the key's part of
+// the mix and mix minus it is exactly the rest (no power-subtraction
+// estimate needed).
+static void writeSplitOutputs(const std::string& prefix, int keyChannel, const StemSet& stemsL,
+                              const StemSet& stemsR, const RenderFn& render,
+                              const std::vector<float>& mixL, const std::vector<float>& mixR,
+                              double sampleRate) {
+    StemSet keyOnlyL = stemsL, keyOnlyR = stemsR;
+    for (int c = 0; c < kNumClasses; ++c) {
+        if (c == keyChannel) continue;
+        std::fill(keyOnlyL[c].begin(), keyOnlyL[c].end(), 0.0f);
+        std::fill(keyOnlyR[c].begin(), keyOnlyR[c].end(), 0.0f);
+    }
+    std::vector<float> keyL, keyR;
+    render(keyOnlyL, keyOnlyR, keyL, keyR);
+    std::vector<float> restL(mixL.size()), restR(mixR.size());
+    for (size_t i = 0; i < mixL.size(); ++i) {
+        restL[i] = mixL[i] - keyL[i];
+        restR[i] = mixR[i] - keyR[i];
+    }
+    writeWavStereo(prefix + "_key.wav", keyL, keyR, sampleRate);
+    writeWavStereo(prefix + "_nonkey.wav", restL, restR, sampleRate);
+    std::cout << "Wrote " << prefix << "_key.wav and " << prefix << "_nonkey.wav (separated key / rest)\n";
 }
 
 // mode=unprocessed: renders the true, unweighted sum of the 5 raw stems -
@@ -348,7 +383,8 @@ static void printStaticUsage() {
 // literally the same file the browser's reference panel plays (which is
 // still fine for its purpose there - a listening reference, not a
 // measurement baseline).
-static int runStaticUnprocessed(const SceneSpec& scene, const std::string& outPath) {
+static int runStaticUnprocessed(const SceneSpec& scene, int keyChannel, const std::string& outPath,
+                                const std::string& splitPrefix) {
     std::array<std::vector<float>, kNumClasses> stemsL, stemsR;
     double loadedSampleRate = kSampleRate;
     bool ok = true;
@@ -371,24 +407,33 @@ static int runStaticUnprocessed(const SceneSpec& scene, const std::string& outPa
         stemsR[c].resize(minLen);
     }
 
-    CompressorParams params; // defaults - irrelevant here since unmaskEnabled=false forces g=1 regardless
-    Engine engine;
-    engine.prepare(loadedSampleRate, params);
-    engine.loadStems(stemsL, stemsR);
-    engine.setMode(DuckMode::Basic); // simplest dry-path arithmetic; mode is otherwise moot with Unmask off
-    engine.setUnmaskEnabled(false);
+    RenderFn render = [&](const StemSet& inL, const StemSet& inR, std::vector<float>& outL,
+                          std::vector<float>& outR) {
+        CompressorParams params; // defaults - irrelevant here since unmaskEnabled=false forces g=1 regardless
+        Engine engine;
+        engine.prepare(loadedSampleRate, params);
+        engine.loadStems(inL, inR);
+        engine.setMode(DuckMode::Basic); // simplest dry-path arithmetic; mode is otherwise moot with Unmask off
+        engine.setUnmaskEnabled(false);
 
-    size_t totalFrames = engine.numFrames();
-    std::vector<float> outputL(totalFrames, 0.0f);
-    std::vector<float> outputR(totalFrames, 0.0f);
-    size_t frame = 0;
-    while (frame < totalFrames) {
-        size_t blockLen = std::min(static_cast<size_t>(kBlockSize), totalFrames - frame);
-        engine.process(outputL.data() + frame, outputR.data() + frame, blockLen);
-        frame += blockLen;
-    }
+        size_t totalFrames = engine.numFrames();
+        outL.assign(totalFrames, 0.0f);
+        outR.assign(totalFrames, 0.0f);
+        size_t frame = 0;
+        while (frame < totalFrames) {
+            size_t blockLen = std::min(static_cast<size_t>(kBlockSize), totalFrames - frame);
+            engine.process(outL.data() + frame, outR.data() + frame, blockLen);
+            frame += blockLen;
+        }
+    };
+    std::vector<float> outputL, outputR;
+    render(stemsL, stemsR, outputL, outputR);
+    size_t totalFrames = outputL.size();
 
     writeWavStereo(outPath, outputL, outputR, loadedSampleRate);
+    if (!splitPrefix.empty()) {
+        writeSplitOutputs(splitPrefix, keyChannel, stemsL, stemsR, render, outputL, outputR, loadedSampleRate);
+    }
     int clicks = countClicks(outputL, 0.35f) + countClicks(outputR, 0.35f);
     std::cout << "Wrote " << outPath << " (" << totalFrames << " frames, mode=unprocessed, "
               << "true sum of the 5 raw stems via Engine, Unmask off)\n"
@@ -397,7 +442,8 @@ static int runStaticUnprocessed(const SceneSpec& scene, const std::string& outPa
 }
 
 static int runStaticDucked(const SceneSpec& scene, int keyChannel, const std::string& modeName,
-                            const std::map<std::string, std::string>& flags, const std::string& outPath) {
+                            const std::map<std::string, std::string>& flags, const std::string& outPath,
+                            const std::string& splitPrefix) {
     std::array<std::vector<float>, kNumClasses> stemsL, stemsR;
     double loadedSampleRate = kSampleRate;
     bool ok = true;
@@ -435,39 +481,48 @@ static int runStaticDucked(const SceneSpec& scene, int keyChannel, const std::st
     double resonanceBandwidthOctaves = flagDouble(flags, "bandwidth", 1.16);
     double resonanceMaxReductionDb = flagDouble(flags, "resonance-max-reduction", 24.0);
 
-    Engine engine;
-    engine.prepare(loadedSampleRate, params);
-    engine.loadStems(stemsL, stemsR);
-    // Fixed configuration applied once, before any processing - no mid-clip
-    // changes, unlike the scripted-timeline path below main().
     DuckMode mode = DuckMode::Advanced;
     if (modeName == "basic") mode = DuckMode::Basic;
     else if (modeName == "resonance") mode = DuckMode::Resonance;
-    engine.setMode(mode);
-    engine.setAdvancedDuckingMode(AdvancedDuckingMode::SummedBus); // task scope: Summed-bus only, see spec
-    engine.setUnmaskEnabled(true);
-    engine.setKeyChannel(keyChannel);
-    engine.setMaxReductionDb(maxReductionDb);
-    if (mode == DuckMode::Resonance) {
-        engine.setResonanceNumPeaks(resonanceNumPeaks);
-        engine.setResonanceBandwidthOctaves(resonanceBandwidthOctaves);
-        engine.setResonanceMaxReductionDb(resonanceMaxReductionDb);
-    }
-    // WDRC output stage stays at its default (bypassed) - out of scope for
-    // this metric, which is specifically about the sidechain-keyed ducking.
 
-    size_t totalFrames = engine.numFrames();
-    std::vector<float> outputL(totalFrames, 0.0f);
-    std::vector<float> outputR(totalFrames, 0.0f);
+    RenderFn render = [&](const StemSet& inL, const StemSet& inR, std::vector<float>& outL,
+                          std::vector<float>& outR) {
+        Engine engine;
+        engine.prepare(loadedSampleRate, params);
+        engine.loadStems(inL, inR);
+        // Fixed configuration applied once, before any processing - no mid-clip
+        // changes, unlike the scripted-timeline path below main().
+        engine.setMode(mode);
+        engine.setAdvancedDuckingMode(AdvancedDuckingMode::SummedBus); // task scope: Summed-bus only, see spec
+        engine.setUnmaskEnabled(true);
+        engine.setKeyChannel(keyChannel);
+        engine.setMaxReductionDb(maxReductionDb);
+        if (mode == DuckMode::Resonance) {
+            engine.setResonanceNumPeaks(resonanceNumPeaks);
+            engine.setResonanceBandwidthOctaves(resonanceBandwidthOctaves);
+            engine.setResonanceMaxReductionDb(resonanceMaxReductionDb);
+        }
+        // WDRC output stage stays at its default (bypassed) - out of scope for
+        // this metric, which is specifically about the sidechain-keyed ducking.
 
-    size_t frame = 0;
-    while (frame < totalFrames) {
-        size_t blockLen = std::min(static_cast<size_t>(kBlockSize), totalFrames - frame);
-        engine.process(outputL.data() + frame, outputR.data() + frame, blockLen);
-        frame += blockLen;
-    }
+        size_t totalFrames = engine.numFrames();
+        outL.assign(totalFrames, 0.0f);
+        outR.assign(totalFrames, 0.0f);
+        size_t frame = 0;
+        while (frame < totalFrames) {
+            size_t blockLen = std::min(static_cast<size_t>(kBlockSize), totalFrames - frame);
+            engine.process(outL.data() + frame, outR.data() + frame, blockLen);
+            frame += blockLen;
+        }
+    };
+    std::vector<float> outputL, outputR;
+    render(stemsL, stemsR, outputL, outputR);
+    size_t totalFrames = outputL.size();
 
     writeWavStereo(outPath, outputL, outputR, loadedSampleRate);
+    if (!splitPrefix.empty()) {
+        writeSplitOutputs(splitPrefix, keyChannel, stemsL, stemsR, render, outputL, outputR, loadedSampleRate);
+    }
     int clicks = countClicks(outputL, 0.35f) + countClicks(outputR, 0.35f);
     std::cout << "Wrote " << outPath << " (" << totalFrames << " frames)\n"
               << "  key=" << classIndexToName(keyChannel) << " mode=" << modeName
@@ -500,6 +555,7 @@ static int runStaticExport(int argc, char** argv) {
     std::string keyName = flagString(flags, "key");
     std::string modeName = flagString(flags, "mode");
     std::string outPath = flagString(flags, "out");
+    std::string splitPrefix = flagString(flags, "split-out");
 
     if (sceneName.empty() || keyName.empty() || modeName.empty() || outPath.empty()) {
         printStaticUsage();
@@ -529,9 +585,9 @@ static int runStaticExport(int argc, char** argv) {
     }
 
     if (modeName == "unprocessed") {
-        return runStaticUnprocessed(*scene, outPath);
+        return runStaticUnprocessed(*scene, keyChannel, outPath, splitPrefix);
     }
-    return runStaticDucked(*scene, keyChannel, modeName, flags, outPath);
+    return runStaticDucked(*scene, keyChannel, modeName, flags, outPath, splitPrefix);
 }
 
 // ---------------------------------------------------------------------

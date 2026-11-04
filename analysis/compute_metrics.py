@@ -78,7 +78,7 @@ SCENES = {
 # Mirrors Types.h's kUnmaskFrequencyRanges (low_hz, high_hz), keyed by the
 # same slug used in export filenames.
 CLASS_RANGES = {
-    "dialogue": (175.0, 7000.0),  # lowered from 400Hz - see Types.h's kUnmaskFrequencyRanges
+    "dialogue": (150.0, 8000.0),  # speech band - see Types.h's kUnmaskFrequencyRanges
     "music": (75.0, 12000.0),
     "background": (60.0, 2000.0),
     "safety": (300.0, 2000.0),
@@ -196,6 +196,68 @@ def compute_masking_margin(dry_priority, mix, sr, low_hz, high_hz, safety_gain_d
         "worst_margin_db": float(np.min(margin)),
         "active_frames": int(np.sum(active)),
         "total_frames": int(n_frames),
+    }
+
+
+# Fixed speech band for the separated margin (and the planned SII, whose
+# one-third-octave bands span 160 Hz-8 kHz). Deliberately NOT read from
+# CLASS_RANGES: the measurement band is a property of the metric, not of
+# whichever band Advanced mode happens to duck.
+SPEECH_BAND_HZ = (150.0, 8000.0)
+
+
+def band_power_frames(signal, sr, low_hz, high_hz, frame_ms=FRAME_MS, overlap=FRAME_OVERLAP):
+    """Per-frame in-band power in dB, summed over FFT bins in [low_hz, high_hz].
+
+    Hann-windowed frames (same length/overlap as frame_rms_db). Summing bins
+    instead of band-pass filtering means there is no analysis filter skirt to
+    interact with Advanced mode's LR4 crossover - the cause of the ~0.9 dB
+    artifact MARGIN_MEASUREMENT_PAD_OCTAVES worked around. At 20 ms frames the
+    bin spacing is 50 Hz, so the 150 Hz edge is resolved only to about one
+    bin plus the Hann main lobe.
+    """
+    frame_len = max(1, int(sr * frame_ms / 1000.0))
+    hop = max(1, int(frame_len * (1 - overlap)))
+    n_frames = max(0, (len(signal) - frame_len) // hop + 1)
+    if n_frames == 0:
+        return np.zeros(0)
+    window = np.hanning(frame_len)
+    idx = np.arange(frame_len)[None, :] + hop * np.arange(n_frames)[:, None]
+    spec = np.fft.rfft(signal[idx] * window, axis=1)
+    freqs = np.fft.rfftfreq(frame_len, 1.0 / sr)
+    in_band = (freqs >= low_hz) & (freqs <= high_hz)
+    power = np.sum(np.abs(spec[:, in_band]) ** 2, axis=1) / np.sum(window ** 2)
+    return 10 * np.log10(np.maximum(power, 1e-12))
+
+
+def compute_separated_margin(priority_out, masker_out, sr, band_hz=SPEECH_BAND_HZ):
+    """Mean/worst-case masking margin from SEPARATED renders.
+
+    priority_out / masker_out are the priority class's own output and the
+    sum of everything else, as written by `demo_engine_cli --static
+    --split-out` (<prefix>_key.wav / <prefix>_nonkey.wav). Because both are
+    the actual processed signals, no power-subtraction estimate is needed
+    (compute_masking_margin's estimate reads ~1 dB high against separated
+    renders, see sbr_margin_crossover.py) and the metric stays valid when
+    the priority class is itself processed (group compression, Combined).
+
+    Gate: frames where the priority output's in-band level is within
+    ACTIVE_FLOOR_DB_BELOW_PEAK of its own peak, as in compute_masking_margin.
+    """
+    n = min(len(priority_out), len(masker_out))
+    priority_db = band_power_frames(priority_out[:n], sr, *band_hz)
+    masker_db = band_power_frames(masker_out[:n], sr, *band_hz)
+    if len(priority_db) == 0:
+        return None
+    active = priority_db > (np.max(priority_db) - ACTIVE_FLOOR_DB_BELOW_PEAK)
+    if not np.any(active):
+        return None
+    margin = priority_db[active] - masker_db[active]
+    return {
+        "mean_margin_db": float(np.mean(margin)),
+        "worst_margin_db": float(np.min(margin)),
+        "active_frames": int(np.sum(active)),
+        "total_frames": int(len(priority_db)),
     }
 
 
