@@ -1,0 +1,35 @@
+STEP 1 - Basic points of the speech-band LHS sweeps, re-measured as SBR
+
+  construction: 100 points; unprocessed SBR +1.31 dB
+    SBR gain vs margin gain: Pearson +0.991, Spearman +0.995
+    SBR gain vs ESII gain:   Pearson +0.985, Spearman +0.991
+    SBR range +1.31 to +11.63 dB (max reduction sampled 3-12 dB)
+    best margin: point 14, margin +11.08 dB, ESII +0.223, SBR +11.63 dB
+    best ESII: point 14, margin +11.08 dB, ESII +0.223, SBR +11.63 dB
+    closest to HI +5.1: #40 SBR +5.13, margin +5.19, ESII +0.103; #26 SBR +4.95, margin +4.56, ESII +0.087; #83 SBR +4.95, margin +4.89, ESII +0.099
+    closest to NH +12.2: #14 SBR +11.63, margin +11.08, ESII +0.223; #72 SBR +11.20, margin +10.79, ESII +0.216; #44 SBR +10.18, margin +9.80, ESII +0.194
+
+  publictransit: 100 points; unprocessed SBR -4.50 dB
+    SBR gain vs margin gain: Pearson +0.992, Spearman +0.996
+    SBR gain vs ESII gain:   Pearson +0.978, Spearman +0.989
+    SBR range -4.50 to +5.94 dB (max reduction sampled 3-12 dB)
+    best margin: point 14, margin +10.94 dB, ESII +0.205, SBR +5.94 dB
+    best ESII: point 14, margin +10.94 dB, ESII +0.205, SBR +5.94 dB
+    closest to HI +5.1: #44 SBR +4.51, margin +9.63, ESII +0.178; #72 SBR +5.80, margin +10.76, ESII +0.200; #14 SBR +5.94, margin +10.94, ESII +0.205
+    closest to NH +12.2: #14 SBR +5.94, margin +10.94, ESII +0.205; #72 SBR +5.80, margin +10.76, ESII +0.200; #44 SBR +4.51, margin +9.63, ESII +0.178
+
+STEP 2 - speech-band metrics of the SBR-matched settings (sbr_matched_settings.tsv)
+  unprocessed construction   SBR  +1.31 dB  speech_margin_db -2.915  esii 0.185  static_sii 0.379  estoi 0.393
+  unprocessed publictransit  SBR  -4.50 dB  speech_margin_db -8.643  esii 0.131  static_sii 0.289  estoi 0.275
+  basic_HI     construction   SBR  +7.84 dB  margin gain  +7.37 dB  ESII gain +0.141  static SII gain +0.218  ESTOI gain +0.237
+  basic_HI     publictransit  SBR  +2.34 dB  margin gain  +7.26 dB  ESII gain +0.128  static SII gain +0.233  ESTOI gain +0.218
+  basic_NH     construction   SBR +14.78 dB  margin gain +15.40 dB  ESII gain +0.324  static SII gain +0.429  ESTOI gain +0.433
+  basic_NH     publictransit  SBR  +9.69 dB  margin gain +15.37 dB  ESII gain +0.309  static SII gain +0.469  ESTOI gain +0.439
+  comp_HI      construction   SBR  +5.54 dB  margin gain  +5.22 dB  ESII gain +0.135  static SII gain +0.254  ESTOI gain +0.239
+  comp_HI      publictransit  SBR  +5.25 dB  margin gain  +8.99 dB  ESII gain +0.157  static SII gain +0.304  ESTOI gain +0.282
+  comp_NH      construction   SBR +12.50 dB  margin gain +11.61 dB  ESII gain +0.277  static SII gain +0.434  ESTOI gain +0.390
+  comp_NH      publictransit  SBR +12.43 dB  margin gain +15.74 dB  ESII gain +0.316  static SII gain +0.508  ESTOI gain +0.467
+  combined_HI  construction   SBR  +5.21 dB  margin gain  +9.04 dB  ESII gain +0.187  static SII gain +0.065  ESTOI gain +0.310
+  combined_HI  publictransit  SBR  +5.13 dB  margin gain +14.22 dB  ESII gain +0.324  static SII gain +0.289  ESTOI gain +0.478
+  combined_NH  construction   SBR +12.00 dB  margin gain +18.15 dB  ESII gain +0.378  static SII gain +0.317  ESTOI gain +0.440
+  combined_NH  publictransit  SBR +12.37 dB  margin gain +19.95 dB  ESII gain +0.434  static SII gain +0.454  ESTOI gain +0.524

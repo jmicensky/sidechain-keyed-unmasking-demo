@@ -1,0 +1,13 @@
+setting	mode	scene	sbr_db	speech_margin_db	speech_margin_db_gain	esii	esii_gain	static_sii	static_sii_gain	estoi	estoi_gain
+basic_HI	basic	construction	7.851	4.3993	7.3143	0.3250	0.1399	0.5972	0.2186	0.6284	0.2352
+basic_HI	basic	publictransit	2.354	-1.4189	7.2246	0.2571	0.1265	0.5231	0.2342	0.4917	0.2165
+basic_NH	basic	construction	14.530	16.1084	19.0234	0.5868	0.4017	0.7981	0.4195	0.8557	0.4625
+basic_NH	basic	publictransit	9.860	9.6676	18.3111	0.5120	0.3814	0.7614	0.4725	0.7512	0.4759
+comp_HI	comp	construction	5.099	2.1344	5.0494	0.2890	0.1039	0.5264	0.1477	0.5843	0.1911
+comp_HI	comp	publictransit	5.101	-0.1143	8.5291	0.2856	0.1549	0.5834	0.2945	0.5515	0.2763
+comp_NH	comp	construction	12.197	8.3246	11.2396	0.4249	0.2399	0.7735	0.3949	0.7553	0.3621
+comp_NH	comp	publictransit	12.193	7.2299	15.8733	0.4432	0.3126	0.8004	0.5116	0.7404	0.4652
+combined_HI	combined	construction	5.062	2.1238	5.0388	0.2768	0.0917	0.4884	0.1098	0.5709	0.1777
+combined_HI	combined	publictransit	5.064	-0.1182	8.5253	0.2842	0.1536	0.5815	0.2926	0.5538	0.2786
+combined_NH	combined	construction	12.208	8.1141	11.0292	0.4096	0.2245	0.7507	0.3720	0.7476	0.3544
+combined_NH	combined	publictransit	12.210	7.0469	15.6903	0.4392	0.3086	0.8101	0.5213	0.7420	0.4668

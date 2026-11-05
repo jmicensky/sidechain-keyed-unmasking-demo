@@ -512,6 +512,11 @@ int main(int argc, char** argv) {
     if (a.count("--min-utt-ms")) o.minUttMs = std::stod(a["--min-utt-ms"]);
     const std::string analysis = o.repo + "/analysis";
     const std::string renderDir = o.repo + "/exports/volume_only";
+    // --split-dir: also write every condition's processed Dialogue and background
+    // sum at their real levels (not LUFS-matched) as <scene>_<condition>[_<target>]_
+    // dialogue.wav / _background.wav, for the speech-band margin and SII
+    // (analysis/score_volume_only_speech.py).
+    const std::string splitDir = a.count("--split-dir") ? a["--split-dir"] : "";
 
     std::vector<Setting> settings = loadSettings(analysis + "/sbr_matched_settings.tsv");
     if (settings.empty()) { std::cerr << "no settings in analysis/sbr_matched_settings.tsv\n"; return 1; }
@@ -622,6 +627,11 @@ int main(int argc, char** argv) {
                 std::string name = renderDir + "/" + sc.name + "_" + r.condition + (r.target.empty() ? "" : "_" + r.target);
                 mix(r, mL, mR, std::pow(10.0, matchDb / 20.0));
                 writeWavFloat(name + "_lufs_matched.wav", mL, mR, sc.sampleRate);
+            }
+            if (!splitDir.empty()) {
+                std::string name = splitDir + "/" + sc.name + "_" + r.condition + (r.target.empty() ? "" : "_" + r.target);
+                writeWavFloat(name + "_dialogue.wav", r.dL, r.dR, sc.sampleRate);
+                writeWavFloat(name + "_background.wav", r.bL, r.bR, sc.sampleRate);
             }
             return pooled;
         };

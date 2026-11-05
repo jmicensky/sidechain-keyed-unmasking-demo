@@ -1,273 +1,142 @@
 #!/usr/bin/env python3
-"""Latin Hypercube parameter sweep over the Sidechain Compressor's 5
-parameters (threshold, ratio, knee, attack, release), searching for
-settings that maximize mean margin gain, STOI gain, and psychoacoustic
-partial-loudness reduction - and specifically for a "sweet spot" where
-STOI/loudness gains are high while margin gain stays comparatively low
-(more intelligibility improvement than the raw level-based margin metric
-would suggest - a proxy for "more intelligible while remaining
-transparent").
+"""Latin Hypercube sweep over the Sidechain Compressor's parameters, scored with
+the speech-band metrics (2026-11-04 revision; see HANDOFF_speech_band_sii.md).
 
-Renders both Basic and Advanced (Summed-bus) for every sampled point via
-the native CLI's --static mode, for a given --scene/--key (defaults to
-Construction Scene, Dialogue priority - the combo every other table in
-this project uses), computing all 3 metrics for each render against a
-single shared unprocessed baseline (computed once, since it doesn't
-depend on any swept parameter). Uses ONE reusable temp WAV file per
-condition, overwritten each iteration, rather than keeping N x 2 renders
-on disk (~9GB+ otherwise for N=150).
+Sampled: threshold, ratio, knee, attack, release, and max reduction (3-12 dB).
+With --fixed-threshold, threshold is held constant and max reduction stays at
+the old 6 dB (the CLI default the earlier sweeps used), so only ratio, knee,
+attack and release are sampled.
 
-Margin uses the same 0.85-octave-padded band as
-compute_metrics.py's MARGIN_MEASUREMENT_PAD_OCTAVES. Partial-loudness uses
-the same ISO 532-1 stationary-per-segment/100dB-SPL-calibration approach
-as compute_partial_loudness.py - see that script's docstring for the full
-methodology caveats (not repeated here).
+Every point renders Basic and Advanced (Summed-bus) through `demo_engine_cli
+--static --split-out`, and split_metrics.score_split scores each render:
+  - speech-band margin, 150 Hz-8 kHz, from separated key/non-key renders;
+  - Extended SII (main value) and static SII;
+  - ESTOI against the dry key stem.
+Each metric is written both absolute and as the change from the unprocessed
+mix (`_gain`), which is rendered and scored once per run.
 
-Writes each row to the output CSV incrementally (flushed after every
-point), so a partial run's results are still usable if interrupted.
+The old metrics (padded-band margin by power subtraction, and mosqito
+partial loudness) are gone. Their CSVs (lhs_sweep_results*.csv) are kept,
+and the script that wrote them is in git history before this revision.
+Outputs go to new files (lhs_speech_*.csv), so the two can't be confused.
+
+Rows are flushed as they are written, so an interrupted run is still usable.
+Each run renders into its own temporary folder, so scenes can run in parallel.
 
 Usage:
-    python3 analysis/run_lhs_sweep.py --n 150 --out analysis/lhs_sweep_results.csv
+    python3 analysis/run_lhs_sweep.py --scene construction --n 100
+    python3 analysis/run_lhs_sweep.py --scene publictransit --n 100
+    python3 analysis/run_lhs_sweep.py --scene construction --n 100 --fixed-threshold -35
 """
 import argparse
 import csv
-import subprocess
+import shutil
 import sys
+import tempfile
 import time
-import warnings
 from pathlib import Path
 
 import numpy as np
 from scipy.stats import qmc
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-warnings.filterwarnings("ignore")  # mosqito/matplotlib import-time deprecation noise
-from compute_metrics import (  # noqa: E402
-    load_mono, CLASS_RANGES, SCENES, DEFAULT_SAFETY_GAIN_DB,
-    compute_masking_margin, compute_stoi, HAVE_PYSTOI,
-)
-from mosqito.sq_metrics import loudness_zwst_perseg  # noqa: E402
+from compute_metrics import CLASS_RANGES, HAVE_PYSTOI, SCENES, load_mono  # noqa: E402
+from split_metrics import METRICS, gain_columns, render_split, score_split  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-CLI = REPO_ROOT / "demo_engine_cli"
 
-# CLI --key expects classIndexToName's display strings (see
-# src/main.cpp's printStaticUsage), not the slugs CLASS_RANGES/SCENES use -
-# map between them here, same pattern as compute_folder_export_metrics.py's
-# KEY_SLUG dict (that one maps label->slug; this is the inverse).
+# CLI --key expects display names (src/main.cpp printStaticUsage), not slugs.
 KEY_LABEL_BY_SLUG = {
     'dialogue': 'Dialogue', 'music': 'Music', 'background': 'Background Noise',
     'safety': 'Safety Alerts', 'other': 'Other',
 }
 
-# Set by main() from --scene/--key before render()/evaluate_condition() are
-# ever called - module-level so render() doesn't need scene/key threaded
-# through every call site.
-SCENE = None
-KEY = None
-KEY_SLUG = None
-
-# Search ranges - matches each control's UI slider/select range where one
-# exists (knee 0-24, attack 1-50, release 20-400); threshold and ratio
-# extend somewhat beyond what's been manually tested so far (threshold
-# -60 to -18 vs. the -48 to -24 explored by hand; ratio up to 10, the
-# engine's own clamp ceiling, vs. the UI dropdown's 1.5/4/8 discrete options).
+# Search ranges. Knee, attack and release follow the UI slider ranges; threshold
+# and ratio extend past what was tested by hand (ratio up to the engine's clamp).
+# The old ranges are kept, and max reduction is new (author's decision 2026-11-04).
 PARAM_RANGES = {
     'threshold_db': (-60.0, -18.0),
     'ratio': (1.5, 10.0),
     'knee_db': (0.0, 24.0),
     'attack_ms': (1.0, 50.0),
     'release_ms': (20.0, 400.0),
+    'max_reduction_db': (3.0, 12.0),
 }
-PARAM_ORDER = ['threshold_db', 'ratio', 'knee_db', 'attack_ms', 'release_ms']
-
-P_REF_PA = 20e-6
-P_FULL_SCALE_PA = P_REF_PA * 10 ** (100 / 20)  # 0dBFS = 100dB SPL, matches compute_partial_loudness.py
-NPERSEG = 8192
-NOVERLAP = 4096
-ACTIVE_FRACTION_OF_PEAK = 0.10
+PARAM_ORDER = list(PARAM_RANGES)
+OLD_MAX_REDUCTION_DB = 6.0   # CLI/Engine.h default, used by every earlier sweep
 
 
-def specific_loudness(signal_linear, sr):
-    signal_pa = signal_linear * P_FULL_SCALE_PA
-    N, N_spec, _bark_axis, time_axis = loudness_zwst_perseg(
-        signal_pa, sr, nperseg=NPERSEG, noverlap=NOVERLAP, field_type="free"
-    )
-    return N, N_spec, time_axis
-
-
-def fraction_masked(dialogue_specific, masker_specific):
-    masked = dialogue_specific <= masker_specific
-    masked_loudness = np.sum(np.where(masked, dialogue_specific, 0.0), axis=0)
-    total_loudness = np.sum(dialogue_specific, axis=0)
-    with np.errstate(invalid="ignore", divide="ignore"):
-        frac = np.where(total_loudness > 1e-9, masked_loudness / total_loudness, np.nan)
-    return frac
-
-
-def render(mode, params, out_path):
-    cmd = [
-        str(CLI), "--static", "--scene", SCENE, "--key", KEY, "--mode", mode,
-        "--threshold", str(params['threshold_db']),
-        "--ratio", str(params['ratio']),
-        "--knee", str(params['knee_db']),
-        "--attack", str(params['attack_ms']),
-        "--release", str(params['release_ms']),
-        "--out", str(out_path),
-    ]
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        raise RuntimeError(f"CLI failed ({' '.join(cmd)}):\n{result.stderr}")
-
-
-def evaluate_condition(dry, dry_sr, spec_dialogue, active, low_hz, high_hz,
-                        unproc_mean_margin, unproc_stoi, unproc_pct_masked,
-                        wav_path):
-    mix, mix_sr = load_mono(wav_path)
-    n = min(len(dry), len(mix))
-
-    margin = compute_masking_margin(dry, mix, mix_sr, low_hz, high_hz, DEFAULT_SAFETY_GAIN_DB)
-    mean_margin_gain = (margin['mean_margin_db'] - unproc_mean_margin) if margin else float('nan')
-
-    stoi_gain = float('nan')
-    if HAVE_PYSTOI:
-        score, _lag = compute_stoi(dry, mix, mix_sr, extended=True)
-        stoi_gain = score - unproc_stoi
-
-    masker_alone = mix[:n] - dry[:n]
-    _N, masker_specific, _t = specific_loudness(masker_alone, mix_sr)
-    frac = fraction_masked(spec_dialogue, masker_specific)
-    pct_masked = 100 * np.nanmean(frac[active])
-    masked_reduction_pp = unproc_pct_masked - pct_masked
-
-    return mean_margin_gain, stoi_gain, masked_reduction_pp
+def cli_args(params):
+    return ["--threshold", params['threshold_db'], "--ratio", params['ratio'],
+            "--knee", params['knee_db'], "--attack", params['attack_ms'],
+            "--release", params['release_ms'], "--max-reduction", params['max_reduction_db']]
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('--n', type=int, default=150)
-    parser.add_argument('--out', default=None,
-                         help='Defaults to analysis/lhs_sweep_results.csv for the original '
-                              'construction/dialogue combo (unchanged, for backward '
-                              'compatibility with existing tables/captions that name that file '
-                              'directly), or analysis/lhs_sweep_results_<scene>_<key>.csv '
-                              'otherwise.')
-    parser.add_argument('--scene', default='construction', choices=sorted(SCENES.keys()))
-    parser.add_argument('--key', default='dialogue', choices=sorted(CLASS_RANGES.keys()))
-    parser.add_argument('--seed', type=int, default=42)
-    parser.add_argument('--modes', nargs='+', default=['basic', 'advanced'], choices=['basic', 'advanced'])
-    parser.add_argument('--fixed-threshold', type=float, default=None,
-                         help='Hold threshold_db constant at this value and sample only the '
-                              'other 4 parameters (dimension drops from 5 to 4). Global '
-                              'per-parameter correlations from a full 5D sweep can understate '
-                              'ratio/knee/attack/release\'s influence at any one threshold, '
-                              'since threshold dominates the overall correlation - this gives a '
-                              'much denser, more precise answer for "at this threshold, which '
-                              'of the other 4 settings performs best" than sparse nearby points '
-                              'from a full 5D sweep would.')
-    args = parser.parse_args()
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('--n', type=int, default=100)
+    ap.add_argument('--scene', default='construction', choices=['construction', 'publictransit'],
+                    help='Restaurant is excluded from these results (see HANDOFF_speech_band_sii.md).')
+    ap.add_argument('--key', default='dialogue', choices=sorted(CLASS_RANGES))
+    ap.add_argument('--seed', type=int, default=42)
+    ap.add_argument('--modes', nargs='+', default=['basic', 'advanced'], choices=['basic', 'advanced'])
+    ap.add_argument('--fixed-threshold', type=float, default=None,
+                    help='Hold threshold constant (and max reduction at 6 dB); sample ratio, '
+                         'knee, attack and release only.')
+    ap.add_argument('--out', default=None,
+                    help='Default: analysis/lhs_speech_<scene>_<key>[_thr<T>].csv')
+    ap.add_argument('--keep-renders', action='store_true', help='Keep the temp folder of WAVs.')
+    args = ap.parse_args()
 
-    global SCENE, KEY, KEY_SLUG
-    SCENE = SCENES[args.scene]['dir']
-    KEY = KEY_LABEL_BY_SLUG[args.key]
-    KEY_SLUG = args.key
-
+    scene_dir = SCENES[args.scene]['dir']
+    key_label = KEY_LABEL_BY_SLUG[args.key]
     if args.out is None:
-        if args.scene == 'construction' and args.key == 'dialogue':
-            args.out = 'analysis/lhs_sweep_results.csv'
-        else:
-            args.out = f'analysis/lhs_sweep_results_{args.scene}_{args.key}.csv'
-
-    if not HAVE_PYSTOI:
-        print("WARNING: pystoi not installed - STOI gain will be NaN for every row.", file=sys.stderr)
-
-    free_params = [p for p in PARAM_ORDER if p != 'threshold_db'] if args.fixed_threshold is not None else PARAM_ORDER
-    d = len(free_params)
-    sampler = qmc.LatinHypercube(d=d, seed=args.seed)
-    unit_samples = sampler.random(n=args.n)
-    bounds_lo = np.array([PARAM_RANGES[k][0] for k in free_params])
-    bounds_hi = np.array([PARAM_RANGES[k][1] for k in free_params])
-    scaled_free = qmc.scale(unit_samples, bounds_lo, bounds_hi)
-
-    if args.fixed_threshold is not None:
-        # Reinsert threshold_db as a constant column so downstream code
-        # (which always indexes PARAM_ORDER) is unchanged.
-        thr_col = np.full((args.n, 1), args.fixed_threshold)
-        scaled = np.concatenate([thr_col, scaled_free], axis=1)  # PARAM_ORDER = [threshold_db, ratio, knee_db, attack_ms, release_ms]
-        print(f"Fixed threshold = {args.fixed_threshold}dB; sampling only {free_params}\n")
-    else:
-        scaled = scaled_free
-
-    tmp_dir = Path('/tmp/lhs_sweep')
-    tmp_dir.mkdir(exist_ok=True)
-
-    print(f"Scene={SCENE!r} Key={KEY!r} (slug={KEY_SLUG})")
-    print(f"Rendering shared unprocessed baseline...")
-    unprocessed_path = tmp_dir / 'unprocessed.wav'
-    dummy_params = {'threshold_db': -30.0, 'ratio': 4.0, 'knee_db': 6.0, 'attack_ms': 5.0, 'release_ms': 120.0}
-    render('unprocessed', dummy_params, unprocessed_path)
-
-    dry_path = REPO_ROOT / SCENE / SCENES[args.scene]['stems'][args.key]
-    dry, dry_sr = load_mono(dry_path)
-    unproc, unproc_sr = load_mono(unprocessed_path)
-    low_hz, high_hz = CLASS_RANGES[KEY_SLUG]
-
-    m_unproc = compute_masking_margin(dry, unproc, unproc_sr, low_hz, high_hz, DEFAULT_SAFETY_GAIN_DB)
-    unproc_mean_margin = m_unproc['mean_margin_db']
-    unproc_stoi = float('nan')
-    if HAVE_PYSTOI:
-        unproc_stoi, _lag = compute_stoi(dry, unproc, unproc_sr, extended=True)
-
-    print(f"Computing dry {KEY} specific loudness (shared across all points)...")
-    N_dialogue, spec_dialogue, _t = specific_loudness(dry, dry_sr)
-    peak_N = np.max(N_dialogue)
-    active = N_dialogue > (ACTIVE_FRACTION_OF_PEAK * peak_N)
-
-    n_unproc = min(len(dry), len(unproc))
-    unproc_masker_alone = unproc[:n_unproc] - dry[:n_unproc]
-    _N, unproc_masker_specific, _t2 = specific_loudness(unproc_masker_alone, unproc_sr)
-    unproc_frac = fraction_masked(spec_dialogue, unproc_masker_specific)
-    unproc_pct_masked = 100 * np.nanmean(unproc_frac[active])
-
-    print(f"Baseline: mean_margin={unproc_mean_margin:.2f}dB stoi={unproc_stoi:.3f} pct_masked={unproc_pct_masked:.1f}%")
-    print(f"Starting sweep: n={args.n} modes={args.modes}\n")
-
+        tag = f"_thr{abs(args.fixed_threshold):g}" if args.fixed_threshold is not None else ""
+        args.out = f"analysis/lhs_speech_{args.scene}_{args.key}{tag}.csv"
     out_path = REPO_ROOT / args.out
+    if out_path.exists():
+        sys.exit(f"{out_path} already exists; pass a different --out or remove it first.")
+    if not HAVE_PYSTOI:
+        print("WARNING: pystoi not installed - ESTOI will be NaN.", file=sys.stderr)
+
+    fixed = {}
+    if args.fixed_threshold is not None:
+        fixed = {'threshold_db': args.fixed_threshold, 'max_reduction_db': OLD_MAX_REDUCTION_DB}
+    free = [p for p in PARAM_ORDER if p not in fixed]
+    unit = qmc.LatinHypercube(d=len(free), seed=args.seed).random(n=args.n)
+    scaled = qmc.scale(unit, [PARAM_RANGES[p][0] for p in free], [PARAM_RANGES[p][1] for p in free])
+    points = [{**fixed, **dict(zip(free, row))} for row in scaled]
+
+    tmp = Path(tempfile.mkdtemp(prefix=f"lhs_{args.scene}_"))
+    print(f"Scene={scene_dir!r} key={key_label!r} n={args.n} modes={args.modes}")
+    print(f"Sampling {free}; fixed {fixed or 'nothing'}; renders in {tmp}")
+
+    dry, dry_sr = load_mono(REPO_ROOT / scene_dir / SCENES[args.scene]['stems'][args.key])
+    base = score_split(render_split(scene_dir, key_label, 'unprocessed', tmp / 'unprocessed'), dry, dry_sr)
+    print("Unprocessed: " + "  ".join(f"{k}={v:.4f}" for k, v in base.items()))
+
+    fieldnames = PARAM_ORDER + [f"{m}_{k}{g}" for m in args.modes for k in METRICS for g in ("", "_gain")]
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    fieldnames = PARAM_ORDER + [f'{m}_{metric}' for m in args.modes for metric in
-                                 ('mean_margin_gain_db', 'stoi_gain', 'masked_reduction_pp')]
-
-    t_start = time.time()
+    t0 = time.time()
     with open(out_path, 'w', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-
-        for i, row_vals in enumerate(scaled):
-            params = dict(zip(PARAM_ORDER, row_vals))
-            row = dict(params)
-
+        w = csv.DictWriter(f, fieldnames=fieldnames)
+        w.writeheader()
+        for i, params in enumerate(points):
+            row = {p: params[p] for p in PARAM_ORDER}
             for mode in args.modes:
-                cond_path = tmp_dir / f'{mode}.wav'
-                render(mode, params, cond_path)
-                mg, sg, mr = evaluate_condition(
-                    dry, dry_sr, spec_dialogue, active, low_hz, high_hz,
-                    unproc_mean_margin, unproc_stoi, unproc_pct_masked, cond_path
-                )
-                row[f'{mode}_mean_margin_gain_db'] = mg
-                row[f'{mode}_stoi_gain'] = sg
-                row[f'{mode}_masked_reduction_pp'] = mr
-
-            writer.writerow(row)
+                prefix = render_split(scene_dir, key_label, mode, tmp / mode, cli_args(params))
+                row.update(gain_columns(mode, score_split(prefix, dry, dry_sr), base))
+            w.writerow(row)
             f.flush()
+            el = time.time() - t0
+            eta = el / (i + 1) * (args.n - i - 1) / 60
+            summary = "  ".join(f"{m}: margin {row[f'{m}_speech_margin_db_gain']:+.2f} dB, "
+                                f"ESII {row[f'{m}_esii_gain']:+.3f}" for m in args.modes)
+            print(f"[{i + 1}/{args.n}] {el / (i + 1):.1f} s/pt ETA {eta:.1f} min | {summary}", flush=True)
 
-            elapsed = time.time() - t_start
-            rate = (i + 1) / elapsed
-            eta_min = (args.n - i - 1) / rate / 60 if rate > 0 else float('nan')
-            print(f"[{i+1}/{args.n}] thr={params['threshold_db']:.1f} ratio={params['ratio']:.2f} "
-                  f"knee={params['knee_db']:.1f} atk={params['attack_ms']:.1f} rel={params['release_ms']:.1f}  "
-                  f"| elapsed={elapsed/60:.1f}min ETA={eta_min:.1f}min")
-
-    print(f"\nDone. Saved {args.n} rows to {out_path}")
+    if not args.keep_renders:
+        shutil.rmtree(tmp, ignore_errors=True)
+    print(f"\nDone. {args.n} rows -> {out_path}")
 
 
 if __name__ == '__main__':

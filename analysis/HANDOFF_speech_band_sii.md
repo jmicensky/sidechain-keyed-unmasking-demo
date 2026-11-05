@@ -115,31 +115,85 @@ the old artifact was about 0.9 dB. Resonance at its defaults gave +0.09 dB.
 The scratch renders for this check were in the previous session's scratchpad
 and are gone. Re-create them with the commands in `--static` usage if needed.
 
-## Decisions still open
+## Decisions (resolved with the author, 2026-11-04)
 
-Ask the author. The recommended defaults are in bold.
+1. **SII tables: the sii.to reference code.** Use the MATLAB implementation by
+   Hannes Muesch (`SII.M` in http://sii.to/siito/assets/siimatlab.zip). Its
+   one-third-octave tables (band centres, internal noise, standard speech
+   spectrum, band importance, constants) agree value for value with Pavlovic's C
+   kit (`SOURCES/SII.C` in http://sii.to/siito/assets/DevelopmentKit.zip).
+   Verified: a port of `SII.M` gives 0.4454 on the kit's `TO.TST` (expected 0.445)
+   and 0.4382 on `TO_1.TST` (expected 0.438). The expected values are in the kit's
+   `readme.doc`. Use those two files as the unit test. Terms (sii.to/programs.html):
+   free to use except in commercially distributed software. The thesis use is fine,
+   but credit Muesch and Pavlovic in the module header. Port the values; don't
+   vendor their files.
+2. **Calibration: 0 dBFS = 100 dB SPL**, the same as `compute_partial_loudness.py`.
+3. **Extended SII as the main value**, with static SII alongside. Source:
+   Rhebergen & Versfeld (2005), JASA 117(4) 2181–2192, doi:10.1121/1.1861713. The
+   PDF is `Documents/2181_1_online.pdf` (not in git). The method, pp. 2182–2183:
+   - speech and noise are filtered into bands separately, with a Hilbert envelope
+     per band;
+   - rectangular windows that all end at the same instant;
+   - an instantaneous SII every 9.4 ms, averaged over frames.
 
-1. **SII tables.** The ANSI S3.5-1997 (R2017) band-importance function, the
-   standard speech spectrum, the reference internal noise and the constants must
-   come from the standard itself or from a reference implementation. **Do not type
-   them from memory.** Ask the author for the PDF (UIC library access). Verify the
-   implementation against the standard's worked example before using it.
-2. **Calibration** (SII needs dB SPL). Either **0 dBFS = 100 dB SPL**, already used
-   by `compute_partial_loudness.py`, or setting each scene's unprocessed mix to
-   65 dBA as Johnson & Healy did.
-3. **Static or Extended SII.** Recommended: **Extended SII** (Rhebergen & Versfeld
-   2005; short windows, for fluctuating maskers) as the main value, with static
-   SII alongside for comparison with Johnson & Healy. Static SII on long-term
-   spectra blurs exactly what ducking does.
-4. **Partial-loudness metric.** Keep it in the sweeps, or **let SII replace it**?
-   It is the slowest part of each point, and SII covers band masking with
-   upward spread, which the partial-loudness proxy lacks.
-5. **SII for hearing-impaired listeners.** **Defer.** Later options: Bisgaard
-   N-series audiograms, or Johnson & Healy's mean listener (34 dB HL PTA).
+   The paper used 21 critical bands but calls one-third-octave "equally valid", so
+   we use the verified one-third-octave core. It gives window lengths only at the
+   ends: 35 ms at the lowest band and 9.4 ms at 8 kHz (Moore 1997 gap detection
+   × 2.5). The bands in between are not tabulated. Author's decisions:
+   - **Windows:** linear in log-frequency between 35 ms (160 Hz band) and 9.4 ms
+     (8 kHz band). This is our assumption, and the thesis methods must say so. The
+     paper's single-window alternative is 12 ms.
+   - **Band importance: average speech** (Table 3, `SII.M` column 1), not the
+     paper's SPIN.
+   - **Silence gate:** average only over frames where Dialogue's in-band level is
+     within 40 dB of its peak, the same rule as `compute_separated_margin`. The
+     paper sidestepped silences by using stationary speech-shaped noise as speech;
+     our Dialogue has real pauses.
+4. **Partial loudness is dropped**; SII replaces it. `run_lhs_sweep.py` imports
+   mosqito at the top level, and `/usr/bin/python3` (the Python with
+   numpy/scipy/soundfile) doesn't have mosqito installed, so remove that import.
+5. **SII for hearing-impaired listeners: deferred.**
+6. **Sweep bounds:** the old LHS ranges, plus **max reduction as a sixth sampled
+   parameter, 3–12 dB**, in the LHS sweeps only. The fixed-threshold sweep and the
+   Resonance sweep keep their current parameters and don't sample it.
+7. **LHS point counts: 100 per scene** (Construction and Public Transit). The author cut this from 150 to save run time.
 
 ## Remaining work, in order
 
 ### 1. Wire the separated margin into the sweep scripts
+
+**Status (2026-11-04): done.** Run every script with `/usr/bin/python3`; pystoi
+0.4.1 was installed into its user site-packages this session.
+
+- `split_metrics.py`: a shared `render_split` (CLI `--split-out`) and
+  `score_split`. It returns speech margin, worst margin, ESTOI, Extended SII and
+  static SII. `gain_columns` writes each metric both absolute and as `_gain`
+  over unprocessed.
+- `run_lhs_sweep.py`: rewritten.
+  - Samples 6 dimensions (max reduction 3–12 dB).
+  - With `--fixed-threshold`, max reduction stays at 6 dB.
+  - Writes `lhs_speech_<scene>_dialogue[_thr35].csv`.
+  - Mosqito and partial loudness are gone.
+- `run_resonance_sweep.py`: rewritten in the same way. Writes
+  `resonance_speech_<scene>_dialogue.csv`. ESTOI trims the 2048-sample delay
+  from the mix (`RESONANCE_LATENCY_SAMPLES`). Margin and SII use the aligned
+  split files.
+- `rerender_folder_exports.py`: re-renders the 9 `UnMasking Exports`
+  settings (max reduction 24 dB, from `settings.txt`) as Basic and Advanced.
+  Writes `folder_export_speech.csv`.
+- `sbr_speech_crossover.py`: replaces `sbr_margin_crossover.py` (kept) for the
+  new metrics.
+  - Step 1 measures SBR for the new LHS Basic points.
+  - Step 2 scores the SBR-matched settings (default
+    `sbr_matched_settings.tsv`; pass `--settings` for the 2-scene best rows).
+  - Run it after the LHS sweeps.
+- `volume_only.cpp --split-dir <dir>`: writes per-condition Dialogue/background
+  WAVs at real levels. `score_volume_only_speech.py` turns them into
+  `volume_only_speech.csv`. With the flag, `volume_only_*.csv` is unchanged
+  (checked with git).
+
+Original plan:
 
 All three render through the CLI, score one temp WAV, and call
 `compute_masking_margin(dry, mix, sr, *CLASS_RANGES[key], ...)`:
@@ -167,6 +221,25 @@ separated Dialogue/background WAVs for basic/comp/combined. Point
 
 ### 2. Implement SII
 
+**Status (2026-11-04): implemented** in `analysis/sii.py`. Test it with
+`/usr/bin/python3 analysis/test_sii.py`. The test covers the C kit's TO/TO_1 cases,
+checks that Extended and static SII agree for stationary signals, and checks that
+Extended SII beats static SII for interrupted noise. Use
+`compute_sii(key, nonkey, sr)` on the split renders; it returns `esii` and
+`static_sii`. It takes about 6 s per pair of 81 s stereo stems.
+
+Finding: on real Dialogue, Extended SII is much lower than static SII.
+Unprocessed Construction gives 0.185 vs 0.379. Basic at −30 dB, 4:1, 6 dB max
+reduction gives 0.215 vs 0.412, so the changes are similar (+0.030 vs +0.033).
+The gap remains at any gate depth (a 15 dB gate gives 0.296 vs 0.445), so the
+gate isn't the cause. It comes from averaging per-frame dB levels of
+fluctuating speech, against the power mean that static SII uses. Rhebergen &
+Versfeld's 0.35 threshold criterion was fitted with stationary speech-shaped
+"speech", so absolute Extended SII values here are not comparable to it. Report
+changes, not absolute values.
+
+Original plan:
+
 Once decision 1 is resolved:
 
 - New module, for example `analysis/sii.py`.
@@ -190,10 +263,33 @@ run and tell the author before starting it.
 
 ### 4. Re-run (Construction and Public Transit only)
 
+**Status (2026-11-04): all runs done** (outputs in `analysis/`, not yet committed):
+- `lhs_speech_construction_dialogue.csv`, `lhs_speech_publictransit_dialogue.csv`:
+  100 points each, Basic and Advanced. Both use seed 42, so the two scenes share
+  the same 100 settings: paired by design.
+- `lhs_speech_construction_dialogue_thr35.csv`: fixed threshold −35 dB, max
+  reduction 6 dB.
+- `resonance_speech_construction_dialogue.csv`: 100 points.
+- `folder_export_speech.csv`: the 9 re-rendered folder exports.
+- `volume_only_speech.csv`: joins to `volume_only_results.csv` on scene,
+  condition and target.
+- `sbr_speech_crossover{,_summary}.*` and `sbr_speech_winners.tsv`: 3-scene
+  settings. `sbr_speech_winners_2scene.tsv` and `sbr_speech_crossover_2scene_summary.txt`:
+  2-scene settings.
+
+Open questions for the author:
+- **SII at rendered vs loudness-matched levels.** Group compression and Combined
+  lower Dialogue by 7–10 dB overall, since there is no makeup gain.
+- **Which SBR-matched settings set to report.** The 3-scene and 2-scene sets
+  reach the same SBR (within 0.45 dB). They give the same margin and SII for
+  basic_HI, comp_HI and comp_NH, but differ a lot for basic_NH and Combined.
+
+Original plan:
+
 | Run | Old output | Points |
 |---|---|---|
-| LHS sweep, Construction, Basic + Advanced | `lhs_sweep_results.csv` | 150 |
-| LHS sweep, Public Transit | `lhs_sweep_results_publictransit_dialogue.csv` | 50 (consider 150 to match) |
+| LHS sweep, Construction, Basic + Advanced | `lhs_sweep_results.csv` | 100 (was 150) |
+| LHS sweep, Public Transit | `lhs_sweep_results_publictransit_dialogue.csv` | 100 (was 50) |
 | Fixed-threshold sweep | `lhs_sweep_fixed_thr35.csv` | 100 |
 | Resonance sweep | `resonance_sweep_results_construction_dialogue.csv` | 100 |
 | 9-run parameter sweep (re-rendered) | `folder_export_results.csv` | 9 |

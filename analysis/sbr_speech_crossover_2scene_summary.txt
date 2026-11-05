@@ -1,0 +1,16 @@
+
+STEP 2 - speech-band metrics of the SBR-matched settings (sbr_matched_2scene_basic_best.tsv, sbr_matched_2scene_comp_best.tsv, sbr_matched_2scene_combined_best.tsv)
+  unprocessed construction   SBR  +1.31 dB  speech_margin_db -2.915  esii 0.185  static_sii 0.379  estoi 0.393
+  unprocessed publictransit  SBR  -4.50 dB  speech_margin_db -8.643  esii 0.131  static_sii 0.289  estoi 0.275
+  basic_HI     construction   SBR  +7.85 dB  margin gain  +7.31 dB  ESII gain +0.140  static SII gain +0.219  ESTOI gain +0.235
+  basic_HI     publictransit  SBR  +2.35 dB  margin gain  +7.22 dB  ESII gain +0.126  static SII gain +0.234  ESTOI gain +0.216
+  basic_NH     construction   SBR +14.53 dB  margin gain +19.02 dB  ESII gain +0.402  static SII gain +0.419  ESTOI gain +0.463
+  basic_NH     publictransit  SBR  +9.86 dB  margin gain +18.31 dB  ESII gain +0.381  static SII gain +0.473  ESTOI gain +0.476
+  comp_HI      construction   SBR  +5.10 dB  margin gain  +5.05 dB  ESII gain +0.104  static SII gain +0.148  ESTOI gain +0.191
+  comp_HI      publictransit  SBR  +5.10 dB  margin gain  +8.53 dB  ESII gain +0.155  static SII gain +0.294  ESTOI gain +0.276
+  comp_NH      construction   SBR +12.20 dB  margin gain +11.24 dB  ESII gain +0.240  static SII gain +0.395  ESTOI gain +0.362
+  comp_NH      publictransit  SBR +12.19 dB  margin gain +15.87 dB  ESII gain +0.313  static SII gain +0.512  ESTOI gain +0.465
+  combined_HI  construction   SBR  +5.06 dB  margin gain  +5.04 dB  ESII gain +0.092  static SII gain +0.110  ESTOI gain +0.178
+  combined_HI  publictransit  SBR  +5.06 dB  margin gain  +8.53 dB  ESII gain +0.154  static SII gain +0.293  ESTOI gain +0.279
+  combined_NH  construction   SBR +12.21 dB  margin gain +11.03 dB  ESII gain +0.225  static SII gain +0.372  ESTOI gain +0.354
+  combined_NH  publictransit  SBR +12.21 dB  margin gain +15.69 dB  ESII gain +0.309  static SII gain +0.521  ESTOI gain +0.467
