@@ -4,6 +4,7 @@
 \begin{table}[H]
 \centering
 \footnotesize
+\setstretch{1}  % single-spaced rows in the double-spaced thesis
 \caption{\protect\todo{AI draft --- rewrite: SBR reached in each scene by the single best setting found for each processing mode and target (two-scene search, Construction and Public Transit). ``Change'' is the SBR change from each scene's unprocessed mix; ``Spread'' is the Construction SBR minus the Public Transit SBR; ``Worst miss'' is the larger distance from the target. SBR is the gated speech-active measure used by the search.}}
 \label{tab:scene-spread}
 \resizebox{\linewidth}{!}{%
@@ -15,11 +16,14 @@
 \midrule
 Unprocessed & -- & $+1.31$ & -- & $-4.50$ & -- & $5.81$ & -- \\
 \midrule
+Group compression & HI $+5.1$ & $+5.10$ & $+3.79$ & $+5.10$ & $+9.60$ & $0.00$ & $0.00$ \\
+Group compression & NH $+12.2$ & $+12.20$ & $+10.89$ & $+12.19$ & $+16.69$ & $0.00$ & $0.01$ \\
+\addlinespace
 Sidechain (Basic) & HI $+5.1$ & $+7.85$ & $+6.54$ & $+2.35$ & $+6.85$ & $5.50$ & $2.75$ \\
 Sidechain (Basic) & NH $+12.2$ & $+14.53$ & $+13.22$ & $+9.86$ & $+14.36$ & $4.67$ & $2.34$ \\
 \addlinespace
-Group compression & HI $+5.1$ & $+5.10$ & $+3.79$ & $+5.10$ & $+9.60$ & $0.00$ & $0.00$ \\
-Group compression & NH $+12.2$ & $+12.20$ & $+10.89$ & $+12.19$ & $+16.69$ & $0.00$ & $0.01$ \\
+Sidechain (per-channel) & HI $+5.1$ & $+5.25$ & $+3.94$ & $+4.96$ & $+9.46$ & $0.29$ & $0.15$ \\
+Sidechain (per-channel) & NH $+12.2$ & $+12.18$ & $+10.87$ & $+12.21$ & $+16.71$ & $-0.03$ & $0.02$ \\
 \addlinespace
 Combined & HI $+5.1$ & $+5.06$ & $+3.75$ & $+5.06$ & $+9.56$ & $0.00$ & $0.04$ \\
 Combined & NH $+12.2$ & $+12.21$ & $+10.90$ & $+12.21$ & $+16.71$ & $0.00$ & $0.01$ \\

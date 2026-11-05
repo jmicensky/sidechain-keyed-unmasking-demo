@@ -2,7 +2,7 @@
 """LaTeX table: scene-to-scene SBR spread of ONE setting per mode and target.
 
 Reads the "best" rows of the two-scene SBR-matched search
-(analysis/sbr_matched_2scene_{basic,comp,combined}.csv, from
+(analysis/sbr_matched_2scene_{comp,basic,perchannel,combined}.csv, from
 `sbr_matched_search --scenes construction,publictransit --tag sbr_matched_2scene`)
 and writes analysis/scene_spread_table.tex (also copied into the thesis
 repo by hand, like the other *_table.tex fragments).
@@ -21,7 +21,8 @@ SCENES = [("construction", "Construction"), ("publictransit", "Public Transit")]
 # Unprocessed gated SBR per scene (analysis/sbr_sweep_findings.txt, same gate).
 UNPROCESSED = {"construction": 1.31, "publictransit": -4.50}
 TARGETS = [("HI", 5.1), ("NH", 12.2)]
-MODES = [("basic", "Sidechain (Basic)"), ("comp", "Group compression"), ("combined", "Combined")]
+MODES = [("comp", "Group compression"), ("basic", "Sidechain (Basic)"),
+         ("perchannel", "Sidechain (per-channel)"), ("combined", "Combined")]
 
 
 def best_rows(mode):
@@ -57,6 +58,7 @@ tex = r"""% Scene-to-scene SBR spread of one setting per mode and target.
 \begin{table}[H]
 \centering
 \footnotesize
+\setstretch{1}  % single-spaced rows in the double-spaced thesis
 \caption{\protect\todo{AI draft --- rewrite: SBR reached in each scene by the single best setting found for each processing mode and target (two-scene search, Construction and Public Transit). ``Change'' is the SBR change from each scene's unprocessed mix; ``Spread'' is the Construction SBR minus the Public Transit SBR; ``Worst miss'' is the larger distance from the target. SBR is the gated speech-active measure used by the search.}}
 \label{tab:scene-spread}
 \resizebox{\linewidth}{!}{%
