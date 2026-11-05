@@ -1,0 +1,138 @@
+
+=== Group single-band (comp): 75 points per scene
+  construction
+    SBR gain dB      min  -7.799  median  +1.224  max +17.792
+    bg level dB      min -15.554  median  -0.501  max  +2.118
+    ESII gain        min  -0.103  median  +0.038  max  +0.392
+    static SII gain  min  -0.228  median  +0.071  max  +0.552
+    ESTOI gain       min  -0.202  median  +0.092  max  +0.481
+    Pearson r(SBR gain, bg level dB) = -0.946
+    Pearson r(SBR gain, ESII gain) = +0.957
+    Pearson r(SBR gain, static SII gain) = +0.958
+    Pearson r(SBR gain, ESTOI gain) = +0.960
+    Spearman rho of each parameter with SBR gain / ESII gain:
+      dialogue_threshold_db        +0.73 / +0.63
+      dialogue_ratio               +0.02 / +0.04
+      dialogue_attack_ms           +0.08 / +0.09
+      dialogue_release_ms          -0.18 / -0.15
+      music_threshold_db           -0.35 / -0.29
+      music_ratio                  -0.02 / -0.03
+      background_threshold_db      -0.52 / -0.67
+      background_ratio             -0.06 / -0.02
+      safety_threshold_db          +0.05 / +0.04
+      safety_ratio                 +0.09 / +0.04
+      other_threshold_db           -0.31 / -0.26
+      other_ratio                  -0.02 / -0.01
+      knee_db                      -0.02 / -0.06
+      background_attack_ms         -0.07 / -0.03
+      background_release_ms        +0.03 / +0.09
+  publictransit
+    SBR gain dB      min  -5.933  median  +5.049  max +22.277
+    bg level dB      min -16.494  median  -1.351  max  +1.824
+    ESII gain        min  -0.075  median  +0.068  max  +0.457
+    static SII gain  min  -0.190  median  +0.146  max  +0.635
+    ESTOI gain       min  -0.164  median  +0.158  max  +0.558
+    Pearson r(SBR gain, bg level dB) = -0.900
+    Pearson r(SBR gain, ESII gain) = +0.927
+    Pearson r(SBR gain, static SII gain) = +0.991
+    Pearson r(SBR gain, ESTOI gain) = +0.952
+    Spearman rho of each parameter with SBR gain / ESII gain:
+      dialogue_threshold_db        +0.59 / +0.54
+      dialogue_ratio               +0.07 / +0.06
+      dialogue_attack_ms           +0.06 / +0.09
+      dialogue_release_ms          -0.07 / -0.08
+      music_threshold_db           -0.43 / -0.45
+      music_ratio                  -0.02 / -0.01
+      background_threshold_db      -0.65 / -0.73
+      background_ratio             -0.00 / +0.02
+      safety_threshold_db          -0.13 / -0.01
+      safety_ratio                 +0.10 / +0.08
+      other_threshold_db           -0.01 / +0.02
+      other_ratio                  +0.03 / -0.02
+      knee_db                      -0.04 / -0.07
+      background_attack_ms         -0.09 / -0.08
+      background_release_ms        +0.03 / +0.04
+
+=== Basic sidechain (basic): 50 points per scene
+  construction
+    SBR gain dB      min  +0.007  median  +2.263  max +10.487
+    bg level dB      min  -4.391  median  -0.857  max  -0.003
+    ESII gain        min  +0.000  median  +0.058  max  +0.223
+    static SII gain  min  +0.000  median  +0.077  max  +0.343
+    ESTOI gain       min  +0.000  median  +0.098  max  +0.344
+    Pearson r(SBR gain, bg level dB) = -0.998
+    Pearson r(SBR gain, ESII gain) = +0.985
+    Pearson r(SBR gain, static SII gain) = +1.000
+    Pearson r(SBR gain, ESTOI gain) = +0.991
+    Spearman rho of each parameter with SBR gain / ESII gain:
+      threshold_db                 -0.94 / -0.91
+      ratio                        +0.26 / +0.27
+      knee_db                      +0.05 / +0.04
+      attack_ms                    +0.09 / +0.11
+      release_ms                   -0.01 / -0.03
+      max_reduction_db             +0.10 / +0.17
+  publictransit
+    SBR gain dB      min  +0.001  median  +2.093  max +10.706
+    bg level dB      min  -2.604  median  -0.412  max  -0.000
+    ESII gain        min  +0.000  median  +0.048  max  +0.204
+    static SII gain  min  +0.000  median  +0.066  max  +0.353
+    ESTOI gain       min  +0.000  median  +0.090  max  +0.328
+    Pearson r(SBR gain, bg level dB) = -0.996
+    Pearson r(SBR gain, ESII gain) = +0.976
+    Pearson r(SBR gain, static SII gain) = +1.000
+    Pearson r(SBR gain, ESTOI gain) = +0.982
+    Spearman rho of each parameter with SBR gain / ESII gain:
+      threshold_db                 -0.94 / -0.91
+      ratio                        +0.24 / +0.27
+      knee_db                      +0.06 / +0.04
+      attack_ms                    +0.09 / +0.11
+      release_ms                   -0.00 / -0.03
+      max_reduction_db             +0.08 / +0.17
+
+=== Per-channel sidechain (perchannel): 75 points per scene
+  construction
+    SBR gain dB      min  +0.042  median  +2.346  max  +7.916
+    bg level dB      min  -3.566  median  -0.901  max  -0.020
+    ESII gain        min  +0.000  median  +0.058  max  +0.200
+    static SII gain  min  +0.002  median  +0.084  max  +0.270
+    ESTOI gain       min  +0.001  median  +0.095  max  +0.303
+    Pearson r(SBR gain, bg level dB) = -0.974
+    Pearson r(SBR gain, ESII gain) = +0.975
+    Pearson r(SBR gain, static SII gain) = +0.939
+    Pearson r(SBR gain, ESTOI gain) = +0.978
+    Spearman rho of each parameter with SBR gain / ESII gain:
+      music_threshold_db           -0.16 / -0.08
+      music_ratio                  -0.11 / -0.11
+      background_threshold_db      -0.79 / -0.82
+      background_ratio             +0.10 / +0.14
+      safety_threshold_db          +0.02 / +0.05
+      safety_ratio                 -0.00 / +0.01
+      other_threshold_db           -0.35 / -0.26
+      other_ratio                  +0.03 / -0.00
+      knee_db                      +0.07 / +0.09
+      attack_ms                    -0.24 / -0.27
+      release_ms                   +0.22 / +0.14
+      max_reduction_db             +0.27 / +0.35
+  publictransit
+    SBR gain dB      min  +0.014  median  +2.103  max  +7.976
+    bg level dB      min  -1.948  median  -0.414  max  -0.003
+    ESII gain        min  +0.000  median  +0.040  max  +0.168
+    static SII gain  min  +0.000  median  +0.063  max  +0.257
+    ESTOI gain       min  +0.000  median  +0.083  max  +0.272
+    Pearson r(SBR gain, bg level dB) = -0.935
+    Pearson r(SBR gain, ESII gain) = +0.915
+    Pearson r(SBR gain, static SII gain) = +0.984
+    Pearson r(SBR gain, ESTOI gain) = +0.926
+    Spearman rho of each parameter with SBR gain / ESII gain:
+      music_threshold_db           -0.15 / -0.22
+      music_ratio                  -0.09 / -0.11
+      background_threshold_db      -0.85 / -0.85
+      background_ratio             +0.04 / +0.10
+      safety_threshold_db          -0.22 / +0.01
+      safety_ratio                 +0.01 / -0.01
+      other_threshold_db           -0.03 / +0.01
+      other_ratio                  -0.01 / +0.01
+      knee_db                      +0.18 / +0.13
+      attack_ms                    -0.28 / -0.32
+      release_ms                   +0.12 / +0.05
+      max_reduction_db             +0.22 / +0.28

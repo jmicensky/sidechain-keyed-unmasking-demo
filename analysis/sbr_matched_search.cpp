@@ -11,6 +11,11 @@
 //               release, mean gain reduction 1.5-6 dB in every scene) - the
 //               intelligibility reason for compressing it - and the four
 //               background groups have to supply the SBR.
+//   perchannel- full-band sidechain ducking keyed on raw Dialogue, like basic,
+//               but each background group has its own threshold/ratio on the
+//               shared detector level (knee, attack, release and max
+//               reduction shared). Engine's PerChannel only exists inside the
+//               band-limited Advanced mode; this is its full-band form.
 //   combined  - comp, then Basic ducking of the four background groups,
 //               keyed on raw (pre-compression) Dialogue: the Unity "S3"
 //               design (unity/UNITY_HANDOFF.md section 3).
@@ -140,12 +145,14 @@ bool loadScene(Scene& s, const std::string& repo) {
 // ---------------------------------------------------------------- settings
 
 struct Setting {
-    bool duck = false, comp = false;
+    bool duck = false, comp = false, perChannel = false;
     // Ducking (Basic, Dialogue key, key gain 0 dB).
     CompressorParams duckP;
     double maxReductionDb = 6.0;
     // Group compression, makeup 0 dB everywhere. [0] = Dialogue.
     std::array<CompressorParams, kNumClasses> compP;
+    // perchannel: each group's own duck threshold/ratio (duckP supplies the rest).
+    std::array<double, kNumClasses> pcThresholdDb{}, pcRatio{};
 };
 
 struct Dim { std::string name; double lo, hi; };
@@ -165,6 +172,16 @@ std::vector<Dim> dimsFor(const std::string& mode) {
         d.push_back({"background_attack_ms", 1.0, 50.0});
         d.push_back({"background_release_ms", 20.0, 1000.0});
     }
+    if (mode == "perchannel") {
+        for (const char* c : {"music", "background", "safety", "other"}) {
+            d.push_back({std::string(c) + "_duck_threshold_db", -70.0, -10.0});
+            d.push_back({std::string(c) + "_duck_ratio", 1.5, 20.0});
+        }
+        d.push_back({"duck_knee_db", 0.0, 24.0});
+        d.push_back({"duck_attack_ms", 1.0, 50.0});
+        d.push_back({"duck_release_ms", 20.0, 1000.0});
+        d.push_back({"duck_max_reduction_db", 3.0, 30.0});
+    }
     if (mode == "basic" || mode == "combined") {
         d.push_back({"duck_threshold_db", -70.0, -10.0});
         d.push_back({"duck_ratio", 1.5, 20.0});
@@ -181,7 +198,8 @@ Setting toSetting(const std::string& mode, const std::vector<Dim>& dims, const s
     for (size_t i = 0; i < dims.size(); ++i) p[dims[i].name] = v[i];
     Setting s;
     s.comp = mode == "comp" || mode == "combined";
-    s.duck = mode == "basic" || mode == "combined";
+    s.duck = mode == "basic" || mode == "combined" || mode == "perchannel";
+    s.perChannel = mode == "perchannel";
     if (s.comp) {
         const char* names[kNumClasses] = {"dialogue", "music", "background", "safety", "other"};
         for (int c = 0; c < kNumClasses; ++c) {
@@ -193,6 +211,16 @@ Setting toSetting(const std::string& mode, const std::vector<Dim>& dims, const s
             cp.releaseMs = c == kDialogue ? p["dialogue_release_ms"] : p["background_release_ms"];
             s.compP[c] = cp;
         }
+    }
+    if (s.perChannel) {
+        const char* names[kNumClasses] = {"dialogue", "music", "background", "safety", "other"};
+        for (int c = 1; c < kNumClasses; ++c) {
+            s.pcThresholdDb[c] = p[std::string(names[c]) + "_duck_threshold_db"];
+            s.pcRatio[c] = p[std::string(names[c]) + "_duck_ratio"];
+        }
+        // duckP's own threshold/ratio are unused; knee/attack/release below are shared.
+        p["duck_threshold_db"] = s.pcThresholdDb[1];
+        p["duck_ratio"] = s.pcRatio[1];
     }
     if (s.duck) {
         s.duckP.thresholdDb = p["duck_threshold_db"];
@@ -206,6 +234,39 @@ Setting toSetting(const std::string& mode, const std::vector<Dim>& dims, const s
 }
 
 // ---------------------------------------------------------------- renderer
+
+// Sidechain gains for one sample: one shared law (basic/combined) or one law per
+// background group on the same detector level (perchannel, as Engine's
+// PerChannel does), each clamped to the max-reduction floor.
+struct DuckGains {
+    EnvelopeFollower det;
+    GainComputer gc;
+    std::array<GainComputer, kNumClasses> pc;
+    double floorLin = 1.0;
+    void prepare(const Setting& st, double sr) {
+        det.prepare(sr, st.duckP.attackMs, st.duckP.releaseMs);
+        gc.prepare(st.duckP);
+        for (int c = 1; c < kNumClasses; ++c) {
+            CompressorParams p = st.duckP;
+            p.thresholdDb = st.pcThresholdDb[c];
+            p.ratio = st.pcRatio[c];
+            pc[c].prepare(p);
+        }
+        floorLin = std::pow(10.0, -std::clamp(st.maxReductionDb, 0.0, 40.0) / 20.0);
+    }
+    // Fills g[1..4]; g[0] (Dialogue) is always 1.
+    void tick(const Setting& st, double keyIn, std::array<double, kNumClasses>& g) {
+        g.fill(1.0);
+        if (!st.duck) return;
+        double lvl = det.tick(keyIn);
+        if (st.perChannel) {
+            for (int c = 1; c < kNumClasses; ++c) g[c] = std::max(pc[c].computeLinearGain(lvl), floorLin);
+        } else {
+            double s = std::max(gc.computeLinearGain(lvl), floorLin);
+            for (int c = 1; c < kNumClasses; ++c) g[c] = s;
+        }
+    }
+};
 
 struct SceneResult {
     double sbrDb = 0.0;
@@ -221,11 +282,9 @@ struct SceneResult {
 SceneResult render(const Scene& sc, const Setting& st, std::vector<float>* outL = nullptr,
                    std::vector<float>* outR = nullptr) {
     SceneResult r;
-    EnvelopeFollower det;
-    GainComputer gc;
-    det.prepare(sc.sampleRate, st.duckP.attackMs, st.duckP.releaseMs);
-    gc.prepare(st.duckP);
-    const double floorLin = std::pow(10.0, -std::clamp(st.maxReductionDb, 0.0, 40.0) / 20.0);
+    DuckGains dg;
+    dg.prepare(st, sc.sampleRate);
+    std::array<double, kNumClasses> gch;
     std::array<SingleBandEnhancementCompressor, kNumClasses> comp;
     for (int c = 0; c < kNumClasses; ++c) {
         comp[c].prepare(sc.sampleRate, st.compP[c]);
@@ -239,20 +298,16 @@ SceneResult render(const Scene& sc, const Setting& st, std::vector<float>* outL 
     std::vector<double> chunkPow(nChunks, 0.0), chunkActive(nChunks, 0.0);
 
     for (size_t i = 0; i < sc.frames; ++i) {
-        double g = 1.0;
-        if (st.duck) {
-            // Engine's detector reads a float mono sum (Engine::loadStems).
-            double keyIn = static_cast<float>(0.5f * (sc.L[kDialogue][i] + sc.R[kDialogue][i]));
-            g = std::max(gc.computeLinearGain(det.tick(keyIn)), floorLin);
-        }
+        // Engine's detector reads a float mono sum (Engine::loadStems).
+        dg.tick(st, static_cast<float>(0.5f * (sc.L[kDialogue][i] + sc.R[kDialogue][i])), gch);
         double dL = sc.L[kDialogue][i], dR = sc.R[kDialogue][i];
         if (st.comp) comp[kDialogue].tick(dL, dR, dL, dR);
         double bL = 0.0, bR = 0.0;
         for (int c = 1; c < kNumClasses; ++c) {
             double yL = sc.L[c][i], yR = sc.R[c][i];
             if (st.comp) comp[c].tick(yL, yR, yL, yR);
-            bL += g * yL;
-            bR += g * yR;
+            bL += gch[c] * yL;
+            bR += gch[c] * yR;
         }
         if (sc.active[i]) {
             dPow += dL * dL + dR * dR;
@@ -265,8 +320,13 @@ SceneResult render(const Scene& sc, const Setting& st, std::vector<float>* outL 
         }
         if ((i & 31) == 0) { // telemetry every 32 samples
             if (st.duck) {
-                sumDuckDb += 20.0 * std::log10(std::max(g, 1e-6));
-                engaged += g < 0.999;
+                double gDb = 0.0, gMin = 1.0;
+                for (int c = 1; c < kNumClasses; ++c) {
+                    gDb += 20.0 * std::log10(std::max(gch[c], 1e-6)) / (kNumClasses - 1);
+                    gMin = std::min(gMin, gch[c]);
+                }
+                sumDuckDb += gDb;
+                engaged += gMin < 0.999;
             }
             if (st.comp) {
                 sumDlgDb += comp[kDialogue].lastGainReductionDb();
@@ -291,26 +351,20 @@ SceneResult render(const Scene& sc, const Setting& st, std::vector<float>* outL 
 // background sum (b) to separate buffers.
 void renderSplit(const Scene& sc, const Setting& st, std::vector<float>& dLo, std::vector<float>& dRo,
                  std::vector<float>& bLo, std::vector<float>& bRo) {
-    EnvelopeFollower det;
-    GainComputer gc;
-    det.prepare(sc.sampleRate, st.duckP.attackMs, st.duckP.releaseMs);
-    gc.prepare(st.duckP);
-    const double floorLin = std::pow(10.0, -std::clamp(st.maxReductionDb, 0.0, 40.0) / 20.0);
+    DuckGains dg;
+    dg.prepare(st, sc.sampleRate);
+    std::array<double, kNumClasses> gch;
     std::array<SingleBandEnhancementCompressor, kNumClasses> comp;
     for (int c = 0; c < kNumClasses; ++c) { comp[c].prepare(sc.sampleRate, st.compP[c]); comp[c].setMakeupGainDb(0.0); }
     for (size_t i = 0; i < sc.frames; ++i) {
-        double g = 1.0;
-        if (st.duck) {
-            double keyIn = static_cast<float>(0.5f * (sc.L[kDialogue][i] + sc.R[kDialogue][i]));
-            g = std::max(gc.computeLinearGain(det.tick(keyIn)), floorLin);
-        }
+        dg.tick(st, static_cast<float>(0.5f * (sc.L[kDialogue][i] + sc.R[kDialogue][i])), gch);
         double dL = sc.L[kDialogue][i], dR = sc.R[kDialogue][i];
         if (st.comp) comp[kDialogue].tick(dL, dR, dL, dR);
         double bL = 0.0, bR = 0.0;
         for (int c = 1; c < kNumClasses; ++c) {
             double yL = sc.L[c][i], yR = sc.R[c][i];
             if (st.comp) comp[c].tick(yL, yR, yL, yR);
-            bL += g * yL; bR += g * yR;
+            bL += gch[c] * yL; bR += gch[c] * yR;
         }
         dLo[i] = float(dL); dRo[i] = float(dR); bLo[i] = float(bL); bRo[i] = float(bR);
     }

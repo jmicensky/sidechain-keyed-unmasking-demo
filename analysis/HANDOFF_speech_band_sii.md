@@ -335,3 +335,70 @@ Point the author to these; don't rewrite them. Line numbers are as of 2026-11-04
   estimator. Update it once the new margin is in the sweeps.
 - The live web demo and `paper-audio/` listening examples were rendered with the
   old band. Re-export the Advanced examples if the paper keeps linking them.
+
+---
+
+## Restructure (decided with the author, 2026-11-05)
+
+The paper is reorganised around two families of processing on the separated
+stems, with Dialogue as the example priority channel. Resonance is dropped
+(too hard to justify). Safety/situational-awareness trade-offs move to a
+"suggested implementation" section of two-piece priority designs, which is
+prose and signal-flow proposals only: no sweeps.
+
+Processes to measure (Construction + Public Transit only):
+
+| Family | Process | Engine | Notes |
+|---|---|---|---|
+| Group compression | Single-band | Enhancement, Single-band (`comp` in sbr_matched_search) | main table |
+| Group compression | Multiband | Enhancement, Multiband (6-band WdrcCompressor per stem) | small side table; per-stem threshold/ratio shared across all 6 bands, shared knee/attack/release (same dims as single-band) |
+| Sidechain | Summed-bus, full band | Basic | main table |
+| Sidechain | Individual compressors | NEW full-band per-channel: Basic with per-stem threshold/ratio, shared detector and knee/attack/release/max reduction (search tool only; the engine's Per-channel is band-limited) | main table |
+| Preview | Group + sidechain | Combined | measured, reported only in the suggested-implementation section |
+
+Advanced Summed-bus (frequency-specific, 150 Hz-8 kHz) is not measured
+(author, 2026-11-05).
+
+Data per process:
+- 100-point LHS per scene: reachable SBR range and metric distributions.
+- Johnson & Healy matched settings (HI +5.1, NH +12.2 dB), searched on the
+  two scenes.
+- Volume-only baseline at the matched SBRs (kept). Fixed-threshold sweep and
+  the 9 folder exports are not rerun.
+
+Metrics next to SBR: Extended SII (+ static SII), ESTOI, background (non-
+dialogue bus) level change. Speech-band margin moves out of the main tables
+(r = 0.99 with SBR gain). All scoring on output loudness-matched to the
+unprocessed mix (group compression has no makeup gain).
+
+Phasing (author, 2026-11-05): run now = Group single-band, Basic, full-band
+Per-channel. Later = Group multiband, Combined preview. The existing 2-scene
+matched settings for basic and comp (sbr_matched_2scene_*_best.tsv) are reused,
+since loudness matching does not change SBR; only Per-channel needs a new
+matched search.
+LHS point counts for this phase (author, 2026-11-05): Basic 50 per scene;
+Group single-band and full-band Per-channel 75 per scene (more parameters).
+
+### Status (2026-11-05)
+- `sbr_matched_search.cpp`: new `perchannel` mode (full-band, per-stem
+  threshold/ratio on the shared Dialogue detector; knee/attack/release/max
+  reduction shared), via a `DuckGains` helper used by render() and
+  renderSplit(). Check: with all four stems set to a Basic law it reproduces
+  Basic sample-for-sample (max diff 0.0) in both scenes; `--validate 1` still
+  matches Engine for basic and comp (diff 0.00000 dB).
+- `sbr_matched_2scene_perchannel{.csv,_best.tsv}`: matched search, `--lhs 1500`.
+  HI: Construction +5.25, Public Transit +4.96 dB. NH: +12.18 / +12.21 dB.
+- `process_metrics.py`: loudness match (BS.1770-4) to the unprocessed mix, then
+  background/Dialogue level change, Extended/static SII, ESTOI, margin.
+  ~19 s and ~2.6 GB per render.
+- `run_process_lhs.py`: LHS per process (basic 50, perchannel 75, comp 75),
+  seed 42, same points in both scenes; writes `process_lhs_<process>.csv`.
+- `score_matched_processes.py`: matched settings plus volume-only conditions
+  (static gain on the unprocessed background sum, same gated SBR) in one table,
+  `process_matched.csv`. Replaces volume_only.cpp for this phase: that tool
+  matches J&H pooled SBR and has no per-channel mode.
+- Runs complete (12:11-13:01): `process_lhs_{basic,perchannel,comp}.csv`,
+  `process_matched.csv`, `process_lhs_summary.txt` (summarize_process_lhs.py).
+  Caveat for the "potential SBR change" claim: LHS ceilings depend on the
+  sampled ranges (sidechain max reduction 3-12 dB; comp ranges from the search
+  tool), so they compare processes under those ranges, not absolute limits.
