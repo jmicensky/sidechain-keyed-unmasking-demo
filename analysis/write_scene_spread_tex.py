@@ -2,7 +2,7 @@
 """LaTeX table: scene-to-scene SBR spread of ONE setting per mode and target.
 
 Reads the "best" rows of the two-scene SBR-matched search
-(analysis/sbr_matched_2scene_{comp,basic,perchannel,combined}.csv, from
+(analysis/sbr_matched_2scene_{comp,compmb,basic,perchannel,combined}.csv, from
 `sbr_matched_search --scenes construction,publictransit --tag sbr_matched_2scene`)
 and writes analysis/scene_spread_table.tex (also copied into the thesis
 repo by hand, like the other *_table.tex fragments).
@@ -21,7 +21,8 @@ SCENES = [("construction", "Construction"), ("publictransit", "Public Transit")]
 # Unprocessed gated SBR per scene (analysis/sbr_sweep_findings.txt, same gate).
 UNPROCESSED = {"construction": 1.31, "publictransit": -4.50}
 TARGETS = [("HI", 5.1), ("NH", 12.2)]
-MODES = [("comp", "Group compression"), ("basic", "Sidechain (Basic)"),
+MODES = [("comp", "Group compression"), ("compmb", "Group compression (multiband)"),
+         ("basic", "Sidechain (Basic)"),
          ("perchannel", "Sidechain (per-channel)"), ("combined", "Combined")]
 
 

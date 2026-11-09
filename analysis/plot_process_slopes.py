@@ -53,6 +53,13 @@ PANELS = {
         ("Background compressor", [("background_threshold_db", "Background threshold (dB)"),
                                    ("background_attack_ms", "Attack, non-Dialogue (ms)"),
                                    ("background_ratio", "Background ratio")])]),
+    "compmb": ("Group compression (multiband)", [
+        ("Dialogue compressor", [("dialogue_threshold_db", "Dialogue threshold (dB)"),
+                                 ("dialogue_attack_ms", "Dialogue attack (ms)"),
+                                 ("dialogue_ratio", "Dialogue ratio")]),
+        ("Background compressor", [("background_threshold_db", "Background threshold (dB)"),
+                                   ("background_attack_ms", "Attack, non-Dialogue (ms)"),
+                                   ("background_ratio", "Background ratio")])]),
 }
 
 INK, MUTED, GRID = "#1f1f1e", "#5c5b55", "#e4e3de"
@@ -172,7 +179,7 @@ def main():
     plt.rcParams.update({"font.family": "serif", "font.serif": ["Times New Roman", "STIXGeneral", "DejaVu Serif"],
                          "mathtext.fontset": "stix", "pdf.fonttype": 42})
     slope_rows = []
-    for proc in ("comp", "basic", "perchannel"):
+    for proc in ("comp", "compmb", "basic", "perchannel"):
         plot_process(proc, slope_rows)
     with open(HERE / "process_slopes.csv", "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(slope_rows[0]))
