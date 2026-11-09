@@ -160,7 +160,7 @@ def table(adv):
 \centering
 \scriptsize
 \setstretch{1}  % single-spaced rows in the double-spaced thesis
-\caption{\protect\todo{AI draft --- rewrite: SBR at the ear of each process minus that of a static background gain with the same SBR into the WDRC, compared at the same output dynamic range of the mix, across the grid of WDRC fittings (threshold $-60$ to $-30$~dBFS, ratio 1.5:1 to 3.5:1). Within each release speed the static-gain condition's SBR at the ear is a straight-line function of the output range; each processed point is compared with that line at its own output range. Cells give the mean, the range, and the number of fittings inside the static condition's span of output ranges. Positive values mean more SBR at the ear for the same output dynamic range.}}
+\caption{\protect\aicaption{AI draft --- rewrite: SBR at the ear of each process minus that of a static background gain with the same SBR into the WDRC, compared at the same output dynamic range of the mix, across the grid of WDRC fittings (threshold $-60$ to $-30$~dBFS, ratio 1.5:1 to 3.5:1). Within each release speed the static-gain condition's SBR at the ear is a straight-line function of the output range; each processed point is compared with that line at its own output range. Cells give the mean, the range, and the number of fittings inside the static condition's span of output ranges. Positive values mean more SBR at the ear for the same output dynamic range.}}
 \label{tab:wdrc-grid}
 \resizebox{\linewidth}{!}{%
 \begin{tabular}{@{}ll cc cc@{}}

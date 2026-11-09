@@ -177,7 +177,7 @@ def table(rows, fit, fname):
 \centering
 \footnotesize
 \setstretch{1}  % single-spaced rows in the double-spaced thesis
-\caption{\protect\todo{AI draft --- rewrite: Each process at its SBR-matched setting followed by the same output WDRC, """
+\caption{\protect\aicaption{AI draft --- rewrite: Each process at its SBR-matched setting followed by the same output WDRC, """
             + fname.lower().replace("fitting", "fitting:") + r""" threshold $-50$~dBFS, 2.5:1, 6~dB knee, attack 5~ms. ``vs static'' is the process minus a static background gain that gives the same SBR into the WDRC. $\Delta$Ext.\ SII is relative to the WDRC alone. WDRC gain reduction is the mean gain change over the clip (negative is reduction, so a positive ``vs static'' means the WDRC reduced less); Dialogue range is the 99th minus 30th percentile of 125~ms Dialogue levels at the output.}}
 \label{tab:wdrc-chain-""" + fit + r"""}
 \resizebox{\linewidth}{!}{%

@@ -182,7 +182,7 @@ def matched_table():
 \centering
 \footnotesize
 \setstretch{1}  % single-spaced rows in the double-spaced thesis
-\caption{\protect\todo{AI draft --- rewrite: Each process at its SBR-matched setting (Table~\ref{tab:process-settings}) next to a static background gain that reaches the same gated SBR. Targets are the hearing-impaired (HI, $+5.1$~dB) and normal-hearing (NH, $+12.2$~dB) optima of Johnson and Healy~\cite{johnsonhealy2024}; one setting per process and target serves both scenes. Every condition is loudness-matched to the unprocessed mix before scoring; level changes and metric changes are relative to the unprocessed mix. The static gain is the gain applied to the unprocessed background sum before loudness matching.}}
+\caption{\protect\aicaption{AI draft --- rewrite: Each process at its SBR-matched setting (Table~\ref{tab:process-settings}) next to a static background gain that reaches the same gated SBR. Targets are the hearing-impaired (HI, $+5.1$~dB) and normal-hearing (NH, $+12.2$~dB) optima of Johnson and Healy~\cite{johnsonhealy2024}; one setting per process and target serves both scenes. Every condition is loudness-matched to the unprocessed mix before scoring; level changes and metric changes are relative to the unprocessed mix. The static gain is the gain applied to the unprocessed background sum before loudness matching.}}
 \label{tab:process-matched}
 \resizebox{\linewidth}{!}{%
 \begin{tabular}{@{}ll rrr rrr@{}}
@@ -217,7 +217,7 @@ def settings_table():
 \centering
 \footnotesize
 \setstretch{1}  % single-spaced rows in the double-spaced thesis
-\caption{\protect\todo{AI draft --- rewrite: SBR-matched settings: for each process and target, the single setting found by the two-scene search (Construction and Public Transit) whose gated SBR is closest to the target in both scenes, with the least processing. Group compression has no makeup gain; Dialogue is required to compress (mean gain reduction 1.5--6~dB in every scene). Sidechain settings share one detector keyed on raw Dialogue.}}
+\caption{\protect\aicaption{AI draft --- rewrite: SBR-matched settings: for each process and target, the single setting found by the two-scene search (Construction and Public Transit) whose gated SBR is closest to the target in both scenes, with the least processing. Group compression has no makeup gain; Dialogue is required to compress (mean gain reduction 1.5--6~dB in every scene). Sidechain settings share one detector keyed on raw Dialogue.}}
 \label{tab:process-settings}
 \begin{tabular}{@{}ll rr@{}}
 \toprule
