@@ -412,3 +412,35 @@ Group single-band and full-band Per-channel 75 per scene (more parameters).
   `process_lhs_compmb.csv`; `process_matched.csv` and
   `process_lhs_summary.txt` regenerated with it. Combined is not being run.
 
+## WDRC chain test (decided with the author, 2026-11-08)
+
+Question: with the hearing aid's WDRC fitting held fixed (it is fitted to a
+dynamic range, not an SBR), what mix reaches the ear with class-based
+processing before it vs WDRC alone? Chains: WDRC alone; Basic, Per-channel,
+group single-band and multiband (existing matched settings, not re-tuned);
+static gain (same SBR into the WDRC as each process, and at the J&H targets).
+Fittings (generic stand-ins for a prescription): -50 dBFS (~50 dB SPL), 2.5:1,
+6 dB knee, attack 5 ms, release 80 ms (fast) and 1000 ms (slow). Unity already
+has a 1:1 port of the WDRC (`Dsp/WdrcCompressor.cs`), so the fitting carries
+over to the VR test; Unity export deferred.
+
+- `sbr_matched_search --eval --wdrc thr,ratio,knee,attack,release`: SplitWdrc
+  applies the WDRC's per-band gains (from the real mix) to Dialogue and the
+  background separately; adds sbr_out_db, WDRC mean gain reduction (all /
+  Dialogue-active samples), output range (99th-30th pct of 125 ms mix levels)
+  and Dialogue range at the output. `--validate-wdrc 1`: split output vs
+  WdrcCompressor on the mix, max difference ~148 dB below peak, all 8 cases.
+- New `static` mode (one dim, bg_gain_db) for the volume-only chains.
+- `score_wdrc_chains.py` -> `wdrc_chains.csv`.
+- Validation already shows the expected WDRC effect: fast fit takes
+  unprocessed Construction from +1.31 to -2.18 dB SBR at the ear, Basic HI from
+  +7.85 to +2.60 dB; slow fit loses less (-1.20, +4.06). Mean WDRC gain
+  reduction is ~10-14 dB and output range ~4-6 dB: the generic fit is strong.
+- Run complete (2026-11-08, 19:12-19:18): `wdrc_chains.csv`, 76 conditions.
+  Every chain loses SBR through the WDRC, more at higher input SBR and with the
+  fast fit (NH chains: about -5.4 to -6.8 dB fast, -3.1 to -4.6 dB slow; WDRC
+  alone on Public Transit, input -4.5 dB, loses ~0). Group compression loses
+  the least and leaves the WDRC the least gain reduction. Sidechain keeps its
+  Extended SII and background-level advantage over a static gain after the
+  WDRC. Output dynamic range is not identical across chains under the same
+  fitting (about 3.4-9.6 dB): report it next to the results.

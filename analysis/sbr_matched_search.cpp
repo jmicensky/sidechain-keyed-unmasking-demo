@@ -18,6 +18,8 @@
 //               band-limited Advanced mode; this is its full-band form.
 //   compmb    - comp in the Enhancement tab's Multiband form: each group's one
 //               law applied in all 6 WDRC bands (same dims as comp).
+//   static    - one static gain on the summed background groups (volume-only
+//               control); one dim, bg_gain_db.
 //   combined  - comp, then Basic ducking of the four background groups,
 //               keyed on raw (pre-compression) Dialogue: the Unity "S3"
 //               design (unity/UNITY_HANDOFF.md section 3).
@@ -45,6 +47,12 @@
 //   sbr_matched_search --repo . --mode basic|comp|combined [--lhs N] [--gens G]
 //                      [--scenes construction,publictransit] [--tag sbr_matched]
 //   sbr_matched_search --repo . --render <settings.tsv> --render-dir exports/sbr_matched
+//   sbr_matched_search --repo . --eval <lines.tsv> --out <out.tsv> [--split-dir D]
+//                      [--wdrc thr,ratio,knee,attack,release]
+//     --wdrc adds Engine's 6-band output WDRC (makeup 0 dB) after the mix: its
+//     band gains come from the real mix and are applied to Dialogue and the
+//     background sum separately, so SBR at the ear is exact. The split WAVs are
+//     then post-WDRC. --validate-wdrc checks this against WdrcCompressor.
 #define DR_WAV_IMPLEMENTATION
 #include "dr_wav.h"
 
@@ -155,6 +163,8 @@ struct Setting {
     std::array<CompressorParams, kNumClasses> compP;
     // perchannel: each group's own duck threshold/ratio (duckP supplies the rest).
     std::array<double, kNumClasses> pcThresholdDb{}, pcRatio{};
+    // static: linear gain on every background group (1 = none).
+    double bgGainLin = 1.0;
 };
 
 struct Dim { std::string name; double lo, hi; };
@@ -174,6 +184,7 @@ std::vector<Dim> dimsFor(const std::string& mode) {
         d.push_back({"background_attack_ms", 1.0, 50.0});
         d.push_back({"background_release_ms", 20.0, 1000.0});
     }
+    if (mode == "static") d.push_back({"bg_gain_db", -40.0, 20.0});
     if (mode == "perchannel") {
         for (const char* c : {"music", "background", "safety", "other"}) {
             d.push_back({std::string(c) + "_duck_threshold_db", -70.0, -10.0});
@@ -203,6 +214,7 @@ Setting toSetting(const std::string& mode, const std::vector<Dim>& dims, const s
     s.multiband = mode == "compmb";
     s.duck = mode == "basic" || mode == "combined" || mode == "perchannel";
     s.perChannel = mode == "perchannel";
+    if (mode == "static") s.bgGainLin = std::pow(10.0, p["bg_gain_db"] / 20.0);
     if (s.comp) {
         const char* names[kNumClasses] = {"dialogue", "music", "background", "safety", "other"};
         for (int c = 0; c < kNumClasses; ++c) {
@@ -332,6 +344,7 @@ SceneResult render(const Scene& sc, const Setting& st, std::vector<float>* outL 
     for (size_t i = 0; i < sc.frames; ++i) {
         // Engine's detector reads a float mono sum (Engine::loadStems).
         dg.tick(st, static_cast<float>(0.5f * (sc.L[kDialogue][i] + sc.R[kDialogue][i])), gch);
+        if (st.bgGainLin != 1.0) for (int c = 1; c < kNumClasses; ++c) gch[c] *= st.bgGainLin;
         double dL = sc.L[kDialogue][i], dR = sc.R[kDialogue][i];
         if (st.comp) comp.tick(kDialogue, dL, dR, dL, dR);
         double bL = 0.0, bR = 0.0;
@@ -390,6 +403,7 @@ void renderSplit(const Scene& sc, const Setting& st, std::vector<float>& dLo, st
     comp.prepare(st, sc.sampleRate);
     for (size_t i = 0; i < sc.frames; ++i) {
         dg.tick(st, static_cast<float>(0.5f * (sc.L[kDialogue][i] + sc.R[kDialogue][i])), gch);
+        if (st.bgGainLin != 1.0) for (int c = 1; c < kNumClasses; ++c) gch[c] *= st.bgGainLin;
         double dL = sc.L[kDialogue][i], dR = sc.R[kDialogue][i];
         if (st.comp) comp.tick(kDialogue, dL, dR, dL, dR);
         double bL = 0.0, bR = 0.0;
@@ -400,6 +414,82 @@ void renderSplit(const Scene& sc, const Setting& st, std::vector<float>& dLo, st
         }
         dLo[i] = float(dL); dRo[i] = float(dR); bLo[i] = float(bL); bRo[i] = float(bR);
     }
+}
+
+// ---------------------------------------------------------------- output WDRC
+
+struct WdrcFit { double thresholdDb = -50.0, ratio = 2.5, kneeDb = 6.0, attackMs = 5.0, releaseMs = 80.0; };
+
+// Engine's output WdrcCompressor (makeup 0 dB, un-bypassed after prepare, so its
+// 25 ms bypass ramp runs from 0 at the start) applied to the mix d + b, with the
+// same per-band gains also applied to d and b on their own. The filterbank is
+// linear, so d's bands + b's bands are the mix's bands, and outD + outB is the
+// WDRC's output on the mix (checked by --validate-wdrc).
+struct SplitWdrc {
+    static constexpr int kB = kWdrcNumBands;
+    static constexpr double kLevelCompensationDb = 10.0; // WdrcCompressor's
+    CrossoverFilterbank<kB> fdL, fdR, fbL, fbR;
+    std::array<EnvelopeFollower, kB> det;
+    GainComputer gc;
+    Smoother blend;
+    void prepare(const WdrcFit& f, double sr) {
+        for (auto* fb : {&fdL, &fdR, &fbL, &fbR}) fb->prepare(sr, kWdrcCrossoverHz);
+        double a = std::clamp(f.attackMs, 1.0, 50.0), r = std::clamp(f.releaseMs, 30.0, 3000.0);
+        for (auto& e : det) { e.prepare(sr, 5.0, 80.0); e.setTimes(a, r); }
+        CompressorParams p;
+        p.thresholdDb = f.thresholdDb; p.ratio = f.ratio; p.kneeDb = f.kneeDb;
+        gc.prepare(p);
+        blend.prepare(sr, 25.0);
+        blend.reset(0.0);
+        blend.setTarget(1.0);
+    }
+    // In-place on one sample; returns the mean band gain in dB (<= 0).
+    double tick(float& dL, float& dR, float& bL, float& bR) {
+        double bl = blend.tick();
+        if (bl < 1e-6) return 0.0;
+        double DL[kB], DR[kB], BL[kB], BR[kB];
+        fdL.tick(dL, DL); fdR.tick(dR, DR); fbL.tick(bL, BL); fbR.tick(bR, BR);
+        double oDL = 0, oDR = 0, oBL = 0, oBR = 0, gDb = 0;
+        for (int k = 0; k < kB; ++k) {
+            double mono = 0.5 * ((DL[k] + BL[k]) + (DR[k] + BR[k]));
+            double g = gc.computeLinearGain(det[k].tick(mono) + kLevelCompensationDb);
+            gDb += 20.0 * std::log10(std::max(g, 1e-6)) / kB;
+            oDL += DL[k] * g; oDR += DR[k] * g; oBL += BL[k] * g; oBR += BR[k] * g;
+        }
+        dL = float((1 - bl) * dL + bl * oDL); dR = float((1 - bl) * dR + bl * oDR);
+        bL = float((1 - bl) * bL + bl * oBL); bR = float((1 - bl) * bR + bl * oBR);
+        return gDb;
+    }
+};
+
+struct WdrcResult { double sbrOutDb, meanGrDb, meanGrActiveDb, outRangeDb, dialogueRangeOutDb; };
+
+// Runs SplitWdrc over rendered d/b buffers in place and measures the result.
+WdrcResult applyWdrc(const Scene& sc, const WdrcFit& f, std::vector<float>& dL, std::vector<float>& dR,
+                     std::vector<float>& bL, std::vector<float>& bR) {
+    SplitWdrc w;
+    w.prepare(f, sc.sampleRate);
+    double dp = 0, bp = 0, gr = 0, grA = 0; size_t nA = 0;
+    const size_t nChunks = sc.frames / kChunk;
+    std::vector<double> mixPow(nChunks, 0.0), dlgPow(nChunks, 0.0), act(nChunks, 0.0), ones(nChunks, 1.0);
+    for (size_t i = 0; i < sc.frames; ++i) {
+        double g = w.tick(dL[i], dR[i], bL[i], bR[i]);
+        gr += g;
+        if (sc.active[i]) {
+            dp += double(dL[i]) * dL[i] + double(dR[i]) * dR[i];
+            bp += double(bL[i]) * bL[i] + double(bR[i]) * bR[i];
+            grA += g; ++nA;
+        }
+        size_t k = i / kChunk;
+        if (k < nChunks) {
+            double mL = double(dL[i]) + bL[i], mR = double(dR[i]) + bR[i];
+            mixPow[k] += 0.5 * (mL * mL + mR * mR) / kChunk;
+            dlgPow[k] += 0.5 * (double(dL[i]) * dL[i] + double(dR[i]) * dR[i]) / kChunk;
+            act[k] += sc.active[i] / static_cast<double>(kChunk);
+        }
+    }
+    return {10.0 * std::log10(dp / std::max(bp, 1e-30)), gr / sc.frames, grA / std::max<size_t>(nA, 1),
+            dynamicRangeDb(mixPow, ones), dynamicRangeDb(dlgPow, act)};
 }
 
 // ---------------------------------------------------------------- objective
@@ -796,6 +886,40 @@ int main(int argc, char** argv) {
     gSceneNames.clear();
     for (auto& s : scenes) gSceneNames.push_back(s.name);
 
+    if (a.count("--validate-wdrc")) {
+        // SplitWdrc's outD + outB vs WdrcCompressor (as Engine sets it up) on the mix,
+        // for unprocessed and a Basic setting, at the fast and slow fits.
+        for (const WdrcFit& f : {WdrcFit{-50, 2.5, 6, 5, 80}, WdrcFit{-50, 2.5, 6, 5, 1000}}) {
+            for (const char* mode : {"none", "basic"}) {
+                Setting st = std::string(mode) == "none" ? Setting{}
+                    : toSetting("basic", dimsFor("basic"), {-43.8, 19.2, 20.3, 32.1, 615.0, 7.9});
+                for (auto& sc : scenes) {
+                    std::vector<float> dL(sc.frames), dR(sc.frames), bL(sc.frames), bR(sc.frames);
+                    renderSplit(sc, st, dL, dR, bL, bR);
+                    WdrcCompressor ref;
+                    ref.prepare(sc.sampleRate);
+                    ref.setThresholdDb(f.thresholdDb); ref.setRatio(f.ratio); ref.setKneeDb(f.kneeDb);
+                    ref.setAttackMs(f.attackMs); ref.setReleaseMs(f.releaseMs); ref.setMakeupGainDb(0.0);
+                    ref.setBypassed(false);
+                    std::vector<double> rL(sc.frames), rR(sc.frames);
+                    for (size_t i = 0; i < sc.frames; ++i)
+                        ref.tick(double(dL[i]) + bL[i], double(dR[i]) + bR[i], rL[i], rR[i]);
+                    WdrcResult wr = applyWdrc(sc, f, dL, dR, bL, bR);
+                    double mx = 0, pk = 0;
+                    for (size_t i = 0; i < sc.frames; ++i) {
+                        mx = std::max({mx, std::fabs(double(dL[i]) + bL[i] - rL[i]), std::fabs(double(dR[i]) + bR[i] - rR[i])});
+                        pk = std::max({pk, std::fabs(rL[i]), std::fabs(rR[i])});
+                    }
+                    std::printf("  validate wdrc rel %4.0f ms %-5s %-14s max |split - ref| %.2e (%.1f dB below peak)  "
+                                "SBR at ear %+6.2f  mean GR %5.2f dB  output range %4.1f dB\n", f.releaseMs, mode,
+                                sc.name.c_str(), mx, 20 * std::log10(pk / std::max(mx, 1e-30)), wr.sbrOutDb,
+                                -wr.meanGrDb, wr.outRangeDb);
+                }
+            }
+        }
+        return 0;
+    }
+
     if (a.count("--validate")) {
         std::mt19937 rng(7);
         for (std::string mode : {"basic", "comp", "compmb"}) {
@@ -821,9 +945,20 @@ int main(int argc, char** argv) {
         // processed Dialogue and processed background-sum as separate float WAVs
         // (<id>_dialogue.wav / <id>_background.wav) for the margin metric.
         const std::string splitDir = a.count("--split-dir") ? a["--split-dir"] : "";
+        const bool useWdrc = a.count("--wdrc") > 0;
+        WdrcFit fit;
+        if (useWdrc) {
+            std::vector<double> f;
+            std::istringstream fs(a["--wdrc"]);
+            for (std::string x; std::getline(fs, x, ',');) f.push_back(std::stod(x));
+            if (f.size() != 5) { std::cerr << "--wdrc needs thr,ratio,knee,attack,release\n"; return 1; }
+            fit = {f[0], f[1], f[2], f[3], f[4]};
+        }
         std::ifstream in(a["--eval"]);
         std::ofstream outf(a.count("--out") ? a["--out"] : "analysis/sbr_eval.tsv");
-        outf << "id\tscene\tsbr_db\tdialogue_range_db\n";
+        outf << "id\tscene\tsbr_db\tdialogue_range_db";
+        if (useWdrc) outf << "\tsbr_out_db\twdrc_mean_gr_db\twdrc_mean_gr_active_db\tout_range_db\tdialogue_range_out_db";
+        outf << "\n";
         std::vector<std::tuple<std::string, std::string, std::string, std::vector<double>>> lines;
         for (std::string line; std::getline(in, line);) {
             std::istringstream ls(line);
@@ -846,14 +981,22 @@ int main(int argc, char** argv) {
                     if (!sc) continue;
                     Setting st = mode == "none" ? Setting{} : toSetting(mode, dimsFor(mode), v);
                     SceneResult r = render(*sc, st);
-                    if (!splitDir.empty()) {
+                    WdrcResult wr{};
+                    if (!splitDir.empty() || useWdrc) {
                         std::vector<float> dL(sc->frames), dR(sc->frames), bL(sc->frames), bR(sc->frames);
                         renderSplit(*sc, st, dL, dR, bL, bR);
-                        writeWavFloat(splitDir + "/" + id + "_dialogue.wav", dL, dR, sc->sampleRate);
-                        writeWavFloat(splitDir + "/" + id + "_background.wav", bL, bR, sc->sampleRate);
+                        if (useWdrc) wr = applyWdrc(*sc, fit, dL, dR, bL, bR);
+                        if (!splitDir.empty()) {
+                            writeWavFloat(splitDir + "/" + id + "_dialogue.wav", dL, dR, sc->sampleRate);
+                            writeWavFloat(splitDir + "/" + id + "_background.wav", bL, bR, sc->sampleRate);
+                        }
                     }
                     std::ostringstream os;
-                    os << id << "\t" << sceneName << "\t" << r.sbrDb << "\t" << r.dialogueRangeDb << "\n";
+                    os << id << "\t" << sceneName << "\t" << r.sbrDb << "\t" << r.dialogueRangeDb;
+                    if (useWdrc)
+                        os << "\t" << wr.sbrOutDb << "\t" << wr.meanGrDb << "\t" << wr.meanGrActiveDb << "\t"
+                           << wr.outRangeDb << "\t" << wr.dialogueRangeOutDb;
+                    os << "\n";
                     results[i] = os.str();
                 }
             });
