@@ -462,7 +462,7 @@ struct SplitWdrc {
     }
 };
 
-struct WdrcResult { double sbrOutDb, meanGrDb, meanGrActiveDb, outRangeDb, dialogueRangeOutDb; };
+struct WdrcResult { double sbrOutDb, meanGrDb, meanGrActiveDb, outRangeDb, dialogueRangeOutDb, inRangeDb; };
 
 // Runs SplitWdrc over rendered d/b buffers in place and measures the result.
 WdrcResult applyWdrc(const Scene& sc, const WdrcFit& f, std::vector<float>& dL, std::vector<float>& dR,
@@ -471,8 +471,13 @@ WdrcResult applyWdrc(const Scene& sc, const WdrcFit& f, std::vector<float>& dL, 
     w.prepare(f, sc.sampleRate);
     double dp = 0, bp = 0, gr = 0, grA = 0; size_t nA = 0;
     const size_t nChunks = sc.frames / kChunk;
-    std::vector<double> mixPow(nChunks, 0.0), dlgPow(nChunks, 0.0), act(nChunks, 0.0), ones(nChunks, 1.0);
+    std::vector<double> mixPow(nChunks, 0.0), dlgPow(nChunks, 0.0), act(nChunks, 0.0), ones(nChunks, 1.0),
+        inPow(nChunks, 0.0);
     for (size_t i = 0; i < sc.frames; ++i) {
+        if (i / kChunk < nChunks) {
+            double mL = double(dL[i]) + bL[i], mR = double(dR[i]) + bR[i];
+            inPow[i / kChunk] += 0.5 * (mL * mL + mR * mR) / kChunk;
+        }
         double g = w.tick(dL[i], dR[i], bL[i], bR[i]);
         gr += g;
         if (sc.active[i]) {
@@ -489,7 +494,7 @@ WdrcResult applyWdrc(const Scene& sc, const WdrcFit& f, std::vector<float>& dL, 
         }
     }
     return {10.0 * std::log10(dp / std::max(bp, 1e-30)), gr / sc.frames, grA / std::max<size_t>(nA, 1),
-            dynamicRangeDb(mixPow, ones), dynamicRangeDb(dlgPow, act)};
+            dynamicRangeDb(mixPow, ones), dynamicRangeDb(dlgPow, act), dynamicRangeDb(inPow, ones)};
 }
 
 // ---------------------------------------------------------------- objective
@@ -957,7 +962,7 @@ int main(int argc, char** argv) {
         std::ifstream in(a["--eval"]);
         std::ofstream outf(a.count("--out") ? a["--out"] : "analysis/sbr_eval.tsv");
         outf << "id\tscene\tsbr_db\tdialogue_range_db";
-        if (useWdrc) outf << "\tsbr_out_db\twdrc_mean_gr_db\twdrc_mean_gr_active_db\tout_range_db\tdialogue_range_out_db";
+        if (useWdrc) outf << "\tsbr_out_db\twdrc_mean_gr_db\twdrc_mean_gr_active_db\tout_range_db\tdialogue_range_out_db\tin_range_db";
         outf << "\n";
         std::vector<std::tuple<std::string, std::string, std::string, std::vector<double>>> lines;
         for (std::string line; std::getline(in, line);) {
@@ -995,7 +1000,7 @@ int main(int argc, char** argv) {
                     os << id << "\t" << sceneName << "\t" << r.sbrDb << "\t" << r.dialogueRangeDb;
                     if (useWdrc)
                         os << "\t" << wr.sbrOutDb << "\t" << wr.meanGrDb << "\t" << wr.meanGrActiveDb << "\t"
-                           << wr.outRangeDb << "\t" << wr.dialogueRangeOutDb;
+                           << wr.outRangeDb << "\t" << wr.dialogueRangeOutDb << "\t" << wr.inRangeDb;
                     os << "\n";
                     results[i] = os.str();
                 }

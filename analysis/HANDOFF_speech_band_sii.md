@@ -444,3 +444,14 @@ over to the VR test; Unity export deferred.
   Extended SII and background-level advantage over a static gain after the
   WDRC. Output dynamic range is not identical across chains under the same
   fitting (about 3.4-9.6 dB): report it next to the results.
+- Fitting grid (2026-11-08): `score_wdrc_grid.py` -> `wdrc_grid.csv`,
+  `wdrc_grid_summary.txt`. Threshold -60/-50/-40/-30 x ratio 1.5/2.5/3.5 x
+  fast/slow, chains WDRC alone, Basic, comp and their static matches;
+  renderer-only measures (no SII/ESTOI). `--eval --wdrc` now also reports
+  in_range_db (mix range into the WDRC). SBR lost through the WDRC follows
+  dynamic-range reduction (r 0.90-1.00 in every chain except WDRC alone on
+  Public Transit, which loses ~0) and not mean gain reduction (r 0.2-0.5
+  overall). Threshold moves mean GR by ~15 dB but SBR loss by < 1 dB; ratio and
+  speed drive both loss and range reduction. Group compression loses less SBR
+  than its static match in 96/96 fittings (mean 1.0 dB, 1.3 dB at 3.5:1);
+  Basic only slightly (mean 0.2 dB, 62/96).

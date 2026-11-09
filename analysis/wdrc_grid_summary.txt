@@ -1,0 +1,76 @@
+SBR lost through the WDRC vs fitting strength, across the 24 fittings (and per speed, 12 each)
+columns: Pearson r of SBR loss with mean GR / with range reduction  [Spearman in brackets]
+  basic                HI  construction   all   loss +1.90..+6.25 dB  r(GR) +0.44 [+0.56]  r(range red.) +0.98 [+0.96]
+  basic                HI  construction   fast  loss +1.99..+6.25 dB  r(GR) +0.68 [+0.72]  r(range red.) +0.97 [+0.99]
+  basic                HI  construction   slow  loss +1.90..+4.48 dB  r(GR) +0.57 [+0.76]  r(range red.) +1.00 [+0.95]
+  basic                HI  publictransit  all   loss +0.65..+2.76 dB  r(GR) +0.25 [+0.33]  r(range red.) +0.95 [+0.98]
+  basic                HI  publictransit  fast  loss +0.97..+2.76 dB  r(GR) +0.61 [+0.69]  r(range red.) +0.99 [+0.98]
+  basic                HI  publictransit  slow  loss +0.65..+1.55 dB  r(GR) +0.46 [+0.49]  r(range red.) +1.00 [+0.94]
+  basic                NH  construction   all   loss +2.15..+7.38 dB  r(GR) +0.50 [+0.61]  r(range red.) +0.98 [+0.97]
+  basic                NH  construction   fast  loss +2.15..+7.38 dB  r(GR) +0.76 [+0.83]  r(range red.) +0.98 [+0.96]
+  basic                NH  construction   slow  loss +2.40..+5.38 dB  r(GR) +0.57 [+0.76]  r(range red.) +1.00 [+0.99]
+  basic                NH  publictransit  all   loss +1.27..+4.73 dB  r(GR) +0.39 [+0.53]  r(range red.) +0.96 [+0.98]
+  basic                NH  publictransit  fast  loss +1.30..+4.73 dB  r(GR) +0.73 [+0.80]  r(range red.) +0.98 [+0.98]
+  basic                NH  publictransit  slow  loss +1.27..+2.92 dB  r(GR) +0.53 [+0.66]  r(range red.) +0.99 [+0.94]
+  comp                 HI  construction   all   loss +0.85..+4.19 dB  r(GR) +0.39 [+0.60]  r(range red.) +0.99 [+0.98]
+  comp                 HI  construction   fast  loss +0.86..+4.19 dB  r(GR) +0.72 [+0.87]  r(range red.) +0.99 [+0.96]
+  comp                 HI  construction   slow  loss +0.85..+2.40 dB  r(GR) +0.61 [+0.72]  r(range red.) +1.00 [+0.98]
+  comp                 HI  publictransit  all   loss +0.46..+3.21 dB  r(GR) +0.19 [+0.21]  r(range red.) +0.90 [+0.81]
+  comp                 HI  publictransit  fast  loss +0.67..+3.21 dB  r(GR) +0.70 [+0.82]  r(range red.) +1.00 [+0.94]
+  comp                 HI  publictransit  slow  loss +0.46..+1.22 dB  r(GR) +0.46 [+0.40]  r(range red.) +0.98 [+0.90]
+  comp                 NH  construction   all   loss +0.65..+6.76 dB  r(GR) +0.49 [+0.68]  r(range red.) +0.99 [+0.98]
+  comp                 NH  construction   fast  loss +0.65..+6.76 dB  r(GR) +0.80 [+0.88]  r(range red.) +0.99 [+1.00]
+  comp                 NH  construction   slow  loss +0.81..+3.87 dB  r(GR) +0.75 [+0.81]  r(range red.) +0.99 [+0.97]
+  comp                 NH  publictransit  all   loss +0.49..+5.75 dB  r(GR) +0.41 [+0.65]  r(range red.) +0.95 [+0.98]
+  comp                 NH  publictransit  fast  loss +0.49..+5.75 dB  r(GR) +0.79 [+0.88]  r(range red.) +0.99 [+1.00]
+  comp                 NH  publictransit  slow  loss +0.56..+2.73 dB  r(GR) +0.72 [+0.78]  r(range red.) +0.99 [+0.94]
+  static_match_basic   HI  construction   all   loss +1.86..+6.49 dB  r(GR) +0.42 [+0.53]  r(range red.) +0.99 [+1.00]
+  static_match_basic   HI  construction   fast  loss +2.06..+6.49 dB  r(GR) +0.67 [+0.72]  r(range red.) +0.99 [+1.00]
+  static_match_basic   HI  construction   slow  loss +1.86..+4.57 dB  r(GR) +0.58 [+0.77]  r(range red.) +1.00 [+0.98]
+  static_match_basic   HI  publictransit  all   loss +0.55..+2.83 dB  r(GR) +0.21 [+0.26]  r(range red.) +0.91 [+0.91]
+  static_match_basic   HI  publictransit  fast  loss +0.94..+2.83 dB  r(GR) +0.60 [+0.69]  r(range red.) +1.00 [+0.99]
+  static_match_basic   HI  publictransit  slow  loss +0.55..+1.43 dB  r(GR) +0.47 [+0.48]  r(range red.) +1.00 [+0.93]
+  static_match_basic   NH  construction   all   loss +2.10..+8.95 dB  r(GR) +0.45 [+0.62]  r(range red.) +0.99 [+0.98]
+  static_match_basic   NH  construction   fast  loss +2.16..+8.95 dB  r(GR) +0.75 [+0.91]  r(range red.) +0.99 [+0.90]
+  static_match_basic   NH  construction   slow  loss +2.10..+5.96 dB  r(GR) +0.66 [+0.77]  r(range red.) +1.00 [+1.00]
+  static_match_basic   NH  publictransit  all   loss +1.04..+5.55 dB  r(GR) +0.28 [+0.40]  r(range red.) +0.93 [+0.89]
+  static_match_basic   NH  publictransit  fast  loss +1.45..+5.55 dB  r(GR) +0.70 [+0.78]  r(range red.) +1.00 [+1.00]
+  static_match_basic   NH  publictransit  slow  loss +1.04..+2.84 dB  r(GR) +0.59 [+0.74]  r(range red.) +1.00 [+0.98]
+  static_match_comp    HI  construction   all   loss +1.69..+5.48 dB  r(GR) +0.40 [+0.47]  r(range red.) +0.99 [+0.98]
+  static_match_comp    HI  construction   fast  loss +1.96..+5.48 dB  r(GR) +0.64 [+0.72]  r(range red.) +0.99 [+0.98]
+  static_match_comp    HI  construction   slow  loss +1.69..+3.92 dB  r(GR) +0.54 [+0.66]  r(range red.) +1.00 [+0.98]
+  static_match_comp    HI  publictransit  all   loss +0.77..+3.83 dB  r(GR) +0.25 [+0.23]  r(range red.) +0.93 [+0.88]
+  static_match_comp    HI  publictransit  fast  loss +1.17..+3.83 dB  r(GR) +0.64 [+0.69]  r(range red.) +1.00 [+0.98]
+  static_match_comp    HI  publictransit  slow  loss +0.77..+2.00 dB  r(GR) +0.53 [+0.45]  r(range red.) +1.00 [+0.87]
+  static_match_comp    NH  construction   all   loss +2.03..+8.10 dB  r(GR) +0.44 [+0.58]  r(range red.) +0.99 [+0.99]
+  static_match_comp    NH  construction   fast  loss +2.14..+8.10 dB  r(GR) +0.72 [+0.79]  r(range red.) +0.99 [+0.96]
+  static_match_comp    NH  construction   slow  loss +2.03..+5.51 dB  r(GR) +0.63 [+0.77]  r(range red.) +1.00 [+1.00]
+  static_match_comp    NH  publictransit  all   loss +1.14..+6.39 dB  r(GR) +0.29 [+0.48]  r(range red.) +0.93 [+0.95]
+  static_match_comp    NH  publictransit  fast  loss +1.54..+6.39 dB  r(GR) +0.73 [+0.83]  r(range red.) +1.00 [+0.99]
+  static_match_comp    NH  publictransit  slow  loss +1.14..+3.20 dB  r(GR) +0.62 [+0.74]  r(range red.) +0.99 [+0.99]
+  wdrc_only                construction   all   loss +1.37..+4.13 dB  r(GR) +0.36 [+0.43]  r(range red.) +0.99 [+0.98]
+  wdrc_only                construction   fast  loss +1.70..+4.13 dB  r(GR) +0.57 [+0.77]  r(range red.) +0.99 [+0.92]
+  wdrc_only                construction   slow  loss +1.37..+2.98 dB  r(GR) +0.50 [+0.68]  r(range red.) +0.98 [+0.95]
+  wdrc_only                publictransit  all   loss -0.21..+0.56 dB  r(GR) -0.11 [-0.27]  r(range red.) +0.40 [+0.35]
+  wdrc_only                publictransit  fast  loss +0.11..+0.56 dB  r(GR) +0.40 [+0.49]  r(range red.) +0.99 [+0.93]
+  wdrc_only                publictransit  slow  loss -0.21..-0.08 dB  r(GR) -0.68 [-0.90]  r(range red.) +0.04 [-0.47]
+
+WDRC alone, per fitting: SBR loss dB / mean GR dB / range reduction dB
+  construction
+    fast thr  -60  1.5:1 +1.99/ 8.76/ 3.71   2.5:1 +3.50/15.77/ 6.13   3.5:1 +4.13/18.78/ 6.87
+    fast thr  -50  1.5:1 +1.99/ 5.52/ 3.71   2.5:1 +3.49/ 9.94/ 6.25   3.5:1 +4.11/11.83/ 6.90
+    fast thr  -40  1.5:1 +1.97/ 2.62/ 3.72   2.5:1 +3.41/ 4.71/ 6.17   3.5:1 +3.98/ 5.61/ 6.82
+    fast thr  -30  1.5:1 +1.70/ 0.53/ 3.51   2.5:1 +2.86/ 0.96/ 5.60   3.5:1 +3.31/ 1.14/ 6.24
+    slow thr  -60  1.5:1 +1.42/10.85/ 2.79   2.5:1 +2.51/19.52/ 4.59   3.5:1 +2.98/23.24/ 4.83
+    slow thr  -50  1.5:1 +1.42/ 7.52/ 2.79   2.5:1 +2.51/13.53/ 4.60   3.5:1 +2.98/16.11/ 4.83
+    slow thr  -40  1.5:1 +1.42/ 4.28/ 2.78   2.5:1 +2.50/ 7.71/ 4.61   3.5:1 +2.96/ 9.17/ 4.89
+    slow thr  -30  1.5:1 +1.37/ 1.51/ 2.71   2.5:1 +2.37/ 2.72/ 4.48   3.5:1 +2.78/ 3.24/ 4.78
+  publictransit
+    fast thr  -60  1.5:1 +0.13/ 9.21/ 3.91   2.5:1 +0.39/16.57/ 6.76   3.5:1 +0.51/19.73/ 7.99
+    fast thr  -50  1.5:1 +0.13/ 6.03/ 3.91   2.5:1 +0.39/10.86/ 6.75   3.5:1 +0.50/12.93/ 7.95
+    fast thr  -40  1.5:1 +0.13/ 3.19/ 3.91   2.5:1 +0.42/ 5.74/ 6.72   3.5:1 +0.56/ 6.83/ 7.91
+    fast thr  -30  1.5:1 +0.11/ 0.91/ 3.70   2.5:1 +0.37/ 1.64/ 6.26   3.5:1 +0.50/ 1.95/ 7.35
+    slow thr  -60  1.5:1 -0.19/11.02/ 3.42   2.5:1 -0.21/19.84/ 6.40   3.5:1 -0.21/23.62/ 7.26
+    slow thr  -50  1.5:1 -0.19/ 7.70/ 3.42   2.5:1 -0.21/13.86/ 6.39   3.5:1 -0.21/16.50/ 7.30
+    slow thr  -40  1.5:1 -0.18/ 4.60/ 3.42   2.5:1 -0.19/ 8.27/ 6.39   3.5:1 -0.18/ 9.85/ 7.27
+    slow thr  -30  1.5:1 -0.17/ 1.84/ 3.36   2.5:1 -0.13/ 3.31/ 6.27   3.5:1 -0.08/ 3.95/ 7.10
