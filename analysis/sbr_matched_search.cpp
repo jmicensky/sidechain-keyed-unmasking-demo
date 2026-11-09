@@ -16,6 +16,8 @@
 //               shared detector level (knee, attack, release and max
 //               reduction shared). Engine's PerChannel only exists inside the
 //               band-limited Advanced mode; this is its full-band form.
+//   compmb    - comp in the Enhancement tab's Multiband form: each group's one
+//               law applied in all 6 WDRC bands (same dims as comp).
 //   combined  - comp, then Basic ducking of the four background groups,
 //               keyed on raw (pre-compression) Dialogue: the Unity "S3"
 //               design (unity/UNITY_HANDOFF.md section 3).
@@ -145,7 +147,7 @@ bool loadScene(Scene& s, const std::string& repo) {
 // ---------------------------------------------------------------- settings
 
 struct Setting {
-    bool duck = false, comp = false, perChannel = false;
+    bool duck = false, comp = false, perChannel = false, multiband = false;
     // Ducking (Basic, Dialogue key, key gain 0 dB).
     CompressorParams duckP;
     double maxReductionDb = 6.0;
@@ -159,7 +161,7 @@ struct Dim { std::string name; double lo, hi; };
 
 std::vector<Dim> dimsFor(const std::string& mode) {
     std::vector<Dim> d;
-    if (mode == "comp" || mode == "combined") {
+    if (mode == "comp" || mode == "compmb" || mode == "combined") {
         d.push_back({"dialogue_threshold_db", -45.0, -15.0});
         d.push_back({"dialogue_ratio", 2.0, 4.0});
         d.push_back({"dialogue_attack_ms", 1.0, 20.0});
@@ -197,7 +199,8 @@ Setting toSetting(const std::string& mode, const std::vector<Dim>& dims, const s
     std::map<std::string, double> p;
     for (size_t i = 0; i < dims.size(); ++i) p[dims[i].name] = v[i];
     Setting s;
-    s.comp = mode == "comp" || mode == "combined";
+    s.comp = mode == "comp" || mode == "compmb" || mode == "combined";
+    s.multiband = mode == "compmb";
     s.duck = mode == "basic" || mode == "combined" || mode == "perchannel";
     s.perChannel = mode == "perchannel";
     if (s.comp) {
@@ -268,6 +271,38 @@ struct DuckGains {
     }
 };
 
+// Group compression on all 5 groups, makeup 0 dB: single-band (comp) or the
+// Enhancement tab's Multiband form (compmb) - one WdrcCompressor per group,
+// its one threshold/ratio/knee/attack/release law applied in all 6 bands, as
+// Engine::syncEnhancementChannel() sets it up.
+struct GroupComp {
+    bool multiband = false;
+    std::array<SingleBandEnhancementCompressor, kNumClasses> sb;
+    std::array<WdrcCompressor, kNumClasses> mb;
+    void prepare(const Setting& st, double sr) {
+        multiband = st.multiband;
+        for (int c = 0; c < kNumClasses; ++c) {
+            if (multiband) {
+                mb[c].prepare(sr);
+                mb[c].setBypassed(false);
+                mb[c].setThresholdDb(st.compP[c].thresholdDb);
+                mb[c].setRatio(st.compP[c].ratio);
+                mb[c].setKneeDb(st.compP[c].kneeDb);
+                mb[c].setAttackMs(st.compP[c].attackMs);
+                mb[c].setReleaseMs(st.compP[c].releaseMs);
+                mb[c].setMakeupGainDb(0.0);
+            } else {
+                sb[c].prepare(sr, st.compP[c]);
+                sb[c].setMakeupGainDb(0.0);
+            }
+        }
+    }
+    void tick(int c, double inL, double inR, double& outL, double& outR) {
+        if (multiband) mb[c].tick(inL, inR, outL, outR); else sb[c].tick(inL, inR, outL, outR);
+    }
+    double gr(int c) const { return multiband ? mb[c].lastGainReductionDb() : sb[c].lastGainReductionDb(); }
+};
+
 struct SceneResult {
     double sbrDb = 0.0;
     double meanDuckDb = 0.0;        // mean duck gain over the clip (<= 0)
@@ -285,11 +320,8 @@ SceneResult render(const Scene& sc, const Setting& st, std::vector<float>* outL 
     DuckGains dg;
     dg.prepare(st, sc.sampleRate);
     std::array<double, kNumClasses> gch;
-    std::array<SingleBandEnhancementCompressor, kNumClasses> comp;
-    for (int c = 0; c < kNumClasses; ++c) {
-        comp[c].prepare(sc.sampleRate, st.compP[c]);
-        comp[c].setMakeupGainDb(0.0);
-    }
+    GroupComp comp;
+    comp.prepare(st, sc.sampleRate);
 
     double dPow = 0.0, bPow = 0.0;
     double sumDuckDb = 0.0, sumDlgDb = 0.0, sumBgDb = 0.0;
@@ -301,11 +333,11 @@ SceneResult render(const Scene& sc, const Setting& st, std::vector<float>* outL 
         // Engine's detector reads a float mono sum (Engine::loadStems).
         dg.tick(st, static_cast<float>(0.5f * (sc.L[kDialogue][i] + sc.R[kDialogue][i])), gch);
         double dL = sc.L[kDialogue][i], dR = sc.R[kDialogue][i];
-        if (st.comp) comp[kDialogue].tick(dL, dR, dL, dR);
+        if (st.comp) comp.tick(kDialogue, dL, dR, dL, dR);
         double bL = 0.0, bR = 0.0;
         for (int c = 1; c < kNumClasses; ++c) {
             double yL = sc.L[c][i], yR = sc.R[c][i];
-            if (st.comp) comp[c].tick(yL, yR, yL, yR);
+            if (st.comp) comp.tick(c, yL, yR, yL, yR);
             bL += gch[c] * yL;
             bR += gch[c] * yR;
         }
@@ -329,9 +361,9 @@ SceneResult render(const Scene& sc, const Setting& st, std::vector<float>* outL 
                 engaged += gMin < 0.999;
             }
             if (st.comp) {
-                sumDlgDb += comp[kDialogue].lastGainReductionDb();
+                sumDlgDb += comp.gr(kDialogue);
                 double bg = 0.0;
-                for (int c = 1; c < kNumClasses; ++c) bg += comp[c].lastGainReductionDb();
+                for (int c = 1; c < kNumClasses; ++c) bg += comp.gr(c);
                 sumBgDb += bg / (kNumClasses - 1);
             }
             ++ticks;
@@ -354,16 +386,16 @@ void renderSplit(const Scene& sc, const Setting& st, std::vector<float>& dLo, st
     DuckGains dg;
     dg.prepare(st, sc.sampleRate);
     std::array<double, kNumClasses> gch;
-    std::array<SingleBandEnhancementCompressor, kNumClasses> comp;
-    for (int c = 0; c < kNumClasses; ++c) { comp[c].prepare(sc.sampleRate, st.compP[c]); comp[c].setMakeupGainDb(0.0); }
+    GroupComp comp;
+    comp.prepare(st, sc.sampleRate);
     for (size_t i = 0; i < sc.frames; ++i) {
         dg.tick(st, static_cast<float>(0.5f * (sc.L[kDialogue][i] + sc.R[kDialogue][i])), gch);
         double dL = sc.L[kDialogue][i], dR = sc.R[kDialogue][i];
-        if (st.comp) comp[kDialogue].tick(dL, dR, dL, dR);
+        if (st.comp) comp.tick(kDialogue, dL, dR, dL, dR);
         double bL = 0.0, bR = 0.0;
         for (int c = 1; c < kNumClasses; ++c) {
             double yL = sc.L[c][i], yR = sc.R[c][i];
-            if (st.comp) comp[c].tick(yL, yR, yL, yR);
+            if (st.comp) comp.tick(c, yL, yR, yL, yR);
             bL += gch[c] * yL; bR += gch[c] * yR;
         }
         dLo[i] = float(dL); dRo[i] = float(dR); bLo[i] = float(bL); bRo[i] = float(bR);
@@ -489,6 +521,7 @@ double engineSbr(const Scene& sc, const std::string& mode, const Setting& st) {
             e.setUnmaskEnabled(true);
         } else {
             e.setProcessingTab(ProcessingTab::Enhancement);
+            if (st.multiband) e.setEnhancementBandMode(EnhancementBandMode::Multiband);
             for (int c = 0; c < kNumClasses; ++c) {
                 e.setEnhancementThresholdDb(c, st.compP[c].thresholdDb);
                 e.setEnhancementRatio(c, st.compP[c].ratio);
@@ -765,7 +798,7 @@ int main(int argc, char** argv) {
 
     if (a.count("--validate")) {
         std::mt19937 rng(7);
-        for (std::string mode : {"basic", "comp"}) {
+        for (std::string mode : {"basic", "comp", "compmb"}) {
             auto dims = dimsFor(mode);
             auto pts = latinHypercube(dims, 3, rng);
             for (auto& v : pts) {

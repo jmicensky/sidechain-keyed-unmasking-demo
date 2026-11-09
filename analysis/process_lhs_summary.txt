@@ -53,6 +53,60 @@
       background_attack_ms         -0.09 / -0.08
       background_release_ms        +0.03 / +0.04
 
+=== Group multiband (compmb): 75 points per scene
+  construction
+    SBR gain dB      min  -8.721  median  +0.669  max +18.385
+    bg level dB      min -15.570  median  -0.175  max  +2.223
+    ESII gain        min  -0.089  median  +0.043  max  +0.379
+    static SII gain  min  -0.230  median  +0.084  max  +0.558
+    ESTOI gain       min  -0.204  median  +0.092  max  +0.481
+    Pearson r(SBR gain, bg level dB) = -0.943
+    Pearson r(SBR gain, ESII gain) = +0.933
+    Pearson r(SBR gain, static SII gain) = +0.960
+    Pearson r(SBR gain, ESTOI gain) = +0.953
+    Spearman rho of each parameter with SBR gain / ESII gain:
+      dialogue_threshold_db        +0.74 / +0.60
+      dialogue_ratio               +0.01 / +0.03
+      dialogue_attack_ms           +0.11 / +0.11
+      dialogue_release_ms          -0.16 / -0.12
+      music_threshold_db           -0.34 / -0.31
+      music_ratio                  -0.01 / -0.01
+      background_threshold_db      -0.52 / -0.70
+      background_ratio             -0.06 / -0.01
+      safety_threshold_db          +0.06 / +0.04
+      safety_ratio                 +0.12 / +0.04
+      other_threshold_db           -0.30 / -0.26
+      other_ratio                  -0.05 / -0.04
+      knee_db                      -0.03 / -0.06
+      background_attack_ms         -0.08 / -0.06
+      background_release_ms        +0.02 / +0.09
+  publictransit
+    SBR gain dB      min  -6.233  median  +5.345  max +22.934
+    bg level dB      min -16.625  median  -1.424  max  +1.075
+    ESII gain        min  -0.063  median  +0.064  max  +0.438
+    static SII gain  min  -0.171  median  +0.141  max  +0.620
+    ESTOI gain       min  -0.165  median  +0.155  max  +0.543
+    Pearson r(SBR gain, bg level dB) = -0.904
+    Pearson r(SBR gain, ESII gain) = +0.920
+    Pearson r(SBR gain, static SII gain) = +0.990
+    Pearson r(SBR gain, ESTOI gain) = +0.958
+    Spearman rho of each parameter with SBR gain / ESII gain:
+      dialogue_threshold_db        +0.62 / +0.52
+      dialogue_ratio               +0.06 / +0.07
+      dialogue_attack_ms           +0.06 / +0.09
+      dialogue_release_ms          -0.06 / -0.07
+      music_threshold_db           -0.44 / -0.46
+      music_ratio                  +0.00 / +0.01
+      background_threshold_db      -0.64 / -0.76
+      background_ratio             +0.01 / +0.02
+      safety_threshold_db          -0.09 / +0.00
+      safety_ratio                 +0.10 / +0.07
+      other_threshold_db           -0.01 / +0.02
+      other_ratio                  +0.01 / -0.04
+      knee_db                      -0.05 / -0.08
+      background_attack_ms         -0.09 / -0.09
+      background_release_ms        +0.02 / +0.06
+
 === Basic sidechain (basic): 50 points per scene
   construction
     SBR gain dB      min  +0.007  median  +2.263  max +10.487

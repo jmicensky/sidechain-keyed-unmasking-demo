@@ -6,11 +6,16 @@ Processes (renderer: sbr_matched_search, validated against Engine):
   basic       Basic sidechain (summed bus, full band)          6 params
   perchannel  full-band sidechain, per-stem threshold/ratio    12 params
   comp        group compression, single-band                   15 params
+  compmb      group compression, multiband (Enhancement tab's
+              6-band form, one law per stem in every band)     15 params
 
 Basic and Per-channel use the same ranges as the earlier Basic LHS sweep
 (run_lhs_sweep.py, max reduction 3-12 dB); Per-channel samples threshold and
 ratio once per background stem. Group compression uses the ranges of
-sbr_matched_search's comp mode (Dialogue compressed 2-4:1).
+sbr_matched_search's comp mode (Dialogue compressed 2-4:1); multiband uses the
+same ranges and the same LHS points as single-band (same seed and dimension),
+so the two are paired point for point. WdrcCompressor clamps release to
+>= 30 ms, so background releases sampled below 30 ms run at 30 ms.
 
 The same LHS points (scipy qmc, seed 42) are rendered in every scene, so the
 scenes are paired. Each point is scored by process_metrics.score after
@@ -52,6 +57,8 @@ RANGES = {
             + [p for s in STEMS for p in ((f"{s}_threshold_db", -65.0, -20.0), (f"{s}_ratio", 1.5, 10.0))]
             + [("knee_db", 0.0, 24.0), ("background_attack_ms", 1.0, 50.0), ("background_release_ms", 20.0, 1000.0)],
 }
+RANGES["compmb"] = RANGES["comp"]   # same law, applied in each of the 6 WDRC bands
+
 
 
 def lhs_points(process, n, seed):

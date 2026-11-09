@@ -402,3 +402,13 @@ Group single-band and full-band Per-channel 75 per scene (more parameters).
   Caveat for the "potential SBR change" claim: LHS ceilings depend on the
   sampled ranges (sidechain max reduction 3-12 dB; comp ranges from the search
   tool), so they compare processes under those ranges, not absolute limits.
+- Group multiband (2026-11-06): `compmb` mode in sbr_matched_search (a
+  `GroupComp` helper: one WdrcCompressor per group, the group's one law in all
+  6 bands, set up as Engine::syncEnhancementChannel() does). `--validate 1`
+  matches Engine's Enhancement Multiband output exactly (diff 0.00000 dB, 3
+  settings x 2 scenes). Same dims and LHS points as `comp` (paired). Note the
+  search's Dialogue-compression constraint (1.5-6 dB mean GR) reads the
+  deepest band's GR for multiband. Outputs: `sbr_matched_2scene_compmb*`,
+  `process_lhs_compmb.csv`; `process_matched.csv` and
+  `process_lhs_summary.txt` regenerated with it. Combined is not being run.
+

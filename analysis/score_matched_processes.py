@@ -38,7 +38,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--tool", required=True)
     ap.add_argument("--work", required=True)
-    ap.add_argument("--processes", nargs="+", default=["basic", "perchannel", "comp"])
+    ap.add_argument("--processes", nargs="+", default=["basic", "perchannel", "comp", "compmb"])
     ap.add_argument("--out", default=str(HERE / "process_matched.csv"))
     args = ap.parse_args()
     work = Path(args.work)

@@ -14,8 +14,8 @@ import numpy as np
 from scipy.stats import pearsonr, spearmanr
 
 HERE = Path(__file__).resolve().parent
-PROCESSES = ["comp", "basic", "perchannel"]
-NAMES = {"comp": "Group single-band", "basic": "Basic sidechain", "perchannel": "Per-channel sidechain"}
+PROCESSES = ["comp", "compmb", "basic", "perchannel"]
+NAMES = {"comp": "Group single-band", "compmb": "Group multiband", "basic": "Basic sidechain", "perchannel": "Per-channel sidechain"}
 SCENES = ["construction", "publictransit"]
 COLS = [("sbr_gain_db", "SBR gain dB"), ("bg_level_change_db", "bg level dB"), ("esii_gain", "ESII gain"),
         ("static_sii_gain", "static SII gain"), ("estoi_gain", "ESTOI gain")]
