@@ -1,0 +1,105 @@
+WDRC chain test (VR), 2026-11-09 11:55
+Recording: LL_CoffeeShop_Results/Calibration/20261022_164227; calibration file created 2026-10-26 09:51; mixer Assets/Main Mixer.mixer
+Master fader: +4.80 dB (applied to the summed groups before the WDRC)
+WDRC: Master LL Dynamics, WDRC mode, 4 bands (LR4 500/1500/4000 Hz), flat, makeup 0, Max GR 60, ratio 2.5, knee 6.0, attack 5.0 ms; fast release 80 ms, slow 1000 ms
+Threshold rule: -55.5 dBFS gives wdrc_only (fast) a mean WDRC gain reduction of 10.00 dB pooled over all 12 conversations (goal 10.0 dB)
+Grid thresholds below the plugin floor (-60 dBFS) are reached with the Master Meter ID threshold offset; none are clamped.
+Split validation: max |Dialogue out + rest out - plugin output on the mix| = -100.3 dB below the output peak (worst case over every run)
+basic / comp: active calibration offsets per conversation, High strength (no strength caps).
+Run time: 266 s with 9 parallel jobs.
+
+Conversations where the active calibration missed its target by more than 0.15 dB:
+  basic HI Zone3_Downstairs conversation 3: calibrated +5.80 dB vs target +5.1
+  basic NH Zone1_Downstairs conversation 1: calibrated +7.63 dB vs target +12.2
+  basic NH Zone1_Downstairs conversation 2: calibrated +7.69 dB vs target +12.2
+  basic NH Zone1_Downstairs conversation 3: calibrated +9.33 dB vs target +12.2
+  basic NH Zone1_Downstairs conversation 4: calibrated +8.72 dB vs target +12.2
+  basic NH Zone2_Upstairs conversation 1: calibrated +8.76 dB vs target +12.2
+  basic NH Zone2_Upstairs conversation 2: calibrated +8.29 dB vs target +12.2
+  basic NH Zone2_Upstairs conversation 3: calibrated +8.38 dB vs target +12.2
+  basic NH Zone2_Upstairs conversation 4: calibrated +6.97 dB vs target +12.2
+  basic NH Zone3_Downstairs conversation 1: calibrated +9.17 dB vs target +12.2
+  basic NH Zone3_Downstairs conversation 2: calibrated +6.07 dB vs target +12.2
+  basic NH Zone3_Downstairs conversation 3: calibrated +11.58 dB vs target +12.2
+  basic NH Zone3_Downstairs conversation 4: calibrated +10.73 dB vs target +12.2
+  comp HI Zone2_Upstairs conversation 1: calibrated +4.53 dB vs target +5.1
+  comp HI Zone2_Upstairs conversation 2: calibrated +3.73 dB vs target +5.1
+  comp HI Zone2_Upstairs conversation 3: calibrated +3.89 dB vs target +5.1
+  comp HI Zone2_Upstairs conversation 4: calibrated +3.33 dB vs target +5.1
+  comp NH Zone1_Downstairs conversation 1: calibrated +9.83 dB vs target +12.2
+  comp NH Zone1_Downstairs conversation 2: calibrated +11.01 dB vs target +12.2
+  comp NH Zone1_Downstairs conversation 4: calibrated +11.21 dB vs target +12.2
+  comp NH Zone2_Upstairs conversation 1: calibrated +10.90 dB vs target +12.2
+  comp NH Zone2_Upstairs conversation 2: calibrated +11.14 dB vs target +12.2
+  comp NH Zone2_Upstairs conversation 3: calibrated +10.41 dB vs target +12.2
+  comp NH Zone2_Upstairs conversation 4: calibrated +10.33 dB vs target +12.2
+  comp NH Zone3_Downstairs conversation 2: calibrated +9.80 dB vs target +12.2
+  comp NH Zone3_Downstairs conversation 3: calibrated +11.91 dB vs target +12.2
+  comp NH Zone3_Downstairs conversation 4: calibrated +11.61 dB vs target +12.2
+
+Two fittings, mean over conversations
+
+fit	condition	target	sbr_in_db	sbr_out_db	sbr_loss_db	wdrc_mean_gr_db	range_reduction_db	dialogue_range_out_db
+fast	basic	HI	+5.16	+3.43	1.73	9.82	7.27	7.68
+fast	basic	NH	+8.61	+6.07	2.55	9.46	7.04	7.42
+fast	comp	HI	+4.68	+3.08	1.60	9.52	6.86	6.18
+fast	comp	NH	+11.04	+8.54	2.50	5.50	13.44	6.17
+fast	static	HI	+5.10	+3.39	1.71	9.17	8.42	7.55
+fast	static	NH	+12.20	+8.48	3.72	6.43	11.98	7.08
+fast	static_match_basic	HI	+5.16	+3.44	1.72	9.14	8.45	7.54
+fast	static_match_basic	NH	+8.61	+5.89	2.72	7.74	10.11	7.29
+fast	static_match_comp	HI	+4.68	+3.09	1.59	9.36	8.18	7.61
+fast	static_match_comp	NH	+11.04	+7.64	3.40	6.83	11.38	7.14
+fast	wdrc_only	-	+3.31	+2.11	1.19	9.99	7.64	7.75
+slow	basic	HI	+5.16	+4.80	0.36	14.14	5.52	9.47
+slow	basic	NH	+8.61	+7.73	0.88	13.97	5.33	9.31
+slow	comp	HI	+4.68	+4.38	0.30	13.71	5.28	7.57
+slow	comp	NH	+11.04	+10.57	0.47	10.50	11.46	8.40
+slow	static	HI	+5.10	+4.80	0.30	13.60	6.48	9.45
+slow	static	NH	+12.20	+11.06	1.14	11.37	9.83	9.34
+slow	static_match_basic	HI	+5.16	+4.84	0.32	13.57	6.51	9.44
+slow	static_match_basic	NH	+8.61	+7.81	0.81	12.44	7.99	9.34
+slow	static_match_comp	HI	+4.68	+4.44	0.24	13.76	6.30	9.49
+slow	static_match_comp	NH	+11.04	+10.00	1.04	11.70	9.23	9.33
+slow	wdrc_only	-	+3.31	+3.26	0.04	14.28	5.87	9.59
+
+Correlation of sbr_loss_db with wdrc_mean_gr_db and with range_reduction_db, over fittings
+(values: the mean over conversations per fitting; n = fittings)
+
+chain	target	fittings	n	pearson_gr	spearman_gr	pearson_range	spearman_range
+wdrc_only	-	all	24	-0.082	0.097	0.652	0.723
+wdrc_only	-	fast	12	0.512	0.600	0.969	0.954
+wdrc_only	-	slow	12	0.612	0.710	0.994	0.975
+basic	HI	all	24	-0.026	0.099	0.735	0.730
+basic	HI	fast	12	0.521	0.712	0.967	0.996
+basic	HI	slow	12	0.492	0.618	0.985	0.931
+basic	NH	all	24	0.069	0.150	0.822	0.758
+basic	NH	fast	12	0.583	0.718	0.985	0.998
+basic	NH	slow	12	0.510	0.657	0.988	0.942
+comp	HI	all	24	-0.012	0.113	0.711	0.673
+comp	HI	fast	12	0.535	0.707	0.962	0.995
+comp	HI	slow	12	0.479	0.643	0.977	0.936
+comp	NH	all	24	-0.128	-0.020	0.502	0.542
+comp	NH	fast	12	0.568	0.692	0.861	0.874
+comp	NH	slow	12	0.484	0.678	0.778	0.902
+static_match_basic	HI	all	24	-0.048	0.108	0.684	0.704
+static_match_basic	HI	fast	12	0.516	0.718	0.956	0.998
+static_match_basic	HI	slow	12	0.488	0.643	0.975	0.947
+static_match_basic	NH	all	24	0.002	0.077	0.694	0.690
+static_match_basic	NH	fast	12	0.561	0.720	0.947	0.958
+static_match_basic	NH	slow	12	0.526	0.640	0.943	0.953
+static_match_comp	HI	all	24	-0.057	0.106	0.675	0.704
+static_match_comp	HI	fast	12	0.512	0.712	0.957	0.996
+static_match_comp	HI	slow	12	0.494	0.643	0.977	0.947
+static_match_comp	NH	all	24	0.005	0.068	0.673	0.673
+static_match_comp	NH	fast	12	0.584	0.692	0.944	0.923
+static_match_comp	NH	slow	12	0.538	0.651	0.918	0.956
+
+Paired: chain vs its static match (same fitting, target and SBR into the WDRC)
+(advantage = static match sbr_loss_db - chain sbr_loss_db; > 0 = the chain lost less)
+
+chain	level	cases	chain_loses_less	mean_advantage_db	min_db	max_db
+basic	fitting x target (conversation means)	48	12	0.007	-0.127	0.199
+basic	fitting x target x conversation	576	201	0.007	-0.498	1.040
+comp	fitting x target (conversation means)	48	30	0.298	-0.083	1.065
+comp	fitting x target x conversation	576	414	0.298	-0.472	2.412

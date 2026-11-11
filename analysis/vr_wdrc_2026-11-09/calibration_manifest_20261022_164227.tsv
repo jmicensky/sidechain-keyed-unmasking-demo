@@ -1,0 +1,81 @@
+# finished	yes
+# scene	TestSeq_2DCoffeeShop
+# created	2026-10-22T16:42:27
+# sample_rate	48000
+# dsp_buffer	1024
+# ambience	On
+# seed	12345
+# expected_takes	72
+take	zone	conversation	talker	sentence	speech_start_s	speech_end_s	window_end_s	effects
+Zone1_Downstairs_c1_Dia_Sentence_1_t1	Zone1_Downstairs	1	Dialogue1	Dia_Sentence 1	2.5	6.436	6.936	Footsteps@2.6486+3.7874
+Zone1_Downstairs_c1_Dia_Sentence_3_t2	Zone1_Downstairs	1	Dialogue1	Dia_Sentence 3	2.5	5.764	6.264	Toilet flush@3.2594+2.5046
+Zone1_Downstairs_c1_Dia_Sentence_2_t3	Zone1_Downstairs	1	Dialogue1	Dia_Sentence 2	2.5	5.764	6.264	Toilet flush@3.071+2.693
+Zone1_Downstairs_c1_Dia_Sentence_1_t4	Zone1_Downstairs	1	Dialogue1	Dia_Sentence 1	2.5	6.436	6.936	Dishwasher@4.774+1.662
+Zone1_Downstairs_c1_Dia_Sentence_3_t5	Zone1_Downstairs	1	Dialogue1	Dia_Sentence 3	2.5	5.764	6.264	Dishwasher@3.2234+2.5406
+Zone1_Downstairs_c1_Dia_Sentence_2_t6	Zone1_Downstairs	1	Dialogue1	Dia_Sentence 2	2.5	5.764	6.264	Applause@3.3576+2.4064
+Zone1_Downstairs_c2_Woman_Sentence_1_t1	Zone1_Downstairs	2	Dialogue3	Woman_Sentence 1	2.5	4.876	5.376	Toilet flush@3.2298+1.6462
+Zone1_Downstairs_c2_Woman_Sentence_2_t2	Zone1_Downstairs	2	Dialogue3	Woman_Sentence 2	2.5	4.828	5.328	Toilet flush@2.9014+1.9266
+Zone1_Downstairs_c2_Woman_Sentence_1_t3	Zone1_Downstairs	2	Dialogue3	Woman_Sentence 1	2.5	4.876	5.376	Baby crying@2.9544+1.9216
+Zone1_Downstairs_c2_Woman_Sentence_2_t4	Zone1_Downstairs	2	Dialogue3	Woman_Sentence 2	2.5	4.828	5.328	Footsteps@2.8512+1.9768
+Zone1_Downstairs_c2_Woman_Sentence_1_t5	Zone1_Downstairs	2	Dialogue3	Woman_Sentence 1	2.5	4.876	5.376	Siren@2.9846+1.8914
+Zone1_Downstairs_c2_Woman_Sentence_2_t6	Zone1_Downstairs	2	Dialogue3	Woman_Sentence 2	2.5	4.828	5.328	Car horn@3.0472+1.7808
+Zone1_Downstairs_c3_Dia_Sentence_2_t1	Zone1_Downstairs	3	Dialogue2	Dia_Sentence 2	2.5	5.764	6.264	Toilet flush@2.7982+2.9658
+Zone1_Downstairs_c3_Dia_Sentence_1_t2	Zone1_Downstairs	3	Dialogue2	Dia_Sentence 1	2.5	6.436	6.936	Dishwasher@4.6063+1.8297
+Zone1_Downstairs_c3_Dia_Sentence_3_t3	Zone1_Downstairs	3	Dialogue2	Dia_Sentence 3	2.5	5.764	6.264	Toilet flush@3.4326+2.3314
+Zone1_Downstairs_c3_Dia_Sentence_2_t4	Zone1_Downstairs	3	Dialogue2	Dia_Sentence 2	2.5	5.764	6.264	Siren@2.6824+3.0816
+Zone1_Downstairs_c3_Dia_Sentence_1_t5	Zone1_Downstairs	3	Dialogue2	Dia_Sentence 1	2.5	6.436	6.936	Toilet flush@4.0718+2.3642
+Zone1_Downstairs_c3_Dia_Sentence_3_t6	Zone1_Downstairs	3	Dialogue2	Dia_Sentence 3	2.5	5.764	6.264	Dishwasher@2.8853+1.2
+Zone1_Downstairs_c4_Woman_Sentence_2_t1	Zone1_Downstairs	4	Dialogue3	Woman_Sentence 2	2.5	4.828	5.328	Door closing@2.9545+1.8735
+Zone1_Downstairs_c4_Woman_Sentence_1_t2	Zone1_Downstairs	4	Dialogue3	Woman_Sentence 1	2.5	4.876	5.376	Footsteps@2.9024+1.9736
+Zone1_Downstairs_c4_Woman_Sentence_2_t3	Zone1_Downstairs	4	Dialogue3	Woman_Sentence 2	2.5	4.828	5.328	Applause@3.3155+1.5125
+Zone1_Downstairs_c4_Woman_Sentence_1_t4	Zone1_Downstairs	4	Dialogue3	Woman_Sentence 1	2.5	4.876	5.376	Glass breaking@2.6358+1.1827
+Zone1_Downstairs_c4_Woman_Sentence_2_t5	Zone1_Downstairs	4	Dialogue3	Woman_Sentence 2	2.5	4.828	5.328	Door closing@3.0239+1.104
+Zone1_Downstairs_c4_Woman_Sentence_1_t6	Zone1_Downstairs	4	Dialogue3	Woman_Sentence 1	2.5	4.876	5.376	Toilet flush@2.755+2.121
+Zone2_Upstairs_c1_Dia_Sentence_4_t1	Zone2_Upstairs	1	Zone2_Dialogue4	Dia_Sentence 4	2.5	7.252	7.752	Sneeze@4.6552+2.1251
+Zone2_Upstairs_c1_Dia_Sentence_6_t2	Zone2_Upstairs	1	Zone2_Dialogue4	Dia_Sentence 6	2.5	5.644	6.144	Applause@2.7895+2.8544
+Zone2_Upstairs_c1_Dia_Sentence_5_t3	Zone2_Upstairs	1	Zone2_Dialogue4	Dia_Sentence 5	2.5	5.236	5.736	Glass breaking@3.047+1.1998
+Zone2_Upstairs_c1_Dia_Sentence_4_t4	Zone2_Upstairs	1	Zone2_Dialogue4	Dia_Sentence 4	2.5	7.252	7.752	Baby crying@3.2767+3.9753
+Zone2_Upstairs_c1_Dia_Sentence_6_t5	Zone2_Upstairs	1	Zone2_Dialogue4	Dia_Sentence 6	2.5	5.644	6.144	Baby crying@2.8477+2.7351
+Zone2_Upstairs_c1_Dia_Sentence_5_t6	Zone2_Upstairs	1	Zone2_Dialogue4	Dia_Sentence 5	2.5	5.236	5.736	Dishwasher@2.9224+2.3136
+Zone2_Upstairs_c2_Woman_Sentence_3_t1	Zone2_Upstairs	2	Zone2_Dialogue5	Woman_Sentence 3	2.5	5.5	6	Glass breaking@2.7648+1.1998
+Zone2_Upstairs_c2_Woman_Sentence_4_t2	Zone2_Upstairs	2	Zone2_Dialogue5	Woman_Sentence 4	2.5	5.644	6.144	Footsteps@3.7928+1.8512
+Zone2_Upstairs_c2_Woman_Sentence_3_t3	Zone2_Upstairs	2	Zone2_Dialogue5	Woman_Sentence 3	2.5	5.5	6	Dishwasher@3.4585+2.0415
+Zone2_Upstairs_c2_Woman_Sentence_4_t4	Zone2_Upstairs	2	Zone2_Dialogue5	Woman_Sentence 4	2.5	5.644	6.144	Dishwasher@3.4273+2.2167
+Zone2_Upstairs_c2_Woman_Sentence_3_t5	Zone2_Upstairs	2	Zone2_Dialogue5	Woman_Sentence 3	2.5	5.5	6	Dishwasher@3.8554+1.2
+Zone2_Upstairs_c2_Woman_Sentence_4_t6	Zone2_Upstairs	2	Zone2_Dialogue5	Woman_Sentence 4	2.5	5.644	6.144	Glass breaking@3.0659+1.1827
+Zone2_Upstairs_c3_Dia_Sentence_5_t1	Zone2_Upstairs	3	Zone2_Dialogue6	Dia_Sentence 5	2.5	5.236	5.736	Footsteps@3.109+2.127
+Zone2_Upstairs_c3_Dia_Sentence_4_t2	Zone2_Upstairs	3	Zone2_Dialogue6	Dia_Sentence 4	2.5	7.252	7.752	Baby crying@5.1241+2.1279
+Zone2_Upstairs_c3_Dia_Sentence_6_t3	Zone2_Upstairs	3	Zone2_Dialogue6	Dia_Sentence 6	2.5	5.644	6.144	Toilet flush@3.5647+2.0793
+Zone2_Upstairs_c3_Dia_Sentence_5_t4	Zone2_Upstairs	3	Zone2_Dialogue6	Dia_Sentence 5	2.5	5.236	5.736	Sneeze@3.0038+1.9791
+Zone2_Upstairs_c3_Dia_Sentence_4_t5	Zone2_Upstairs	3	Zone2_Dialogue6	Dia_Sentence 4	2.5	7.252	7.752	Applause@3.0042+4.2478
+Zone2_Upstairs_c3_Dia_Sentence_6_t6	Zone2_Upstairs	3	Zone2_Dialogue6	Dia_Sentence 6	2.5	5.644	6.144	Footsteps@3.6237+2.0203
+Zone2_Upstairs_c4_Woman_Sentence_4_t1	Zone2_Upstairs	4	Zone2_Dialogue5	Woman_Sentence 4	2.5	5.644	6.144	Dishwasher@3.462+1.2
+Zone2_Upstairs_c4_Woman_Sentence_3_t2	Zone2_Upstairs	4	Zone2_Dialogue5	Woman_Sentence 3	2.5	5.5	6	Footsteps@3.5427+1.9573
+Zone2_Upstairs_c4_Woman_Sentence_4_t3	Zone2_Upstairs	4	Zone2_Dialogue5	Woman_Sentence 4	2.5	5.644	6.144	Baby crying@2.9565+2.6875
+Zone2_Upstairs_c4_Woman_Sentence_3_t4	Zone2_Upstairs	4	Zone2_Dialogue5	Woman_Sentence 3	2.5	5.5	6	Pen writing@4.0753+1.241
+Zone2_Upstairs_c4_Woman_Sentence_4_t5	Zone2_Upstairs	4	Zone2_Dialogue5	Woman_Sentence 4	2.5	5.644	6.144	Car horn@2.8919+2.7521
+Zone2_Upstairs_c4_Woman_Sentence_3_t6	Zone2_Upstairs	4	Zone2_Dialogue5	Woman_Sentence 3	2.5	5.5	6	Applause@2.9675+2.5325
+Zone3_Downstairs_c1_Dia_Sentence_7_t1	Zone3_Downstairs	1	Dialogue8	Dia_Sentence 7	2.5	6.268	6.768	Siren@2.6385+3.6295
+Zone3_Downstairs_c1_Dia_Sentence_9_t2	Zone3_Downstairs	1	Dialogue8	Dia_Sentence 9	2.5	6.148	6.648	Siren@3.296+2.852
+Zone3_Downstairs_c1_Dia_Sentence_8_t3	Zone3_Downstairs	1	Dialogue8	Dia_Sentence 8	2.5	6.172	6.672	Siren@4.0839+2.0881
+Zone3_Downstairs_c1_Dia_Sentence_7_t4	Zone3_Downstairs	1	Dialogue8	Dia_Sentence 7	2.5	6.268	6.768	Cat@4.0529+0.768
+Zone3_Downstairs_c1_Dia_Sentence_9_t5	Zone3_Downstairs	1	Dialogue8	Dia_Sentence 9	2.5	6.148	6.648	Cat@4.0442+1.1841
+Zone3_Downstairs_c1_Dia_Sentence_8_t6	Zone3_Downstairs	1	Dialogue8	Dia_Sentence 8	2.5	6.172	6.672	Car horn@4.1044+0.984
+Zone3_Downstairs_c2_Woman_Sentence_5_t1	Zone3_Downstairs	2	Dialogue7	Woman_Sentence 5	2.5	5.356	5.856	Applause@3.3285+2.0275
+Zone3_Downstairs_c2_Woman_Sentence_6_t2	Zone3_Downstairs	2	Dialogue7	Woman_Sentence 6	2.5	5.524	6.024	Car horn@3.1734+1.704
+Zone3_Downstairs_c2_Woman_Sentence_5_t3	Zone3_Downstairs	2	Dialogue7	Woman_Sentence 5	2.5	5.356	5.856	Siren@3.2341+2.1219
+Zone3_Downstairs_c2_Woman_Sentence_6_t4	Zone3_Downstairs	2	Dialogue7	Woman_Sentence 6	2.5	5.524	6.024	Siren@3.9089+1.6151
+Zone3_Downstairs_c2_Woman_Sentence_5_t5	Zone3_Downstairs	2	Dialogue7	Woman_Sentence 5	2.5	5.356	5.856	Car horn@3.3474+1.704
+Zone3_Downstairs_c2_Woman_Sentence_6_t6	Zone3_Downstairs	2	Dialogue7	Woman_Sentence 6	2.5	5.524	6.024	Sneeze@4.4915+0.804
+Zone3_Downstairs_c3_Dia_Sentence_8_t1	Zone3_Downstairs	3	Dialogue8	Dia_Sentence 8	2.5	6.172	6.672	Glass breaking@2.9047+1.896
+Zone3_Downstairs_c3_Dia_Sentence_7_t2	Zone3_Downstairs	3	Dialogue8	Dia_Sentence 7	2.5	6.268	6.768	Car horn@2.8473+1.704
+Zone3_Downstairs_c3_Dia_Sentence_9_t3	Zone3_Downstairs	3	Dialogue8	Dia_Sentence 9	2.5	6.148	6.648	Glass breaking@2.7144+1.1998
+Zone3_Downstairs_c3_Dia_Sentence_8_t4	Zone3_Downstairs	3	Dialogue8	Dia_Sentence 8	2.5	6.172	6.672	Door closing@2.9909+1.104
+Zone3_Downstairs_c3_Dia_Sentence_7_t5	Zone3_Downstairs	3	Dialogue8	Dia_Sentence 7	2.5	6.268	6.768	Glass breaking@4.2728+1.464
+Zone3_Downstairs_c3_Dia_Sentence_9_t6	Zone3_Downstairs	3	Dialogue8	Dia_Sentence 9	2.5	6.148	6.648	Door closing@3.8686+1.9895
+Zone3_Downstairs_c4_Woman_Sentence_6_t1	Zone3_Downstairs	4	Dialogue7	Woman_Sentence 6	2.5	5.524	6.024	Baby crying@3.2092+2.3148
+Zone3_Downstairs_c4_Woman_Sentence_5_t2	Zone3_Downstairs	4	Dialogue7	Woman_Sentence 5	2.5	5.356	5.856	Cat@2.9126+1.1841
+Zone3_Downstairs_c4_Woman_Sentence_6_t3	Zone3_Downstairs	4	Dialogue7	Woman_Sentence 6	2.5	5.524	6.024	Door closing@3.7002+1.536
+Zone3_Downstairs_c4_Woman_Sentence_5_t4	Zone3_Downstairs	4	Dialogue7	Woman_Sentence 5	2.5	5.356	5.856	Sneeze@2.753+0.9649
+Zone3_Downstairs_c4_Woman_Sentence_6_t5	Zone3_Downstairs	4	Dialogue7	Woman_Sentence 6	2.5	5.524	6.024	Baby crying@3.1558+2.3682
+Zone3_Downstairs_c4_Woman_Sentence_5_t6	Zone3_Downstairs	4	Dialogue7	Woman_Sentence 5	2.5	5.356	5.856	Sneeze@3.201+1.9791
