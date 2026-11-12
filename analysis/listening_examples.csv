@@ -1,0 +1,15 @@
+id,part,process,level,setting,sbr_in_db,sbr_ear_db,sbr_gain_db,level_db,peak_dbfs,file
+unprocessed,process,Unprocessed,,,1.31,1.31,0.0,0.0,-4.15,construction_unprocessed.mp3
+comp_half,process,Group compression,Half of maximum,LHS 1,10.67,10.67,9.36,2.57,-6.2,construction_comp_half.mp3
+comp_max,process,Group compression,Maximum,LHS 12,19.1,19.1,17.79,2.69,-6.31,construction_comp_max.mp3
+compmb_half,process,Group multiband compression,Half of maximum,LHS 41,9.87,9.87,8.56,3.43,-3.54,construction_compmb_half.mp3
+compmb_max,process,Group multiband compression,Maximum,LHS 12,19.7,19.7,18.39,4.63,-8.64,construction_compmb_max.mp3
+basic_half,process,"Sidechain, summed bus (Basic)",Half of maximum,LHS 2,6.0,6.0,4.69,1.52,-2.92,construction_basic_half.mp3
+basic_max,process,"Sidechain, summed bus (Basic)",Maximum,LHS 23,11.8,11.8,10.49,2.37,-3.51,construction_basic_max.mp3
+perchannel_half,process,"Sidechain, per-channel",Half of maximum,LHS 44,5.19,5.19,3.88,1.26,-3.18,construction_perchannel_half.mp3
+perchannel_max,process,"Sidechain, per-channel",Maximum,LHS 48,9.23,9.23,7.92,2.01,-2.43,construction_perchannel_max.mp3
+wdrc_only,wdrc,WDRC alone,,,1.31,-2.18,-3.49,15.01,-3.92,construction_wdrc_only.mp3
+wdrc_comp_NH,wdrc,Group compression,NH setting,,12.2,6.76,5.45,19.39,-5.79,construction_wdrc_comp_NH.mp3
+wdrc_static_comp_NH,wdrc,Static gain,matched to group compression,-10.9 dB,12.2,5.41,4.1,17.49,-6.19,construction_wdrc_static_comp_NH.mp3
+wdrc_basic_NH,wdrc,"Sidechain, summed bus (Basic)",NH setting,,14.53,8.43,7.12,17.18,-3.56,construction_wdrc_basic_NH.mp3
+wdrc_static_basic_NH,wdrc,Static gain,matched to Basic,-13.2 dB,14.53,7.07,5.76,17.79,-7.24,construction_wdrc_static_basic_NH.mp3
