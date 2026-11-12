@@ -4,7 +4,7 @@
 \centering
 \footnotesize
 \setstretch{1}
-\caption{\protect\aicaption{AI draft --- rewrite: Listening examples for the four processes on the same Construction clip. For each process, ``Maximum'' is the setting with the largest SBR gain in its parameter sweep and ``Half of maximum'' is the swept setting whose SBR gain is closest to half of that. Every clip is matched in integrated loudness to the unprocessed mix, so the clips differ in balance, not level.}}
+\caption{\protect\aicaption{AI draft --- rewrite: Listening examples for the four processes on the same Construction clip. For each process, the $+3$ and $+6$~dB rows are the swept settings whose SBR gain over the unprocessed mix is closest to those values, and ``Maximum'' is the setting with the largest SBR gain in its parameter sweep. Every clip is matched in integrated loudness to the unprocessed mix, so the clips differ in balance, not level.}}
 \label{tab:listening-processes}
 \begin{tabular}{@{}lllrrl@{}}
 \toprule
@@ -12,16 +12,20 @@
 \midrule
 Unprocessed &  &  & $+1.3$ & $+0.0$ & \href{https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/listening/construction_unprocessed.mp3}{Listen} \\
 \addlinespace
-Group compression & Half of maximum & LHS 1 & $+10.7$ & $+9.4$ & \href{https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/listening/construction_comp_half.mp3}{Listen} \\
+Group compression & +3 dB & LHS 60 & $+4.3$ & $+3.0$ & \href{https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/listening/construction_comp_3db.mp3}{Listen} \\
+ & +6 dB & LHS 5 & $+7.4$ & $+6.1$ & \href{https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/listening/construction_comp_6db.mp3}{Listen} \\
  & Maximum & LHS 12 & $+19.1$ & $+17.8$ & \href{https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/listening/construction_comp_max.mp3}{Listen} \\
 \addlinespace
-Group multiband compression & Half of maximum & LHS 41 & $+9.9$ & $+8.6$ & \href{https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/listening/construction_compmb_half.mp3}{Listen} \\
+Group multiband compression & +3 dB & LHS 42 & $+4.3$ & $+3.0$ & \href{https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/listening/construction_compmb_3db.mp3}{Listen} \\
+ & +6 dB & LHS 46 & $+7.2$ & $+5.9$ & \href{https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/listening/construction_compmb_6db.mp3}{Listen} \\
  & Maximum & LHS 12 & $+19.7$ & $+18.4$ & \href{https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/listening/construction_compmb_max.mp3}{Listen} \\
 \addlinespace
-Sidechain, summed bus (Basic) & Half of maximum & LHS 2 & $+6.0$ & $+4.7$ & \href{https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/listening/construction_basic_half.mp3}{Listen} \\
+Sidechain, summed bus (Basic) & +3 dB & LHS 12 & $+4.2$ & $+2.9$ & \href{https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/listening/construction_basic_3db.mp3}{Listen} \\
+ & +6 dB & LHS 8 & $+7.3$ & $+6.0$ & \href{https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/listening/construction_basic_6db.mp3}{Listen} \\
  & Maximum & LHS 23 & $+11.8$ & $+10.5$ & \href{https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/listening/construction_basic_max.mp3}{Listen} \\
 \addlinespace
-Sidechain, per-channel & Half of maximum & LHS 44 & $+5.2$ & $+3.9$ & \href{https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/listening/construction_perchannel_half.mp3}{Listen} \\
+Sidechain, per-channel & +3 dB & LHS 4 & $+4.3$ & $+3.0$ & \href{https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/listening/construction_perchannel_3db.mp3}{Listen} \\
+ & +6 dB & LHS 72 & $+7.8$ & $+6.5$ & \href{https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/listening/construction_perchannel_6db.mp3}{Listen} \\
  & Maximum & LHS 48 & $+9.2$ & $+7.9$ & \href{https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/listening/construction_perchannel_max.mp3}{Listen} \\
 \bottomrule
 \end{tabular}
@@ -31,7 +35,7 @@ Sidechain, per-channel & Half of maximum & LHS 44 & $+5.2$ & $+3.9$ & \href{http
 \centering
 \footnotesize
 \setstretch{1}
-\caption{\protect\aicaption{AI draft --- rewrite: Listening examples through the hearing-aid WDRC (threshold $-50$~dBFS, 2.5:1, 80~ms release) on the same Construction clip. Group compression and Basic sidechain use their NH settings; each is paired with a static background gain giving the same SBR into the WDRC. Every clip is matched in integrated loudness to the unprocessed mix.}}
+\caption{\protect\aicaption{AI draft --- rewrite: Listening examples through the hearing-aid WDRC (threshold $-50$~dBFS, 2.5:1, 80~ms release) on the same Construction clip. Group compression and Basic sidechain use their HI settings (Johnson and Healy's $+5.1$~dB target); each is paired with a static background gain giving the same SBR into the WDRC. Every clip is matched in integrated loudness to the unprocessed mix.}}
 \label{tab:listening-wdrc}
 \begin{tabular}{@{}llrrl@{}}
 \toprule
@@ -39,11 +43,11 @@ Sidechain, per-channel & Half of maximum & LHS 44 & $+5.2$ & $+3.9$ & \href{http
 \midrule
 WDRC alone &  & $+1.3$ & $-2.2$ & \href{https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/listening/construction_wdrc_only.mp3}{Listen} \\
 \addlinespace
-Group compression & NH setting & $+12.2$ & $+6.8$ & \href{https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/listening/construction_wdrc_comp_NH.mp3}{Listen} \\
-Static gain & matched to group compression & $+12.2$ & $+5.4$ & \href{https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/listening/construction_wdrc_static_comp_NH.mp3}{Listen} \\
+Group compression & HI setting & $+5.1$ & $+1.6$ & \href{https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/listening/construction_wdrc_comp_HI.mp3}{Listen} \\
+Static gain & matched to group compression & $+5.1$ & $+0.5$ & \href{https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/listening/construction_wdrc_static_comp_HI.mp3}{Listen} \\
 \addlinespace
-Sidechain, summed bus (Basic) & NH setting & $+14.5$ & $+8.4$ & \href{https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/listening/construction_wdrc_basic_NH.mp3}{Listen} \\
-Static gain & matched to Basic & $+14.5$ & $+7.1$ & \href{https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/listening/construction_wdrc_static_basic_NH.mp3}{Listen} \\
+Sidechain, summed bus (Basic) & HI setting & $+7.9$ & $+2.6$ & \href{https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/listening/construction_wdrc_basic_HI.mp3}{Listen} \\
+Static gain & matched to Basic & $+7.9$ & $+2.4$ & \href{https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/listening/construction_wdrc_static_basic_HI.mp3}{Listen} \\
 \bottomrule
 \end{tabular}
 \end{table}

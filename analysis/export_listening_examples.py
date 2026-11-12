@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """Listening examples for the thesis (2026-11-12), Construction scene.
 
-Part 1, the four processes, each at two strengths from its LHS sweep
+Part 1, the four processes, each at three strengths from its LHS sweep
 (process_lhs_<process>.csv, Construction rows):
-  max   the point with the largest SBR gain over the unprocessed mix
-  half  the point whose SBR gain is closest to half of that maximum
+  3db, 6db  the point whose SBR gain over the unprocessed mix is closest to
+            +3 / +6 dB
+  max       the point with the largest SBR gain
 plus the unprocessed mix.
 
 Part 2, the WDRC chain (fast fitting of score_wdrc_chains.py: -50 dBFS, 2.5:1,
 6 dB knee, 5 ms attack, 80 ms release): the WDRC alone, group compression and
-Basic at their NH matched settings (sbr_matched_2scene_<process>_best.tsv) into
+Basic at their HI matched settings (sbr_matched_2scene_<process>_best.tsv) into
 the WDRC, and for each a static background gain giving the same SBR into the
 WDRC.
 
@@ -41,6 +42,8 @@ SCENE = "construction"
 OUT_DIR = REPO / "paper-audio" / "listening"
 URL = "https://jmicensky.github.io/sidechain-keyed-unmasking-demo/paper-audio/listening/"
 WDRC_FIT = "-50,2.5,6,5,80"
+TARGET = "HI"  # matched setting used into the WDRC
+STEPS = [("3db", 3.0, "+3 dB"), ("6db", 6.0, "+6 dB")]
 PROCESSES = [("comp", "Group compression"), ("compmb", "Group multiband compression"),
              ("basic", "Sidechain, summed bus (Basic)"), ("perchannel", "Sidechain, per-channel")]
 WDRC_PROCESSES = [("comp", "Group compression", "group compression"), ("basic", "Sidechain, summed bus (Basic)", "Basic")]
@@ -51,14 +54,17 @@ def lhs_points(proc):
         rows = [r for r in csv.DictReader(f) if r["scene"] == SCENE]
     cols = list(rows[0])
     params = cols[cols.index("scene") + 1:cols.index("sbr_db")]
-    best = max(rows, key=lambda r: float(r["sbr_gain_db"]))
-    goal = float(best["sbr_gain_db"]) / 2
-    half = min(rows, key=lambda r: abs(float(r["sbr_gain_db"]) - goal))
     vec = lambda r: ",".join(r[p] for p in params)  # noqa: E731
-    return {"half": (half["point"], vec(half)), "max": (best["point"], vec(best))}
+    out = {}
+    for key, goal, label in STEPS:
+        r = min(rows, key=lambda r: abs(float(r["sbr_gain_db"]) - goal))
+        out[key] = (label, r["point"], vec(r))
+    best = max(rows, key=lambda r: float(r["sbr_gain_db"]))
+    out["max"] = ("Maximum", best["point"], vec(best))
+    return out
 
 
-def matched(proc, target="NH"):
+def matched(proc, target=TARGET):
     with open(HERE / f"sbr_matched_2scene_{proc}_best.tsv") as f:
         for line in f:
             label, mode, v = line.rstrip("\n").split("\t")[:3]
@@ -94,16 +100,16 @@ def main():
     work = Path(args.work)
     work.mkdir(parents=True, exist_ok=True)
 
-    # Part 1 + the pre-WDRC SBR of the NH settings (for the static matches).
+    # Part 1 + the pre-WDRC SBR of the matched settings (for the static matches).
     jobs = [("unprocessed", "none", "0")]
     meta = {"unprocessed": ("Unprocessed", "", "", "")}
     for proc, label in PROCESSES:
-        for level, (point, v) in lhs_points(proc).items():
+        for level, (strength, point, v) in lhs_points(proc).items():
             rid = f"{proc}_{level}"
             jobs.append((rid, proc, v))
-            meta[rid] = (label, "Half of maximum" if level == "half" else "Maximum", f"LHS {point}", "")
+            meta[rid] = (label, strength, f"LHS {point}", "")
     for proc, *_ in WDRC_PROCESSES:
-        jobs.append((f"pre_{proc}_NH", proc, matched(proc)))
+        jobs.append((f"pre_{proc}", proc, matched(proc)))
     res = run(args.tool, jobs, work, "listening")
     sbr0 = float(res["unprocessed"]["sbr_db"])
 
@@ -111,11 +117,11 @@ def main():
     wjobs = [("wdrc_only", "none", "0")]
     meta["wdrc_only"] = ("WDRC alone", "", "", "")
     for proc, label, short in WDRC_PROCESSES:
-        sin = float(res[f"pre_{proc}_NH"]["sbr_db"])
-        wjobs.append((f"wdrc_{proc}_NH", proc, matched(proc)))
-        wjobs.append((f"wdrc_static_{proc}_NH", "static", repr(sbr0 - sin)))
-        meta[f"wdrc_{proc}_NH"] = (label, "NH setting", "", "")
-        meta[f"wdrc_static_{proc}_NH"] = ("Static gain", f"matched to {short}", f"{sbr0 - sin:+.1f} dB", "")
+        sin = float(res[f"pre_{proc}"]["sbr_db"])
+        wjobs.append((f"wdrc_{proc}_{TARGET}", proc, matched(proc)))
+        wjobs.append((f"wdrc_static_{proc}_{TARGET}", "static", repr(sbr0 - sin)))
+        meta[f"wdrc_{proc}_{TARGET}"] = (label, f"{TARGET} setting", "", "")
+        meta[f"wdrc_static_{proc}_{TARGET}"] = ("Static gain", f"matched to {short}", f"{sbr0 - sin:+.1f} dB", "")
     wres = run(args.tool, wjobs, work, "listening_wdrc", wdrc=WDRC_FIT)
 
     ids = [j[0] for j in jobs if not j[0].startswith("pre_")] + [j[0] for j in wjobs]
@@ -141,8 +147,8 @@ def main():
         sbr_ear = float(r["sbr_out_db"]) if through else sbr_in
         proc, level, note, _ = meta[rid]
         rows.append({"id": rid, "part": "wdrc" if through else "process", "process": proc, "level": level,
-                     "setting": note, "sbr_in_db": round(sbr_in, 2), "sbr_ear_db": round(sbr_ear, 2),
-                     "sbr_gain_db": round(sbr_ear - sbr0, 2),
+                     "setting": note, "sbr_in_db": round(sbr_in, 3), "sbr_ear_db": round(sbr_ear, 3),
+                     "sbr_gain_db": round(sbr_ear - sbr0, 3),
                      "level_db": round(20 * np.log10(gains[rid] * offset), 2),
                      "peak_dbfs": round(20 * np.log10(np.abs(x).max()), 2), "file": mp3.name})
         print(f"{rid:24s} SBR {sbr_ear:+6.2f} dB  peak {rows[-1]['peak_dbfs']:6.2f} dBFS")
@@ -159,7 +165,7 @@ def table(rows):
     p2 = [r for r in rows if r["part"] == "wdrc"]
     body1 = []
     for r in p1:
-        name = r["process"] if r["level"] in ("", "Half of maximum") else ""
+        name = r["process"] if r["level"] in ("", STEPS[0][2]) else ""
         body1.append(f"{name} & {r['level']} & {r['setting']} & ${r['sbr_ear_db']:+.1f}$ & "
                      f"${r['sbr_gain_db']:+.1f}$ & {link(r)} \\\\")
         if r["level"] in ("", "Maximum"):
@@ -178,7 +184,7 @@ def table(rows):
 \centering
 \footnotesize
 \setstretch{1}
-\caption{\protect\aicaption{AI draft --- rewrite: Listening examples for the four processes on the same Construction clip. For each process, ``Maximum'' is the setting with the largest SBR gain in its parameter sweep and ``Half of maximum'' is the swept setting whose SBR gain is closest to half of that. Every clip is matched in integrated loudness to the unprocessed mix, so the clips differ in balance, not level.}}
+\caption{\protect\aicaption{AI draft --- rewrite: Listening examples for the four processes on the same Construction clip. For each process, the $+3$ and $+6$~dB rows are the swept settings whose SBR gain over the unprocessed mix is closest to those values, and ``Maximum'' is the setting with the largest SBR gain in its parameter sweep. Every clip is matched in integrated loudness to the unprocessed mix, so the clips differ in balance, not level.}}
 \label{tab:listening-processes}
 \begin{tabular}{@{}lllrrl@{}}
 \toprule
@@ -193,7 +199,7 @@ def table(rows):
 \centering
 \footnotesize
 \setstretch{1}
-\caption{\protect\aicaption{AI draft --- rewrite: Listening examples through the hearing-aid WDRC (threshold $-50$~dBFS, 2.5:1, 80~ms release) on the same Construction clip. Group compression and Basic sidechain use their NH settings; each is paired with a static background gain giving the same SBR into the WDRC. Every clip is matched in integrated loudness to the unprocessed mix.}}
+\caption{\protect\aicaption{AI draft --- rewrite: Listening examples through the hearing-aid WDRC (threshold $-50$~dBFS, 2.5:1, 80~ms release) on the same Construction clip. Group compression and Basic sidechain use their HI settings (Johnson and Healy's $+5.1$~dB target); each is paired with a static background gain giving the same SBR into the WDRC. Every clip is matched in integrated loudness to the unprocessed mix.}}
 \label{tab:listening-wdrc}
 \begin{tabular}{@{}llrrl@{}}
 \toprule
